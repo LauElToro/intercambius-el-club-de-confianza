@@ -550,7 +550,7 @@ const Market = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute top-2 right-2 bg-background/90 hover:bg-background backdrop-blur-sm"
+                      className="absolute top-2 right-2 bg-background/95 hover:bg-background backdrop-blur-sm text-foreground"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleFavorito(item.id);
@@ -564,7 +564,7 @@ const Market = () => {
                         }`}
                       />
                     </Button>
-                    <Badge className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm">
+                    <Badge className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50">
                       {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
                       {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
                     </Badge>

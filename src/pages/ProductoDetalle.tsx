@@ -349,7 +349,7 @@ const ProductoDetalle = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge>
+                      <Badge variant="secondary">
                         {item.rubro === "servicios" ? "🔧 Servicio" : 
                          item.rubro === "productos" ? "📦 Producto" :
                          item.rubro === "alimentos" ? "🍎 Alimento" : "🎭 Experiencia"}
@@ -395,7 +395,7 @@ const ProductoDetalle = () => {
                     <h3 className="font-semibold mb-3">Características</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {item.caracteristicas.map((caracteristica, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
+                        <div key={index} className="flex items-center gap-2 text-sm text-foreground">
                           <CheckCircle2 className="w-4 h-4 text-gold" />
                           <span>{caracteristica}</span>
                         </div>
@@ -415,7 +415,7 @@ const ProductoDetalle = () => {
                         <span className="text-sm text-muted-foreground capitalize">
                           {key.replace(/([A-Z])/g, ' $1').trim()}:
                         </span>
-                        <p className="font-medium">{value as string}</p>
+                        <p className="font-medium text-foreground">{value as string}</p>
                       </div>
                     ))}
                   </div>

@@ -182,7 +182,7 @@ interface FeatureCardProps {
 const FeatureCard = ({ icon, title, description }: FeatureCardProps) => (
   <div className="bg-card rounded-2xl p-8 border border-border hover:border-gold/30 transition-all duration-300 hover:gold-glow">
     <div className="text-gold mb-4">{icon}</div>
-    <h3 className="text-xl font-semibold mb-2">{title}</h3>
+    <h3 className="text-xl font-semibold mb-2 text-card-foreground">{title}</h3>
     <p className="text-muted-foreground">{description}</p>
   </div>
 );

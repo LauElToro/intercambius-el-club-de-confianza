@@ -80,7 +80,7 @@ const Dashboard = () => {
                   style={{ width: `${Math.min(porcentajeCredito, 100)}%` }}
                 />
               </div>
-              <p className="text-sm">
+              <p className="text-sm text-foreground">
                 <span className="text-gold">{Math.abs(user.saldo)}</span>
                 <span className="text-muted-foreground"> / {user.limite} IX</span>
               </p>
