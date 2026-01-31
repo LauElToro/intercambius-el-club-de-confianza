@@ -17,4 +17,5 @@ export const formatCurrency = (amount: number, currency: 'IX' | 'ARS' = 'IX'): s
   return `${amount} IX`;
 };
 
-export const LIMITE_CREDITO_NEGATIVO = 15000; // pesos argentinos
+export const LIMITE_CREDITO_NEGATIVO_PESOS = 15000; // pesos argentinos
+export const LIMITE_CREDITO_NEGATIVO = LIMITE_CREDITO_NEGATIVO_PESOS; // Alias para compatibilidad

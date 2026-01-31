@@ -1,42 +1,16 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle } from "lucide-react";
-import { convertIXToPesos, LIMITE_CREDITO_NEGATIVO, formatCurrency } from "@/lib/currency";
-
-// Reutilizar la estructura de items de Market
-interface MarketItem {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  precio: number;
-  rubro: string;
-  ubicacion: string;
-  distancia: number;
-  imagen: string;
-  vendedor: string;
-  rating: number;
-  favorito: boolean;
-  detalles: Record<string, string>;
-}
-
-interface User {
-  nombre: string;
-  ofrece: string;
-  necesita: string;
-  contacto: string;
-  saldo: number;
-  limite: number;
-  id: number;
-  precioOferta?: number; // Precio en IX del servicio/producto que ofrece
-}
-
-// Mock data - En producción vendría del backend
-const mockItems: MarketItem[] = [
+import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2 } from "lucide-react";
+import { convertIXToPesos, LIMITE_CREDITO_NEGATIVO_PESOS, formatCurrency } from "@/lib/currency";
+import { useAuth } from "@/contexts/AuthContext";
+import { coincidenciasService } from "@/services/coincidencias.service";
+import { MarketItem } from "@/services/market.service";
   {
     id: 1,
     titulo: "Clases de inglés online",
@@ -138,45 +112,15 @@ const RUBROS = {
 
 const Coincidencias = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [favoritos, setFavoritos] = useState<number[]>([]);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("intercambius_user");
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
-      // Si no tiene precioOferta, asignar uno por defecto basado en su oferta
-      if (!userData.precioOferta) {
-        userData.precioOferta = 100; // Valor por defecto
-        localStorage.setItem("intercambius_user", JSON.stringify(userData));
-        setUser(userData);
-      }
-    }
-  }, []);
-
-  // Filtrar coincidencias: mismo valor o aproximado (±20%)
-  const coincidencias = useMemo(() => {
-    if (!user || !user.precioOferta) return [];
-
-    const precioUsuario = user.precioOferta;
-    const margen = precioUsuario * 0.2; // 20% de margen
-    const precioMin = precioUsuario - margen;
-    const precioMax = precioUsuario + margen;
-
-    return mockItems.filter(item => {
-      // Filtrar por precio aproximado
-      const precioAproximado = item.precio >= precioMin && item.precio <= precioMax;
-      
-      // Verificar que el usuario tenga crédito disponible (puede tener negativo hasta el límite)
-      const saldoEnPesos = convertIXToPesos(user.saldo);
-      const precioItemEnPesos = convertIXToPesos(item.precio);
-      const nuevoSaldo = saldoEnPesos - precioItemEnPesos;
-      const tieneCredito = nuevoSaldo >= -LIMITE_CREDITO_NEGATIVO;
-
-      return precioAproximado && tieneCredito;
-    });
-  }, [user]);
+  // Obtener coincidencias del backend
+  const { data: coincidencias = [], isLoading, error } = useQuery({
+    queryKey: ['coincidencias', user?.id],
+    queryFn: () => coincidenciasService.getCoincidencias(user!.id),
+    enabled: !!user?.id,
+  });
 
   const toggleFavorito = (id: number) => {
     setFavoritos(prev => 
@@ -197,7 +141,7 @@ const Coincidencias = () => {
   }
 
   const saldoEnPesos = convertIXToPesos(user.saldo);
-  const puedeComprar = saldoEnPesos > -LIMITE_CREDITO_NEGATIVO;
+  const puedeComprar = saldoEnPesos > -LIMITE_CREDITO_NEGATIVO_PESOS;
 
   return (
     <Layout>
@@ -219,7 +163,7 @@ const Coincidencias = () => {
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Has alcanzado el límite de crédito negativo ({formatCurrency(LIMITE_CREDITO_NEGATIVO, 'ARS')}). 
+              Has alcanzado el límite de crédito negativo ({formatCurrency(LIMITE_CREDITO_NEGATIVO_PESOS, 'ARS')}). 
               Necesitás generar créditos positivos para continuar intercambiando.
             </AlertDescription>
           </Alert>
@@ -233,7 +177,7 @@ const Coincidencias = () => {
               <p className="text-lg font-semibold">
                 {formatCurrency(user.saldo)} 
                 <span className="text-sm text-muted-foreground ml-2">
-                  (Límite: {formatCurrency(-LIMITE_CREDITO_NEGATIVO, 'ARS')})
+                  (Límite: {formatCurrency(-LIMITE_CREDITO_NEGATIVO_PESOS, 'ARS')})
                 </span>
               </p>
             </div>
@@ -300,15 +244,14 @@ const Coincidencias = () => {
                       <MapPin className="w-3 h-3" />
                       <span className="truncate max-w-[120px]">{item.ubicacion}</span>
                     </div>
-                    <span className="flex-shrink-0">{item.distancia} km</span>
+                    {item.distancia && (
+                      <span className="flex-shrink-0">{item.distancia} km</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1 text-xs">
                       <span className="text-yellow-500">★</span>
-                      <span className="font-medium">{item.rating}</span>
-                      <span className="text-muted-foreground truncate max-w-[100px]">
-                        {item.vendedor}
-                      </span>
+                      <span className="font-medium">{item.rating || 0}</span>
                     </div>
                     <Button 
                       variant="default" 

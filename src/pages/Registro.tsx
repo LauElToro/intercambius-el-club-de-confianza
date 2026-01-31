@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
 import { ArrowRight, Sparkles, Mail, Lock, Phone } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiError } from "@/lib/api";
 
 const Registro = () => {
-  const navigate = useNavigate();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -31,52 +31,22 @@ const Registro = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nombre: formData.nombre,
-          email: formData.email,
-          password: formData.password,
-          contacto: formData.contacto,
-          ofrece: formData.ofrece,
-          necesita: formData.necesita,
-          precioOferta: formData.precioOferta ? parseInt(formData.precioOferta) : undefined,
-          ubicacion: formData.ubicacion || "CABA",
-        }),
+      await register({
+        nombre: formData.nombre,
+        email: formData.email,
+        password: formData.password,
+        contacto: formData.contacto,
+        ofrece: formData.ofrece,
+        necesita: formData.necesita,
+        precioOferta: formData.precioOferta ? parseInt(formData.precioOferta) : undefined,
+        ubicacion: formData.ubicacion || "CABA",
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al registrarse");
-      }
-
-      // Hacer login automático después del registro
-      const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      const loginData = await loginResponse.json();
-
-      if (loginResponse.ok) {
-        localStorage.setItem("intercambius_token", loginData.token);
-        localStorage.setItem("intercambius_user", JSON.stringify(loginData.user));
-        navigate("/dashboard");
-      } else {
-        navigate("/login");
-      }
     } catch (err: any) {
-      setError(err.message || "Error al registrarse");
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError(err.message || "Error al registrarse");
+      }
     } finally {
       setLoading(false);
     }

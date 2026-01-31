@@ -1,45 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight } from "lucide-react";
-
-interface User {
-  nombre: string;
-  ofrece: string;
-  necesita: string;
-  contacto: string;
-  saldo: number;
-  limite: number;
-  id: number;
-}
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { userService } from "@/services/user.service";
+import { Loader2 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: authLoading } = useAuth();
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("intercambius_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    } else {
-      // Mock user for demo
-      setUser({
-        nombre: "María García",
-        ofrece: "Diseño gráfico, logos, flyers",
-        necesita: "Clases de inglés, reparación de electrodomésticos",
-        contacto: "+54 11 1234-5678",
-        saldo: 150,
-        limite: 500,
-        id: 1,
-      });
-    }
-  }, []);
+  // Obtener datos actualizados del usuario
+  const { data: userData, isLoading: userLoading } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
 
-  if (!user) return null;
+  const currentUser = userData || user;
 
-  const saldoPositivo = user.saldo >= 0;
-  const porcentajeCredito = Math.abs(user.saldo) / user.limite * 100;
+  if (authLoading || userLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-gold" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!currentUser) {
+    navigate('/login');
+    return null;
+  }
+
+  const saldoPositivo = currentUser.saldo >= 0;
+  const porcentajeCredito = Math.abs(currentUser.saldo) / currentUser.limite * 100;
 
   return (
     <Layout>
@@ -47,7 +45,7 @@ const Dashboard = () => {
         {/* Greeting */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">
-            Hola, {user.nombre.split(" ")[0]} 👋
+            Hola, {currentUser.nombre.split(" ")[0]} 👋
           </h1>
           <p className="text-muted-foreground">
             Este es tu espacio en Intercambius
@@ -61,7 +59,7 @@ const Dashboard = () => {
               <p className="text-muted-foreground mb-2">Tu saldo actual</p>
               <div className="flex items-baseline gap-2">
               <span className={`text-5xl md:text-6xl font-bold ${saldoPositivo ? 'gold-text' : 'text-destructive'}`}>
-                  {saldoPositivo ? '+' : ''}{user.saldo}
+                  {saldoPositivo ? '+' : ''}{currentUser.saldo}
                 </span>
                 <span className="text-2xl text-muted-foreground">IX</span>
               </div>
@@ -81,8 +79,8 @@ const Dashboard = () => {
                 />
               </div>
               <p className="text-sm text-foreground">
-                <span className="text-gold">{Math.abs(user.saldo)}</span>
-                <span className="text-muted-foreground"> / {user.limite} IX</span>
+                <span className="text-gold">{Math.abs(currentUser.saldo)}</span>
+                <span className="text-muted-foreground"> / {currentUser.limite} IX</span>
               </p>
             </div>
           </div>
@@ -115,13 +113,13 @@ const Dashboard = () => {
         <div className="grid md:grid-cols-2 gap-6">
           <ProfileCard
             title="Lo que ofrecés"
-            content={user.ofrece}
+            content={currentUser.ofrece}
             icon={<ArrowUpRight className="w-5 h-5 text-primary" />}
             type="ofrece"
           />
           <ProfileCard
             title="Lo que necesitás"
-            content={user.necesita}
+            content={currentUser.necesita}
             icon={<ArrowDownLeft className="w-5 h-5 text-muted-foreground" />}
             type="necesita"
           />

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +20,11 @@ import {
   MessageCircle,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Loader2
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { marketService, MarketItem } from "@/services/market.service";
 
 // Tipos de rubros y sus filtros específicos
 const RUBROS = {
@@ -221,7 +224,18 @@ const Market = () => {
   const [precioMax, setPrecioMax] = useState([500]);
   const [filtrosRubro, setFiltrosRubro] = useState<Record<string, string[]>>({});
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
-  const [favoritos, setFavoritos] = useState<number[]>([2, 6]);
+  const [favoritos, setFavoritos] = useState<number[]>([]);
+
+  // Obtener items del backend
+  const { data: items = [], isLoading, error } = useQuery({
+    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0]],
+    queryFn: () => marketService.getItems({
+      rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado as any : undefined,
+      tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
+      precioMin: precioMin[0],
+      precioMax: precioMax[0],
+    }),
+  });
 
   // Obtener filtros específicos del rubro seleccionado
   const filtrosDisponibles = rubroSeleccionado !== "todos" && rubroSeleccionado in RUBROS
@@ -239,44 +253,26 @@ const Market = () => {
     });
   };
 
-  // Filtrar items
+  // Filtrar items (filtros del lado del cliente para búsqueda y detalles)
   const itemsFiltrados = useMemo(() => {
-    return mockItems.filter(item => {
+    return items.filter((item: MarketItem) => {
       // Búsqueda por texto
       if (search && !item.titulo.toLowerCase().includes(search.toLowerCase()) &&
           !item.descripcion.toLowerCase().includes(search.toLowerCase())) {
         return false;
       }
 
-      // Filtro por tipo (productos/servicios)
-      if (tipoSeleccionado !== "todos") {
-        const esProducto = item.rubro === "productos" || item.rubro === "alimentos";
-        const esServicio = item.rubro === "servicios" || item.rubro === "experiencias";
-        if (tipoSeleccionado === "productos" && !esProducto) return false;
-        if (tipoSeleccionado === "servicios" && !esServicio) return false;
-      }
-
-      // Filtro por rubro
-      if (rubroSeleccionado !== "todos" && item.rubro !== rubroSeleccionado) {
+      // Filtro por distancia (si está disponible)
+      if (item.distancia && item.distancia > distanciaMax[0]) {
         return false;
       }
 
-      // Filtro por distancia
-      if (item.distancia > distanciaMax[0]) {
-        return false;
-      }
-
-      // Filtro por precio
-      if (item.precio < precioMin[0] || item.precio > precioMax[0]) {
-        return false;
-      }
-
-      // Filtros específicos del rubro
+      // Filtros específicos del rubro (detalles)
       if (filtrosDisponibles && item.detalles) {
         for (const [categoria, valores] of Object.entries(filtrosRubro)) {
           if (valores.length > 0) {
-            const valorItem = item.detalles[categoria as keyof typeof item.detalles];
-            if (!valorItem || !valores.includes(valorItem as string)) {
+            const valorItem = item.detalles[categoria];
+            if (!valorItem || !valores.includes(valorItem)) {
               return false;
             }
           }
@@ -285,7 +281,7 @@ const Market = () => {
 
       return true;
     });
-  }, [search, tipoSeleccionado, rubroSeleccionado, distanciaMax, precioMin, precioMax, filtrosRubro, filtrosDisponibles]);
+  }, [items, search, distanciaMax, filtrosRubro, filtrosDisponibles]);
 
   const toggleFavorito = (id: number) => {
     setFavoritos(prev => 
@@ -533,9 +529,28 @@ const Market = () => {
               </Button>
             </div>
 
+            {/* Loading state */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-gold" />
+                <span className="ml-2 text-muted-foreground">Cargando items...</span>
+              </div>
+            )}
+
+            {/* Error state */}
+            {error && (
+              <div className="text-center py-12">
+                <p className="text-destructive mb-4">Error al cargar los items</p>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Reintentar
+                </Button>
+              </div>
+            )}
+
             {/* Grid de items */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {itemsFiltrados.map(item => (
+            {!isLoading && !error && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {itemsFiltrados.map((item: MarketItem) => (
                 <Card 
                   key={item.id} 
                   className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
@@ -586,15 +601,14 @@ const Market = () => {
                         <MapPin className="w-3 h-3" />
                         <span className="truncate max-w-[120px]">{item.ubicacion}</span>
                       </div>
-                      <span className="flex-shrink-0">{item.distancia} km</span>
+                      {item.distancia && (
+                        <span className="flex-shrink-0">{item.distancia} km</span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1 text-xs">
                         <span className="text-yellow-500">★</span>
-                        <span className="font-medium">{item.rating}</span>
-                        <span className="text-muted-foreground truncate max-w-[100px]">
-                          {item.vendedor}
-                        </span>
+                        <span className="font-medium">{item.rating || 0}</span>
                       </div>
                       <Button 
                         variant="default" 
@@ -611,10 +625,11 @@ const Market = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
-            {itemsFiltrados.length === 0 && (
+            {!isLoading && !error && itemsFiltrados.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">
                   No se encontraron resultados con los filtros seleccionados

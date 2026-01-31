@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
 import { ArrowRight, Mail, Lock } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiError } from "@/lib/api";
 
 const Login = () => {
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -24,28 +24,13 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al iniciar sesión");
-      }
-
-      // Guardar token y usuario
-      localStorage.setItem("intercambius_token", data.token);
-      localStorage.setItem("intercambius_user", JSON.stringify(data.user));
-
-      // Redirigir al dashboard
-      navigate("/dashboard");
+      await login(formData.email, formData.password);
     } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión");
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError(err.message || "Error al iniciar sesión");
+      }
     } finally {
       setLoading(false);
     }
