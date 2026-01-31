@@ -4,7 +4,7 @@
   publish = "dist"
 
   [build.environment]
-    VITE_API_URL = "https://ticket-backend-nine.vercel.app/api"
+    VITE_API_URL = "https://intercambios-backend.vercel.app"
 
 # Opcional: config local con Netlify CLI
 [dev]
