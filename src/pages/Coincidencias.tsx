@@ -154,7 +154,7 @@ const Coincidencias = () => {
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Productos y servicios con valor similar a lo que ofrecés ({formatCurrency(user.precioOferta || 0)})
+            Productos y servicios con valor similar a tus publicaciones
           </p>
         </div>
 
@@ -184,7 +184,7 @@ const Coincidencias = () => {
             <div className="text-right">
               <p className="text-sm text-muted-foreground mb-1">Valor de tu oferta</p>
               <p className="text-lg font-semibold gold-text">
-                {formatCurrency(user.precioOferta || 0)}
+                Basado en tus productos
               </p>
             </div>
           </div>
@@ -277,9 +277,9 @@ const Coincidencias = () => {
               No encontramos coincidencias con el valor de tu oferta
             </p>
             <p className="text-sm text-muted-foreground">
-              {user.precioOferta 
-                ? `Buscamos productos/servicios con valor similar a ${formatCurrency(user.precioOferta)} (±20%)`
-                : "Configurá el valor de tu oferta en tu perfil"}
+              {coincidencias.length === 0 
+                ? "Crea productos o servicios para encontrar coincidencias"
+                : "Buscamos productos/servicios con valor similar a los tuyos (±20%)"}
             </p>
           </div>
         )}

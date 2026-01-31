@@ -52,8 +52,6 @@ const Registro = () => {
         email: formData.email,
         password: formData.password,
         contacto: formData.telefono,
-        ofrece: "", // Se completará después al crear productos/servicios
-        necesita: "", // Se completará después
         ubicacion: formData.ubicacion,
       });
     } catch (err: any) {

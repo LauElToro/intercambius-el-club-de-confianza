@@ -118,17 +118,19 @@ const Dashboard = () => {
         {/* Profile Cards */}
         <div className="grid md:grid-cols-2 gap-6">
           <ProfileCard
-            title="Lo que ofrecés"
-            content={currentUser.ofrece}
+            title="Mis productos/servicios"
+            content={currentUser.ofrece || "Aún no has creado ningún producto o servicio. ¡Crea uno ahora!"}
             icon={<ArrowUpRight className="w-5 h-5 text-primary" />}
-            type="ofrece"
+            type="productos"
           />
-          <ProfileCard
-            title="Lo que necesitás"
-            content={currentUser.necesita}
-            icon={<ArrowDownLeft className="w-5 h-5 text-muted-foreground" />}
-            type="necesita"
-          />
+          <Link to="/market" className="block">
+            <ProfileCard
+              title="Explorar marketplace"
+              content="Descubrí productos y servicios disponibles en la comunidad"
+              icon={<ArrowDownLeft className="w-5 h-5 text-muted-foreground" />}
+              type="market"
+            />
+          </Link>
         </div>
 
         {/* Recent activity (mock) */}
