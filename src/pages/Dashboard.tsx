@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
@@ -6,13 +5,26 @@ import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight } from "lucide-reac
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
+import { intercambiosService } from "@/services/intercambios.service";
 import { Loader2 } from "lucide-react";
+
+function formatFechaRelativa(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Hoy";
+  if (diffDays === 1) return "Ayer";
+  if (diffDays < 7) return `Hace ${diffDays} días`;
+  if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semana${diffDays >= 14 ? "s" : ""}`;
+  if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} mes${diffDays >= 60 ? "es" : ""}`;
+  return `Hace ${Math.floor(diffDays / 365)} año${diffDays >= 730 ? "s" : ""}`;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
-  // Obtener datos actualizados del usuario
   const { data: userData, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => userService.getCurrentUser(),
@@ -20,6 +32,12 @@ const Dashboard = () => {
   });
 
   const currentUser = userData || user;
+
+  const { data: intercambios = [] } = useQuery({
+    queryKey: ['intercambios', currentUser?.id],
+    queryFn: () => intercambiosService.getByUserId(currentUser!.id!),
+    enabled: !!currentUser?.id,
+  });
 
   if (authLoading || userLoading) {
     return (
@@ -135,29 +153,28 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Recent activity (mock) */}
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">Últimos movimientos</h2>
-          <div className="space-y-3">
-            <ActivityItem
-              type="recibido"
-              description="Diseño de logo para Juan Pérez"
-              amount={80}
-              date="Hace 3 días"
-            />
-            <ActivityItem
-              type="enviado"
-              description="Clase de inglés con Ana López"
-              amount={50}
-              date="Hace 1 semana"
-            />
-            <ActivityItem
-              type="recibido"
-              description="Flyer para emprendimiento"
-              amount={40}
-              date="Hace 2 semanas"
-            />
-          </div>
+          {intercambios.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center">
+              Aún no tenés movimientos. Registrá un intercambio para verlo acá.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {intercambios
+                .sort((a, b) => new Date(b.fecha || b.createdAt || 0).getTime() - new Date(a.fecha || a.createdAt || 0).getTime())
+                .slice(0, 10)
+                .map((i) => (
+                  <ActivityItem
+                    key={i.id}
+                    type={i.creditos > 0 ? "recibido" : "enviado"}
+                    description={i.descripcion}
+                    amount={Math.abs(i.creditos)}
+                    date={formatFechaRelativa(i.fecha || i.createdAt || "")}
+                  />
+                ))}
+            </div>
+          )}
         </div>
       </div>
     </Layout>

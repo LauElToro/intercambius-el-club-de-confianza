@@ -117,7 +117,6 @@ const CrearProducto = () => {
   const [formData, setFormData] = useState({
     titulo: "",
     descripcion: "",
-    descripcionCompleta: "",
     precio: "",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: user?.ubicacion || "",
@@ -181,7 +180,6 @@ const CrearProducto = () => {
       const itemData: CreateMarketItemData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
-        descripcionCompleta: formData.descripcionCompleta || undefined,
         precio: parseInt(formData.precio),
         rubro: formData.rubro,
         ubicacion: formData.ubicacion,
@@ -263,25 +261,14 @@ const CrearProducto = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="descripcion">Descripción corta *</Label>
+                  <Label htmlFor="descripcion">Descripción *</Label>
                   <Textarea
                     id="descripcion"
                     value={formData.descripcion}
                     onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-                    placeholder="Breve descripción que aparecerá en el listado"
-                    rows={3}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="descripcionCompleta">Descripción completa</Label>
-                  <Textarea
-                    id="descripcionCompleta"
-                    value={formData.descripcionCompleta}
-                    onChange={(e) => setFormData(prev => ({ ...prev, descripcionCompleta: e.target.value }))}
-                    placeholder="Descripción detallada del producto/servicio"
+                    placeholder="Descripción del producto o servicio"
                     rows={5}
+                    required
                   />
                 </div>
 

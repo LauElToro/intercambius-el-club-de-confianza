@@ -1,10 +1,21 @@
 import api, { ApiError } from '@/lib/api';
 
+export interface VendedorInfo {
+  id: number;
+  nombre: string;
+  avatar?: string;
+  rating: number;
+  totalResenas: number;
+  ubicacion?: string;
+  miembroDesde?: string;
+  verificado?: boolean;
+}
+
 export interface MarketItem {
   id: number;
   titulo: string;
   descripcion: string;
-  descripcionCompleta?: string;
+  descripcionCompleta?: string; // legacy, usar descripcion
   precio: number;
   rubro: 'servicios' | 'productos' | 'alimentos' | 'experiencias';
   ubicacion: string;
@@ -16,6 +27,7 @@ export interface MarketItem {
   caracteristicas?: string[];
   createdAt: string;
   updatedAt: string;
+  vendedor?: VendedorInfo | null;
 }
 
 export interface MarketItemFilters {
@@ -30,7 +42,6 @@ export interface MarketItemFilters {
 export interface CreateMarketItemData {
   titulo: string;
   descripcion: string;
-  descripcionCompleta?: string;
   precio: number;
   rubro: 'servicios' | 'productos' | 'alimentos' | 'experiencias';
   ubicacion: string;
