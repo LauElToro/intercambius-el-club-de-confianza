@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Search, X } from "lucide-react";
+import { MapPin, Search, X, Navigation } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LocationPickerProps {
   value: string;
@@ -14,6 +15,45 @@ interface LocationPickerProps {
   onRadiusChange?: (radius: number) => void;
   label?: string;
   required?: boolean;
+}
+
+// Función para obtener la dirección desde coordenadas (reverse geocoding)
+async function getAddressFromCoordinates(lat: number, lng: number): Promise<string> {
+  try {
+    // Usar Nominatim (OpenStreetMap) para reverse geocoding gratuito
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'Intercambius App'
+        }
+      }
+    );
+    const data = await response.json();
+    
+    if (data && data.address) {
+      const addr = data.address;
+      // Construir dirección legible
+      const parts: string[] = [];
+      
+      if (addr.neighbourhood || addr.suburb) {
+        parts.push(addr.neighbourhood || addr.suburb);
+      }
+      if (addr.city || addr.town || addr.village) {
+        parts.push(addr.city || addr.town || addr.village);
+      }
+      if (addr.state) {
+        parts.push(addr.state);
+      }
+      
+      return parts.length > 0 ? parts.join(', ') : data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+    
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch (error) {
+    console.error('Error obteniendo dirección:', error);
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
 }
 
 export const LocationPicker = ({
@@ -27,6 +67,8 @@ export const LocationPicker = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
   // Ubicaciones comunes en Argentina
@@ -51,6 +93,71 @@ export const LocationPicker = ({
       }
     }
   }, [value]);
+
+  // Función para obtener ubicación automática
+  const handleGetCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no soporta geolocalización');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Obtener dirección desde coordenadas
+          const address = await getAddressFromCoordinates(latitude, longitude);
+          
+          setSelectedLocation({
+            lat: latitude,
+            lng: longitude,
+            address: address
+          });
+          
+          onChange(address, latitude, longitude, radius);
+          setLocationError(null);
+        } catch (error) {
+          console.error('Error obteniendo dirección:', error);
+          const fallbackAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setSelectedLocation({
+            lat: latitude,
+            lng: longitude,
+            address: fallbackAddress
+          });
+          onChange(fallbackAddress, latitude, longitude, radius);
+        } finally {
+          setIsGettingLocation(false);
+        }
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        let errorMessage = 'No se pudo obtener tu ubicación';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Permiso de ubicación denegado. Por favor, permite el acceso a tu ubicación en la configuración del navegador.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Información de ubicación no disponible.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Tiempo de espera agotado al obtener la ubicación.';
+            break;
+        }
+        
+        setLocationError(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
 
   const handleLocationSelect = (location: typeof commonLocations[0]) => {
     setSelectedLocation({ ...location, address: location.name });
@@ -114,6 +221,24 @@ export const LocationPicker = ({
             </DialogHeader>
             
             <div className="space-y-4">
+              {/* Botón de ubicación automática */}
+              <Button
+                type="button"
+                onClick={handleGetCurrentLocation}
+                disabled={isGettingLocation}
+                variant="outline"
+                className="w-full"
+              >
+                <Navigation className={`w-4 h-4 mr-2 ${isGettingLocation ? 'animate-spin' : ''}`} />
+                {isGettingLocation ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual'}
+              </Button>
+
+              {locationError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{locationError}</AlertDescription>
+                </Alert>
+              )}
+
               {/* Búsqueda */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
