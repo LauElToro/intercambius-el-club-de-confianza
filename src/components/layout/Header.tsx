@@ -1,27 +1,60 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { 
+  Moon, 
+  Sun, 
+  Menu, 
+  X, 
+  ShoppingBag, 
+  Users, 
+  User,
+  Home,
+  LogIn
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === "/";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Cerrar menú mobile al cambiar de ruta
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const navItems = [
+    { to: "/market", label: "Market", icon: ShoppingBag },
+    { to: "/coincidencias", label: "Coincidencias", icon: Users },
+    { to: "/dashboard", label: "Mi cuenta", icon: User },
+  ];
+
+  const handleNavClick = (to: string) => {
+    navigate(to);
+    setMobileMenuOpen(false);
+  };
+
   if (!mounted) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={logo} alt="Intercambius" className="h-10 w-10 rounded-full" />
-            <span className="text-xl font-semibold gold-text">Intercambius</span>
+          <Link to="/" className="flex items-center gap-2 md:gap-3">
+            <img src={logo} alt="Intercambius" className="h-8 w-8 md:h-10 md:w-10 rounded-full" />
+            <span className="text-lg md:text-xl font-semibold gold-text">Intercambius</span>
           </Link>
           <div className="h-9 w-9" />
         </div>
@@ -30,40 +63,54 @@ const Header = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <img src={logo} alt="Intercambius" className="h-10 w-10 rounded-full" />
-          <span className="text-xl font-semibold gold-text">Intercambius</span>
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+          <img 
+            src={logo} 
+            alt="Intercambius" 
+            className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover"
+          />
+          <span className="text-lg md:text-xl font-semibold gold-text hidden sm:inline-block">
+            Intercambius
+          </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6">
-          <Link 
-            to="/market" 
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Market
-          </Link>
-          <Link 
-            to="/coincidencias" 
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Coincidencias
-          </Link>
-          <Link 
-            to="/dashboard" 
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Mi cuenta
-          </Link>
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.to || 
+              (item.to !== "/" && location.pathname.startsWith(item.to));
+            
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "text-foreground bg-muted"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        {/* Right side actions */}
+        <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="h-9 w-9"
+            aria-label="Cambiar tema"
           >
             {theme === "dark" ? (
               <Sun className="h-4 w-4" />
@@ -71,21 +118,150 @@ const Header = () => {
               <Moon className="h-4 w-4" />
             )}
           </Button>
-          {isHome ? (
+
+          {/* Desktop CTA Button */}
+          {!isMobile && (
             <>
-              <Link to="/registro">
-                <Button variant="gold" size="default">
-                  Sumarme
-                </Button>
-              </Link>
+              {isHome ? (
+                <Link to="/registro">
+                  <Button variant="gold" size="default" className="hidden sm:flex">
+                    Sumarme
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/dashboard">
+                  <Button variant="gold-outline" size="default" className="hidden sm:flex">
+                    Mi cuenta
+                  </Button>
+                </Link>
+              )}
             </>
-          ) : (
-            <Link to="/dashboard">
-              <Button variant="gold-outline" size="default">
-                Mi cuenta
-              </Button>
-            </Link>
           )}
+
+          {/* Mobile Menu Button */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden h-9 w-9"
+                aria-label="Abrir menú"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0">
+              <div className="flex flex-col h-full">
+                {/* Header del menú mobile */}
+                <SheetHeader className="px-6 pt-6 pb-4 border-b">
+                  <div className="flex items-center gap-3 mb-4">
+                    <img 
+                      src={logo} 
+                      alt="Intercambius" 
+                      className="h-10 w-10 rounded-full"
+                    />
+                    <SheetTitle className="text-xl font-semibold gold-text">
+                      Intercambius
+                    </SheetTitle>
+                  </div>
+                </SheetHeader>
+
+                {/* Navigation Items */}
+                <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                  {/* Home link */}
+                  <button
+                    onClick={() => handleNavClick("/")}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                      location.pathname === "/"
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    )}
+                  >
+                    <Home className="h-5 w-5" />
+                    <span className="font-medium">Inicio</span>
+                  </button>
+
+                  <Separator className="my-2" />
+
+                  {/* Main nav items */}
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.to || 
+                      (item.to !== "/" && location.pathname.startsWith(item.to));
+                    
+                    return (
+                      <button
+                        key={item.to}
+                        onClick={() => handleNavClick(item.to)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                          isActive
+                            ? "bg-muted text-foreground"
+                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span className="font-medium">{item.label}</span>
+                      </button>
+                    );
+                  })}
+
+                  <Separator className="my-2" />
+
+                  {/* CTA Button en mobile */}
+                  {isHome ? (
+                    <Link to="/registro" className="block">
+                      <Button 
+                        variant="gold" 
+                        className="w-full justify-start gap-3 h-auto py-3"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <LogIn className="h-5 w-5" />
+                        <span className="font-medium">Sumarme</span>
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to="/dashboard" className="block">
+                      <Button 
+                        variant="gold-outline" 
+                        className="w-full justify-start gap-3 h-auto py-3"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <User className="h-5 w-5" />
+                        <span className="font-medium">Mi cuenta</span>
+                      </Button>
+                    </Link>
+                  )}
+                </nav>
+
+                {/* Footer del menú mobile */}
+                <div className="px-4 py-4 border-t">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Tema</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="h-8 gap-2"
+                    >
+                      {theme === "dark" ? (
+                        <>
+                          <Sun className="h-4 w-4" />
+                          <span>Claro</span>
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="h-4 w-4" />
+                          <span>Oscuro</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>
