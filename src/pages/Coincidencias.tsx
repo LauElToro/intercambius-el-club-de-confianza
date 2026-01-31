@@ -27,7 +27,12 @@ const Coincidencias = () => {
   // Obtener coincidencias del backend
   const { data: coincidencias = [], isLoading, error } = useQuery({
     queryKey: ['coincidencias', user?.id],
-    queryFn: () => coincidenciasService.getCoincidencias(user!.id),
+    queryFn: () => {
+      if (!user?.id) {
+        throw new Error('Usuario no autenticado');
+      }
+      return coincidenciasService.getCoincidencias(user.id);
+    },
     enabled: !!user?.id,
   });
 
@@ -115,9 +120,9 @@ const Coincidencias = () => {
           </div>
         ) : Array.isArray(coincidencias) && coincidencias.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {coincidencias.map((item: MarketItem) => {
-              if (!item || !item.id) return null;
-              return (
+            {coincidencias
+              .filter((item: MarketItem) => item && item.id)
+              .map((item: MarketItem) => (
               <Card 
                 key={item.id} 
                 className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
@@ -195,8 +200,7 @@ const Coincidencias = () => {
                   </div>
                 </CardContent>
               </Card>
-              );
-            })}
+            ))}
           </div>
         ) : (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
@@ -205,7 +209,7 @@ const Coincidencias = () => {
               No encontramos coincidencias con el valor de tu oferta
             </p>
             <p className="text-sm text-muted-foreground">
-              {coincidencias.length === 0 
+              {(!coincidencias || (Array.isArray(coincidencias) && coincidencias.length === 0))
                 ? "Crea productos o servicios para encontrar coincidencias"
                 : "Buscamos productos/servicios con valor similar a los tuyos (±20%)"}
             </p>

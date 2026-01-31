@@ -13,10 +13,27 @@ export const coincidenciasService = {
       const coincidencias = await api.get<Coincidencia[]>(`/api/coincidencias/${userId}`);
       // Extraer solo los items del array de coincidencias
       if (!Array.isArray(coincidencias)) {
+        console.warn('Coincidencias no es un array:', coincidencias);
         return [];
       }
-      return coincidencias.map(c => c.item || c).filter(Boolean);
+      const items = coincidencias
+        .map(c => {
+          // Si c tiene la propiedad 'item', usar esa, sino usar c directamente
+          if (c && typeof c === 'object' && 'item' in c) {
+            return (c as Coincidencia).item;
+          }
+          return c as MarketItem;
+        })
+        .filter((item): item is MarketItem => 
+          item !== null && 
+          item !== undefined && 
+          typeof item === 'object' && 
+          'id' in item && 
+          'titulo' in item
+        );
+      return items;
     } catch (error) {
+      console.error('Error al obtener coincidencias:', error);
       if (error instanceof ApiError) {
         throw error;
       }

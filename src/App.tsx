@@ -31,54 +31,54 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
             <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/registro" element={<Registro />} />
-            <Route path="/market" element={<Market />} />
-            <Route path="/market/:id" element={<ProductoDetalle />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/coincidencias" 
-              element={
-                <ProtectedRoute>
-                  <Coincidencias />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/registrar-intercambio" 
-              element={
-                <ProtectedRoute>
-                  <RegistrarIntercambio />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/crear-producto" 
-              element={
-                <ProtectedRoute>
-                  <CrearProducto />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="/ofertas" element={<Ofertas />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/registro" element={<Registro />} />
+              <Route path="/market" element={<Market />} />
+              <Route path="/market/:id" element={<ProductoDetalle />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/coincidencias" 
+                element={
+                  <ProtectedRoute>
+                    <Coincidencias />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/registrar-intercambio" 
+                element={
+                  <ProtectedRoute>
+                    <RegistrarIntercambio />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/crear-producto" 
+                element={
+                  <ProtectedRoute>
+                    <CrearProducto />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="/ofertas" element={<Ofertas />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
-        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>
