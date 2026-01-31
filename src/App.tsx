@@ -13,7 +13,6 @@ import Market from "./pages/Market";
 import ProductoDetalle from "./pages/ProductoDetalle";
 import Perfil from "./pages/Perfil";
 import Coincidencias from "./pages/Coincidencias";
-import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import CrearProducto from "./pages/CrearProducto";
 import EditarProducto from "./pages/EditarProducto";
 import MisPublicaciones from "./pages/MisPublicaciones";
@@ -46,6 +45,7 @@ const App = () => (
               <Route path="/registro" element={<Registro />} />
               <Route path="/market" element={<Market />} />
               <Route path="/market/:id" element={<ProductoDetalle />} />
+              <Route path="/producto/:id" element={<ProductoDetalle />} />
               <Route path="/perfil/:id" element={<Perfil />} />
               <Route 
                 path="/dashboard" 
@@ -60,14 +60,6 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Coincidencias />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/registrar-intercambio" 
-                element={
-                  <ProtectedRoute>
-                    <RegistrarIntercambio />
                   </ProtectedRoute>
                 } 
               />

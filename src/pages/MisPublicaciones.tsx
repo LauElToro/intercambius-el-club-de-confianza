@@ -158,7 +158,7 @@ const MisPublicaciones = () => {
                 key={item.id}
                 className="overflow-hidden hover:border-gold/30 transition-colors group"
               >
-                <Link to={`/market/${item.id}`} className="block">
+                <Link to={`/producto/${item.id}`} className="block">
                   <div className="aspect-video bg-muted">
                     <img
                       src={item.imagen || "https://via.placeholder.com/300x200"}
@@ -174,7 +174,7 @@ const MisPublicaciones = () => {
                     </Badge>
                     <span className="font-bold text-gold">{item.precio} IX</span>
                   </div>
-                  <Link to={`/market/${item.id}`}>
+                  <Link to={`/producto/${item.id}`}>
                     <h3 className="font-semibold line-clamp-2 hover:text-gold mb-1">
                       {item.titulo}
                     </h3>
@@ -186,7 +186,7 @@ const MisPublicaciones = () => {
                     </p>
                   )}
                   <div className="flex gap-2">
-                    <Link to={`/market/${item.id}`} className="flex-1">
+                    <Link to={`/producto/${item.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full">
                         <MessageCircle className="w-4 h-4 mr-1" />
                         Ver

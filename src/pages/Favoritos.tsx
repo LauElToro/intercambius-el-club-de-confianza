@@ -85,7 +85,7 @@ const Favoritos = () => {
                 key={item.id}
                 className="overflow-hidden hover:border-gold/50 transition-colors group"
               >
-                <Link to={`/market/${item.id}`}>
+                <Link to={`/producto/${item.id}`}>
                   <div className="aspect-video bg-muted relative">
                     <img
                       src={item.imagen || (item.images?.[0]?.url) || "https://via.placeholder.com/300x200"}
@@ -109,7 +109,7 @@ const Favoritos = () => {
                   <Badge variant="secondary" className="text-xs mb-2">
                     {RUBROS[item.rubro]?.icon} {RUBROS[item.rubro]?.label ?? item.rubro}
                   </Badge>
-                  <Link to={`/market/${item.id}`}>
+                  <Link to={`/producto/${item.id}`}>
                     <h3 className="font-semibold line-clamp-2 hover:text-gold mb-1">{item.titulo}</h3>
                   </Link>
                   <p className="font-bold text-gold mb-2">{formatCurrency(item.precio)}</p>
@@ -119,7 +119,7 @@ const Favoritos = () => {
                       {item.ubicacion}
                     </p>
                   )}
-                  <Link to={`/market/${item.id}`}>
+                  <Link to={`/producto/${item.id}`}>
                     <Button variant="outline" size="sm" className="w-full">
                       <MessageCircle className="w-4 h-4 mr-1" />
                       Ver detalle

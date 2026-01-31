@@ -30,7 +30,6 @@ import { checkoutService } from "@/services/checkout.service";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { CreditCard } from "lucide-react";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,11 +47,6 @@ const ProductoDetalle = () => {
   });
 
   const usuario = currentUser || user;
-  const saldo = Number(usuario?.saldo) ?? 0;
-  const limite = Number(usuario?.limite) ?? 150000;
-  const precio = item?.precio ?? 0;
-  const puedeGastar = saldo + limite;
-  const puedeComprar = !!item && (saldo - precio >= -limite);
 
   const { data: item, isLoading, error } = useQuery({
     queryKey: ['marketItem', id],
@@ -91,6 +85,12 @@ const ProductoDetalle = () => {
   const medias = (item?.images && item.images.length > 0)
     ? item.images
     : (item?.imagen ? [{ url: item.imagen, mediaType: 'image' as const }] : []);
+
+  const saldo = Number(usuario?.saldo) ?? 0;
+  const limite = Number(usuario?.limite) ?? 150000;
+  const precio = item?.precio ?? 0;
+  const puedeGastar = saldo + limite;
+  const puedeComprar = !!item && (saldo - precio >= -limite);
 
   if (isLoading) {
     return (

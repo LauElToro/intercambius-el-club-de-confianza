@@ -80,10 +80,10 @@ const Historial = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                Aún no tenés movimientos registrados.
+                Aún no tenés movimientos registrados. Los intercambios se registran automáticamente cuando pagás un producto con IX desde el checkout.
               </p>
-              <Button variant="gold" onClick={() => navigate("/registrar-intercambio")}>
-                Registrar intercambio
+              <Button variant="gold" onClick={() => navigate("/market")}>
+                Explorar productos
               </Button>
             </CardContent>
           </Card>

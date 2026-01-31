@@ -128,12 +128,6 @@ const Dashboard = () => {
               <span>Crear producto/servicio</span>
             </Button>
           </Link>
-          <Link to="/registrar-intercambio">
-            <Button variant="gold-outline" size="lg" className="w-full h-auto py-4 flex flex-col gap-1">
-              <Plus className="w-5 h-5" />
-              <span>Registrar intercambio</span>
-            </Button>
-          </Link>
           <Link to="/coincidencias">
             <Button variant="gold-outline" size="lg" className="w-full h-auto py-4 flex flex-col gap-1">
               <ArrowRight className="w-5 h-5" />

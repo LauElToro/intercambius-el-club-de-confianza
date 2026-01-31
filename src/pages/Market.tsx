@@ -426,7 +426,7 @@ const Market = () => {
                 <Card 
                   key={item.id} 
                   className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
-                  onClick={() => navigate(`/market/${item.id}`)}
+                  onClick={() => navigate(`/producto/${item.id}`)}
                 >
                   <div className="relative group">
                     <img
@@ -485,7 +485,7 @@ const Market = () => {
                         className="bg-gold hover:bg-gold/90 text-primary-foreground"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/market/${item.id}`);
+                          navigate(`/producto/${item.id}`);
                         }}
                       >
                         <MessageCircle className="w-4 h-4 mr-1" />

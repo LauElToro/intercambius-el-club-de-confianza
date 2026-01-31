@@ -110,7 +110,7 @@ const Perfil = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {productos.map((item) => (
-                  <Link key={item.id} to={`/market/${item.id}`}>
+                  <Link key={item.id} to={`/producto/${item.id}`}>
                     <Card className="overflow-hidden hover:border-gold/50 transition-colors cursor-pointer">
                       <div className="aspect-video bg-muted">
                         <img
