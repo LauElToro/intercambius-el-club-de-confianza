@@ -13,6 +13,7 @@ import Market from "./pages/Market";
 import ProductoDetalle from "./pages/ProductoDetalle";
 import Coincidencias from "./pages/Coincidencias";
 import RegistrarIntercambio from "./pages/RegistrarIntercambio";
+import CrearProducto from "./pages/CrearProducto";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -61,6 +62,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <RegistrarIntercambio />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/crear-producto" 
+              element={
+                <ProtectedRoute>
+                  <CrearProducto />
                 </ProtectedRoute>
               } 
             />

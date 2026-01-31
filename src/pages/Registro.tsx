@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
-import { ArrowRight, Sparkles, Mail, Lock, Phone } from "lucide-react";
+import { ArrowRight, Sparkles, Mail, Lock, Phone, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 
@@ -14,32 +13,48 @@ const Registro = () => {
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     nombre: "",
+    apellido: "",
     email: "",
     password: "",
-    contacto: "",
-    ofrece: "",
-    necesita: "",
-    precioOferta: "",
-    ubicacion: "",
+    confirmPassword: "",
+    telefono: "",
+    ubicacion: "CABA",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Validaciones
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    if (!recaptchaVerified) {
+      setError("Por favor, completa el reCAPTCHA");
+      return;
+    }
+
     setLoading(true);
 
     try {
       await register({
-        nombre: formData.nombre,
+        nombre: `${formData.nombre} ${formData.apellido}`.trim(),
         email: formData.email,
         password: formData.password,
-        contacto: formData.contacto,
-        ofrece: formData.ofrece,
-        necesita: formData.necesita,
-        precioOferta: formData.precioOferta ? parseInt(formData.precioOferta) : undefined,
-        ubicacion: formData.ubicacion || "CABA",
+        contacto: formData.telefono,
+        ofrece: "", // Se completará después al crear productos/servicios
+        necesita: "", // Se completará después
+        ubicacion: formData.ubicacion,
       });
     } catch (err: any) {
       if (err instanceof ApiError) {
@@ -52,11 +67,15 @@ const Registro = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
+  };
+
+  const handleRecaptcha = (token: string | null) => {
+    setRecaptchaVerified(!!token);
   };
 
   return (
@@ -70,10 +89,10 @@ const Registro = () => {
             </Link>
             <div className="inline-flex items-center gap-2 mb-2">
               <Sparkles className="w-6 h-6 text-gold" />
-              <h1 className="text-3xl font-bold">Sumate al intercambio</h1>
+              <h1 className="text-3xl font-bold">Crear cuenta</h1>
             </div>
             <p className="text-muted-foreground">
-              En 1 minuto estás adentro
+              Completá tus datos para empezar a intercambiar
             </p>
           </div>
 
@@ -85,21 +104,44 @@ const Registro = () => {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="nombre">¿Cómo te llamás?</Label>
-                <Input
-                  id="nombre"
-                  name="nombre"
-                  placeholder="Tu nombre o el de tu emprendimiento"
-                  value={formData.nombre}
-                  onChange={handleChange}
-                  required
-                  className="bg-surface border-border focus:border-gold"
-                />
+              {/* Nombre y Apellido */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nombre">Nombre *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="nombre"
+                      name="nombre"
+                      placeholder="Juan"
+                      value={formData.nombre}
+                      onChange={handleChange}
+                      required
+                      className="pl-10 bg-surface border-border focus:border-gold"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="apellido">Apellido *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="apellido"
+                      name="apellido"
+                      placeholder="Pérez"
+                      value={formData.apellido}
+                      onChange={handleChange}
+                      required
+                      className="pl-10 bg-surface border-border focus:border-gold"
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
@@ -115,15 +157,34 @@ const Registro = () => {
                 </div>
               </div>
 
+              {/* Teléfono */}
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="telefono">Teléfono *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="telefono"
+                    name="telefono"
+                    type="tel"
+                    placeholder="+54 11 1234-5678"
+                    value={formData.telefono}
+                    onChange={handleChange}
+                    required
+                    className="pl-10 bg-surface border-border focus:border-gold"
+                  />
+                </div>
+              </div>
+
+              {/* Contraseña */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña *</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="password"
                     name="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="Mínimo 6 caracteres"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -131,20 +192,19 @@ const Registro = () => {
                     className="pl-10 bg-surface border-border focus:border-gold"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Mínimo 6 caracteres
-                </p>
               </div>
 
+              {/* Confirmar Contraseña */}
               <div className="space-y-2">
-                <Label htmlFor="contacto">¿Cómo te contactamos?</Label>
+                <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    id="contacto"
-                    name="contacto"
-                    placeholder="+54 11 1234-5678 o email"
-                    value={formData.contacto}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Repetí tu contraseña"
+                    value={formData.confirmPassword}
                     onChange={handleChange}
                     required
                     className="pl-10 bg-surface border-border focus:border-gold"
@@ -152,88 +212,59 @@ const Registro = () => {
                 </div>
               </div>
 
+              {/* Ubicación */}
               <div className="space-y-2">
-                <Label htmlFor="ofrece">¿Qué ofrecés?</Label>
-                <Textarea
-                  id="ofrece"
-                  name="ofrece"
-                  placeholder="Ej: Diseño gráfico, clases de inglés, tortas caseras..."
-                  value={formData.ofrece}
-                  onChange={handleChange}
-                  required
-                  className="bg-surface border-border focus:border-gold min-h-[80px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Contanos qué sabés hacer o qué productos tenés
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="necesita">¿Qué necesitás?</Label>
-                <Textarea
-                  id="necesita"
-                  name="necesita"
-                  placeholder="Ej: Reparación de computadoras, clases de cocina..."
-                  value={formData.necesita}
-                  onChange={handleChange}
-                  required
-                  className="bg-surface border-border focus:border-gold min-h-[80px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  ¿Qué te vendría bien conseguir?
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="precioOferta">Precio de tu oferta (IX)</Label>
-                <Input
-                  id="precioOferta"
-                  name="precioOferta"
-                  type="number"
-                  placeholder="100"
-                  value={formData.precioOferta}
-                  onChange={handleChange}
-                  className="bg-surface border-border focus:border-gold"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Valor aproximado en IX de lo que ofrecés (1 IX = 1 peso argentino)
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ubicacion">Ubicación</Label>
+                <Label htmlFor="ubicacion">Ubicación *</Label>
                 <Input
                   id="ubicacion"
                   name="ubicacion"
-                  placeholder="Palermo, CABA"
+                  placeholder="CABA, Buenos Aires, etc."
                   value={formData.ubicacion}
                   onChange={handleChange}
+                  required
                   className="bg-surface border-border focus:border-gold"
                 />
               </div>
+
+              {/* reCAPTCHA - Placeholder por ahora */}
+              <div className="space-y-2">
+                <Label>Verificación *</Label>
+                <div className="flex items-center gap-2 p-4 bg-surface rounded-lg border border-border">
+                  <input
+                    type="checkbox"
+                    id="recaptcha"
+                    checked={recaptchaVerified}
+                    onChange={(e) => setRecaptchaVerified(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="recaptcha" className="text-sm text-muted-foreground cursor-pointer">
+                    No soy un robot (reCAPTCHA se implementará)
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <Button 
-              type="submit" 
-              variant="gold" 
-              size="xl" 
+            <Button
+              type="submit"
+              variant="gold"
+              size="xl"
               className="w-full group"
               disabled={loading}
             >
-              <Sparkles className="w-5 h-5" />
-              {loading ? "Creando cuenta..." : "Crear mi cuenta"}
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {loading ? "Creando cuenta..." : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Crear cuenta
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </Button>
 
-            <div className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground">
               ¿Ya tenés cuenta?{" "}
               <Link to="/login" className="text-gold hover:underline font-medium">
                 Iniciar sesión
               </Link>
-            </div>
-
-            <p className="text-center text-xs text-muted-foreground">
-              Al registrarte, aceptás formar parte de esta comunidad de intercambio
             </p>
           </form>
         </div>

@@ -94,9 +94,15 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <Link to="/registrar-intercambio">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Link to="/crear-producto">
             <Button variant="gold" size="lg" className="w-full h-auto py-4 flex flex-col gap-1">
+              <Plus className="w-5 h-5" />
+              <span>Crear producto/servicio</span>
+            </Button>
+          </Link>
+          <Link to="/registrar-intercambio">
+            <Button variant="gold-outline" size="lg" className="w-full h-auto py-4 flex flex-col gap-1">
               <Plus className="w-5 h-5" />
               <span>Registrar intercambio</span>
             </Button>

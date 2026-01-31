@@ -31,7 +31,32 @@ async function request<T>(
     headers,
   });
 
-  const data = await response.json().catch(() => ({}));
+  // Verificar Content-Type antes de parsear JSON
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType && contentType.includes('application/json');
+
+  let data: any = {};
+  
+  if (isJson) {
+    try {
+      data = await response.json();
+    } catch (e) {
+      // Si falla el parseo JSON, lanzar error
+      throw new ApiError(
+        'Error al procesar la respuesta del servidor',
+        response.status,
+        { raw: await response.text() }
+      );
+    }
+  } else {
+    // Si no es JSON, probablemente es HTML (error 404, 500, etc.)
+    const text = await response.text();
+    throw new ApiError(
+      `El servidor devolvió una respuesta no válida (${response.status})`,
+      response.status,
+      { html: text.substring(0, 200) } // Solo primeros 200 chars para debug
+    );
+  }
 
   if (!response.ok) {
     throw new ApiError(
@@ -83,6 +108,18 @@ export const api = {
       },
       body: formData,
     });
+
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
+    if (!isJson) {
+      const text = await response.text();
+      throw new ApiError(
+        `Error al subir la imagen (${response.status})`,
+        response.status,
+        { html: text.substring(0, 200) }
+      );
+    }
 
     const data = await response.json();
 
