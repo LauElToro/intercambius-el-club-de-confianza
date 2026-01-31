@@ -100,9 +100,24 @@ const Coincidencias = () => {
         </div>
 
         {/* Grid de coincidencias */}
-        {coincidencias.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-gold" />
+            <span className="ml-2 text-muted-foreground">Buscando coincidencias...</span>
+          </div>
+        ) : error ? (
+          <div className="bg-card rounded-xl border border-border p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive mb-2">Error al cargar coincidencias</p>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : "Intenta de nuevo más tarde"}
+            </p>
+          </div>
+        ) : Array.isArray(coincidencias) && coincidencias.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {coincidencias.map(item => (
+            {coincidencias.map((item: MarketItem) => {
+              if (!item || !item.id) return null;
+              return (
               <Card 
                 key={item.id} 
                 className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
@@ -110,9 +125,12 @@ const Coincidencias = () => {
               >
                 <div className="relative group">
                   <img
-                    src={item.imagen}
-                    alt={item.titulo}
+                    src={item.imagen || 'https://via.placeholder.com/300x200'}
+                    alt={item.titulo || 'Producto'}
                     className="w-full h-48 object-cover transition-transform duration-200 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200';
+                    }}
                   />
                   <Button
                     variant="ghost"
@@ -177,7 +195,8 @@ const Coincidencias = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
