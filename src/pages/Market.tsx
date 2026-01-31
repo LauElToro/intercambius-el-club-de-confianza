@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { marketService, MarketItem } from "@/services/market.service";
+import { favoritosService } from "@/services/favoritos.service";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Tipos de rubros y sus filtros específicos
 const RUBROS = {
@@ -68,15 +70,32 @@ const RUBROS = {
 
 const Market = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"todos" | "productos" | "servicios">("todos");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("todos");
   const [distanciaMax, setDistanciaMax] = useState([20]);
   const [precioMin, setPrecioMin] = useState([0]);
-  const [precioMax, setPrecioMax] = useState([500000]); // IX pueden ser altos (ej. 100000)
+  const [precioMax, setPrecioMax] = useState([500000]);
   const [filtrosRubro, setFiltrosRubro] = useState<Record<string, string[]>>({});
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
-  const [favoritos, setFavoritos] = useState<number[]>([]);
+  const [favoritosLocal, setFavoritosLocal] = useState<number[]>([]);
+
+  const { data: favoritosData = [] } = useQuery({
+    queryKey: ['favoritos'],
+    queryFn: () => favoritosService.getFavoritos(),
+    enabled: !!user,
+  });
+
+  const favoritosIds = user ? (favoritosData.map((f: MarketItem) => f.id)) : favoritosLocal;
+
+  const toggleFavMutation = useMutation({
+    mutationFn: (marketItemId: number) => favoritosService.toggleFavorito(marketItemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favoritos'] });
+    },
+  });
 
   // Obtener items del backend
   const { data: items = [], isLoading, error } = useQuery({
@@ -135,12 +154,13 @@ const Market = () => {
     });
   }, [items, search, distanciaMax, filtrosRubro, filtrosDisponibles]);
 
-  const toggleFavorito = (id: number) => {
-    setFavoritos(prev => 
-      prev.includes(id) 
-        ? prev.filter(f => f !== id)
-        : [...prev, id]
-    );
+  const toggleFavorito = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    if (user) {
+      toggleFavMutation.mutate(id);
+    } else {
+      setFavoritosLocal(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+    }
   };
 
   const limpiarFiltros = () => {
@@ -418,14 +438,11 @@ const Market = () => {
                       variant="ghost"
                       size="icon"
                       className="absolute top-2 right-2 bg-background/95 hover:bg-background backdrop-blur-sm text-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorito(item.id);
-                      }}
+                      onClick={(e) => toggleFavorito(e, item.id)}
                     >
                       <Heart
                         className={`w-5 h-5 transition-all ${
-                          favoritos.includes(item.id) 
+                          favoritosIds.includes(item.id) 
                             ? "fill-red-500 text-red-500" 
                             : "text-foreground/70 hover:text-red-500"
                         }`}

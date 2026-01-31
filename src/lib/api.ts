@@ -92,7 +92,7 @@ export const api = {
   
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   
-  upload: async (file: File): Promise<{ url: string; pathname: string }> => {
+  upload: async (file: File): Promise<{ url: string; pathname: string; mediaType?: 'image' | 'video' }> => {
     const token = localStorage.getItem('intercambius_token');
     if (!token) {
       throw new ApiError('No autorizado', 401);

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,16 +25,72 @@ import {
   Mail
 } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
+import { favoritosService } from "@/services/favoritos.service";
+import { checkoutService } from "@/services/checkout.service";
+import { userService } from "@/services/user.service";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import { CreditCard } from "lucide-react";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [selectedMedia, setSelectedMedia] = useState(0);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
+
+  const usuario = currentUser || user;
+  const saldo = Number(usuario?.saldo) ?? 0;
+  const limite = Number(usuario?.limite) ?? 150000;
+  const precio = item?.precio ?? 0;
+  const puedeGastar = saldo + limite;
+  const puedeComprar = !!item && (saldo - precio >= -limite);
 
   const { data: item, isLoading, error } = useQuery({
     queryKey: ['marketItem', id],
     queryFn: () => marketService.getItemById(Number(id!)),
     enabled: !!id,
   });
+
+  const { data: isFav } = useQuery({
+    queryKey: ['favorito', id],
+    queryFn: () => favoritosService.isFavorito(Number(id!)),
+    enabled: !!id && !!item,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: () => checkoutService.pay(Number(id!)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      queryClient.invalidateQueries({ queryKey: ['marketItem', id] });
+      queryClient.invalidateQueries({ queryKey: ['intercambios'] });
+      toast({ title: "¡Compra exitosa!", description: "El intercambio fue registrado automáticamente." });
+      setCheckoutOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "No se pudo completar el pago", variant: "destructive" });
+    },
+  });
+
+  const toggleFavMutation = useMutation({
+    mutationFn: () => favoritosService.toggleFavorito(Number(id!)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorito', id] });
+      queryClient.invalidateQueries({ queryKey: ['favoritos'] });
+    },
+  });
+
+  const medias = (item?.images && item.images.length > 0)
+    ? item.images
+    : (item?.imagen ? [{ url: item.imagen, mediaType: 'image' as const }] : []);
 
   if (isLoading) {
     return (
@@ -75,15 +133,80 @@ const ProductoDetalle = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Columna principal - Imagen y descripción */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Imagen principal */}
+            {/* Galería */}
             <Card>
               <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
-                <img
-                  src={item.imagen}
-                  alt={item.titulo}
-                  className="w-full h-full object-cover"
-                />
+                {medias.length > 0 ? (
+                  medias[selectedMedia]?.mediaType === 'video' ? (
+                    <video
+                      src={medias[selectedMedia].url}
+                      className="w-full h-full object-cover"
+                      controls
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={medias[selectedMedia]?.url || item.imagen}
+                      alt={item.titulo}
+                      className="w-full h-full object-cover"
+                    />
+                  )
+                ) : (
+                  <img src={item.imagen} alt={item.titulo} className="w-full h-full object-cover" />
+                )}
+                {medias.length > 1 && (
+                  <>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                      {medias.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedMedia(i)}
+                          className={`w-2 h-2 rounded-full transition-colors ${
+                            i === selectedMedia ? "bg-white" : "bg-white/50"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={() => toggleFavMutation.mutate()}
+                    >
+                      <Heart className={`w-5 h-5 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
+                    </Button>
+                  </>
+                )}
+                {medias.length <= 1 && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={() => toggleFavMutation.mutate()}
+                  >
+                    <Heart className={`w-5 h-5 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
+                  </Button>
+                )}
               </div>
+              {medias.length > 1 && (
+                <div className="flex gap-2 p-2 overflow-x-auto">
+                  {medias.map((m, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedMedia(i)}
+                      className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 ${
+                        i === selectedMedia ? "border-gold" : "border-transparent"
+                      }`}
+                    >
+                      {m.mediaType === 'video' ? (
+                        <video src={m.url} className="w-full h-full object-cover" muted />
+                      ) : (
+                        <img src={m.url} alt="" className="w-full h-full object-cover" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </Card>
 
             {/* Información del producto */}
@@ -285,9 +408,16 @@ const ProductoDetalle = () => {
                     </Button>
                   </Link>
                 )}
-                <Button variant="outline" className="w-full" size="lg" asChild>
-                  <Link to="/registrar-intercambio">Registrar intercambio</Link>
-                </Button>
+                {usuario && vendedor && item.vendedorId !== usuario.id && (
+                  <Button
+                    className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
+                    size="lg"
+                    onClick={() => setCheckoutOpen(true)}
+                  >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Pagar con IX
+                  </Button>
+                )}
                 {item.createdAt && (
                   <div className="text-xs text-center text-muted-foreground pt-2">
                     <Clock className="w-3 h-3 inline mr-1" />
@@ -298,6 +428,52 @@ const ProductoDetalle = () => {
             </Card>
           </div>
         </div>
+
+        {/* Checkout Dialog */}
+        <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Pagar con IX</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{item.titulo}</span>
+                <span className="font-bold">{precio.toLocaleString('es-AR')} IX</span>
+              </div>
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Tu saldo</span>
+                  <span>{saldo.toLocaleString('es-AR')} IX</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Límite negativo</span>
+                  <span>-{limite.toLocaleString('es-AR')} IX</span>
+                </div>
+                <div className="flex justify-between font-medium pt-2 border-t">
+                  <span>Podés gastar hasta</span>
+                  <span className="text-gold">{puedeGastar.toLocaleString('es-AR')} IX</span>
+                </div>
+              </div>
+              {!puedeComprar && (
+                <p className="text-sm text-destructive">
+                  No tenés suficiente crédito. Tu saldo ({saldo.toLocaleString('es-AR')} IX) menos el precio ({precio.toLocaleString('es-AR')} IX) superaría el límite negativo (-{limite.toLocaleString('es-AR')} IX).
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCheckoutOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="gold"
+                onClick={() => checkoutMutation.mutate()}
+                disabled={!puedeComprar || checkoutMutation.isPending}
+              >
+                {checkoutMutation.isPending ? "Procesando..." : "Confirmar pago"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

@@ -28,8 +28,7 @@ const CrearProducto = () => {
     precio: "",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: user?.ubicacion || "",
-    imagen: null as File | null,
-    imagenPreview: "",
+    medias: [] as { file: File; preview: string; type: 'image' | 'video' }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
   });
@@ -57,41 +56,87 @@ const CrearProducto = () => {
     },
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({
-        ...prev,
-        imagen: file,
-        imagenPreview: URL.createObjectURL(file),
-      }));
-    }
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setFormData((prev) => {
+      let newMedias = [...prev.medias];
+      for (const file of files) {
+        const type = file.type.startsWith('video/') ? 'video' as const : 'image' as const;
+        const hasVideo = newMedias.some((m) => m.type === 'video');
+        const imgCount = newMedias.filter((m) => m.type === 'image').length;
+
+        if (type === 'video') {
+          if (hasVideo) {
+            toast({ title: "Máximo 1 video", variant: "destructive" });
+            continue;
+          }
+          if (imgCount >= 5) {
+            toast({ title: "Con video: máx 5 imágenes", variant: "destructive" });
+            continue;
+          }
+        } else {
+          if (hasVideo && imgCount >= 5) continue;
+          if (!hasVideo && imgCount >= 6) {
+            toast({ title: "Máximo 6 imágenes", variant: "destructive" });
+            continue;
+          }
+        }
+        newMedias.push({ file, preview: URL.createObjectURL(file), type });
+      }
+      return { ...prev, medias: newMedias };
+    });
+    e.target.value = "";
+  };
+
+  const removeMedia = (index: number) => {
+    setFormData((prev) => {
+      const medias = [...prev.medias];
+      URL.revokeObjectURL(medias[index].preview);
+      medias.splice(index, 1);
+      return { ...prev, medias };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.imagen) {
+    if (formData.medias.length === 0) {
       toast({
-        title: "Imagen requerida",
-        description: "Por favor, subí una imagen de tu producto/servicio",
+        title: "Imagen o video requerido",
+        description: "Subí al menos una foto o un video (máx 6 fotos o 5 fotos + 1 video)",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Subir imagen primero
-      const uploadResult = await api.upload(formData.imagen);
+      const uploaded: { url: string; mediaType: 'image' | 'video' }[] = [];
+      for (let i = 0; i < formData.medias.length; i++) {
+        const res = await api.upload(formData.medias[i].file);
+        uploaded.push({
+          url: res.url,
+          mediaType: (res.mediaType as 'image' | 'video') || formData.medias[i].type,
+        });
+      }
 
-      // Crear el item
+      const firstImage = uploaded.find((u) => u.mediaType === 'image') || uploaded[0];
+      const images = uploaded.map((u, i) => ({
+        url: u.url,
+        position: i,
+        isPrimary: i === 0,
+        mediaType: u.mediaType,
+      }));
+
       const itemData: CreateMarketItemData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         precio: parseInt(formData.precio),
         rubro: formData.rubro,
         ubicacion: formData.ubicacion,
-        imagen: uploadResult.url,
+        imagen: firstImage.url,
+        images,
         detalles: formData.detalles,
         caracteristicas: formData.caracteristicas,
       };
@@ -226,35 +271,47 @@ const CrearProducto = () => {
                 />
               </div>
 
-              {/* Imagen */}
+              {/* Imágenes y video */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Imagen</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="imagen">Imagen del producto/servicio *</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="imagen"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                    <label htmlFor="imagen">
-                      <Button type="button" variant="outline" asChild>
-                        <span>
-                          <Upload className="w-4 h-4 mr-2" />
-                          Subir imagen
-                        </span>
+                <h3 className="text-lg font-semibold">Imágenes y video</h3>
+                <p className="text-sm text-muted-foreground">
+                  Mínimo 1 foto o 1 video. Máx 6 fotos, o 5 fotos + 1 video opcional.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <Input
+                    id="medias"
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={handleMediaChange}
+                    className="hidden"
+                  />
+                  <label htmlFor="medias">
+                    <Button type="button" variant="outline" asChild>
+                      <span>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Agregar fotos o video
+                      </span>
+                    </Button>
+                  </label>
+                  {formData.medias.map((m, i) => (
+                    <div key={i} className="relative group">
+                      {m.type === 'video' ? (
+                        <video src={m.preview} className="w-32 h-32 object-cover rounded-lg" muted playsInline />
+                      ) : (
+                        <img src={m.preview} alt="" className="w-32 h-32 object-cover rounded-lg" />
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeMedia(i)}
+                      >
+                        <X className="h-3 w-3" />
                       </Button>
-                    </label>
-                    {formData.imagenPreview && (
-                      <img
-                        src={formData.imagenPreview}
-                        alt="Preview"
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
-                    )}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

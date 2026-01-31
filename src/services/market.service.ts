@@ -12,6 +12,14 @@ export interface VendedorInfo {
   verificado?: boolean;
 }
 
+export interface ProductMedia {
+  url: string;
+  alt?: string;
+  position?: number;
+  isPrimary?: boolean;
+  mediaType?: 'image' | 'video';
+}
+
 export interface MarketItem {
   id: number;
   titulo: string;
@@ -26,6 +34,7 @@ export interface MarketItem {
   rating: number;
   detalles?: Record<string, string>;
   caracteristicas?: string[];
+  images?: ProductMedia[];
   createdAt: string;
   updatedAt: string;
   vendedor?: VendedorInfo | null;
@@ -48,6 +57,7 @@ export interface CreateMarketItemData {
   ubicacion: string;
   distancia?: number;
   imagen: string;
+  images?: ProductMedia[];
   detalles?: Record<string, string>;
   caracteristicas?: string[];
 }
