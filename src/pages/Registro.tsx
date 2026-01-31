@@ -8,6 +8,7 @@ import logo from "@/assets/logo-intercambius.jpeg";
 import { ArrowRight, Sparkles, Mail, Lock, Phone, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
+import { LocationPicker } from "@/components/location/LocationPicker";
 
 const Registro = () => {
   const { register } = useAuth();
@@ -18,7 +19,8 @@ const Registro = () => {
     password: "",
     confirmPassword: "",
     telefono: "",
-    ubicacion: "CABA",
+    ubicacion: "",
+    radioBusqueda: 20,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -210,19 +212,23 @@ const Registro = () => {
                 </div>
               </div>
 
-              {/* Ubicación */}
-              <div className="space-y-2">
-                <Label htmlFor="ubicacion">Ubicación *</Label>
-                <Input
-                  id="ubicacion"
-                  name="ubicacion"
-                  placeholder="CABA, Buenos Aires, etc."
-                  value={formData.ubicacion}
-                  onChange={handleChange}
-                  required
-                  className="bg-surface border-border focus:border-gold"
-                />
-              </div>
+              {/* Ubicación con mapa */}
+              <LocationPicker
+                value={formData.ubicacion}
+                onChange={(location, lat, lng, radius) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    ubicacion: location,
+                    radioBusqueda: radius || prev.radioBusqueda,
+                  }));
+                }}
+                radius={formData.radioBusqueda}
+                onRadiusChange={(radius) => {
+                  setFormData(prev => ({ ...prev, radioBusqueda: radius }));
+                }}
+                label="Ubicación"
+                required
+              />
 
               {/* reCAPTCHA - Placeholder por ahora */}
               <div className="space-y-2">

@@ -13,6 +13,7 @@ import { marketService, CreateMarketItemData } from "@/services/market.service";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { LocationPicker } from "@/components/location/LocationPicker";
 
 // Fichas técnicas por rubro (inspirado en MercadoLibre)
 const FICHAS_TECNICAS = {
@@ -317,16 +318,17 @@ const CrearProducto = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="ubicacion">Ubicación *</Label>
-                  <Input
-                    id="ubicacion"
-                    value={formData.ubicacion}
-                    onChange={(e) => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
-                    placeholder="CABA, Buenos Aires"
-                    required
-                  />
-                </div>
+                <LocationPicker
+                  value={formData.ubicacion}
+                  onChange={(location, lat, lng, radius) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      ubicacion: location,
+                    }));
+                  }}
+                  label="Ubicación"
+                  required
+                />
               </div>
 
               {/* Imagen */}
