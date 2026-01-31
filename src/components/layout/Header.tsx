@@ -39,8 +39,7 @@ const Header = () => {
 
   const navItems = [
     { to: "/market", label: "Market", icon: ShoppingBag },
-    { to: "/coincidencias", label: "Coincidencias", icon: Users },
-    { to: "/dashboard", label: "Mi cuenta", icon: User },
+    { to: "/coincidencias", label: "Coincidencias", icon: Users }
   ];
 
   const handleNavClick = (to: string) => {

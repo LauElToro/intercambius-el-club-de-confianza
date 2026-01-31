@@ -54,8 +54,10 @@ const Dashboard = () => {
     return null;
   }
 
-  const saldoPositivo = currentUser.saldo >= 0;
-  const porcentajeCredito = Math.abs(currentUser.saldo) / currentUser.limite * 100;
+  const saldo = Number(currentUser.saldo) || 0;
+  const limite = Number(currentUser.limite) || 150000;
+  const saldoPositivo = saldo >= 0;
+  const porcentajeCredito = limite > 0 ? Math.abs(saldo) / limite * 100 : 0;
 
   return (
     <Layout>
@@ -77,7 +79,7 @@ const Dashboard = () => {
               <p className="text-muted-foreground mb-2">Tu saldo actual</p>
               <div className="flex items-baseline gap-2">
               <span className={`text-5xl md:text-6xl font-bold ${saldoPositivo ? 'gold-text' : 'text-destructive'}`}>
-                  {saldoPositivo ? '+' : ''}{currentUser.saldo}
+                  {saldoPositivo ? '+' : ''}{saldo}
                 </span>
                 <span className="text-2xl text-muted-foreground">IX</span>
               </div>
@@ -97,8 +99,8 @@ const Dashboard = () => {
                 />
               </div>
               <p className="text-sm text-foreground">
-                <span className="text-gold">{Math.abs(currentUser.saldo)}</span>
-                <span className="text-muted-foreground"> / {currentUser.limite} IX</span>
+                <span className="text-gold">{Math.abs(saldo)}</span>
+                <span className="text-muted-foreground"> / {limite} IX</span>
               </p>
             </div>
           </div>

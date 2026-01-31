@@ -73,7 +73,7 @@ const Market = () => {
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("todos");
   const [distanciaMax, setDistanciaMax] = useState([20]);
   const [precioMin, setPrecioMin] = useState([0]);
-  const [precioMax, setPrecioMax] = useState([500]);
+  const [precioMax, setPrecioMax] = useState([500000]); // IX pueden ser altos (ej. 100000)
   const [filtrosRubro, setFiltrosRubro] = useState<Record<string, string[]>>({});
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
   const [favoritos, setFavoritos] = useState<number[]>([]);
@@ -109,8 +109,8 @@ const Market = () => {
   const itemsFiltrados = useMemo(() => {
     return items.filter((item: MarketItem) => {
       // Búsqueda por texto
-      if (search && !item.titulo.toLowerCase().includes(search.toLowerCase()) &&
-          !item.descripcion.toLowerCase().includes(search.toLowerCase())) {
+      if (search && !(item.titulo || '').toLowerCase().includes(search.toLowerCase()) &&
+          !(item.descripcion || '').toLowerCase().includes(search.toLowerCase())) {
         return false;
       }
 
@@ -149,12 +149,12 @@ const Market = () => {
     setRubroSeleccionado("todos");
     setDistanciaMax([20]);
     setPrecioMin([0]);
-    setPrecioMax([500]);
+    setPrecioMax([500000]);
     setFiltrosRubro({});
   };
 
   const tieneFiltrosActivos = search || tipoSeleccionado !== "todos" || rubroSeleccionado !== "todos" || 
-    distanciaMax[0] < 20 || precioMin[0] > 0 || precioMax[0] < 500 ||
+    distanciaMax[0] < 20 || precioMin[0] > 0 || precioMax[0] < 500000 ||
     Object.values(filtrosRubro).some(v => v.length > 0);
 
   return (
@@ -295,9 +295,9 @@ const Market = () => {
                           <Slider
                             value={precioMax}
                             onValueChange={setPrecioMax}
-                            max={1000}
+                            max={500000}
                             min={precioMin[0] + 10}
-                            step={10}
+                            step={1000}
                             className="w-full"
                           />
                           <div className="text-xs text-muted-foreground mt-1">
@@ -432,8 +432,8 @@ const Market = () => {
                       />
                     </Button>
                     <Badge className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50">
-                      {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
-                      {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
+                      {RUBROS[item.rubro as keyof typeof RUBROS]?.icon ?? "📦"}{" "}
+                      {RUBROS[item.rubro as keyof typeof RUBROS]?.label ?? item.rubro}
                     </Badge>
                   </div>
                   <CardContent className="p-4">
