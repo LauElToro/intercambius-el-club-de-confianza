@@ -1,62 +1,203 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Sparkles, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle } from "lucide-react";
+import { convertIXToPesos, LIMITE_CREDITO_NEGATIVO, formatCurrency } from "@/lib/currency";
 
-// Mock coincidencias
-const mockCoincidencias = {
-  teNecesitan: [
-    {
-      id: 1,
-      nombre: "Juan Pérez",
-      necesita: "Diseño gráfico para su emprendimiento",
-      ofrece: "Clases de guitarra",
-      contacto: "+54 11 1111-2222",
-    },
-    {
-      id: 2,
-      nombre: "Café del Centro",
-      necesita: "Diseño de menú y cartelería",
-      ofrece: "Consumiciones en el café",
-      contacto: "cafe@email.com",
-    },
-  ],
-  vosNecesitas: [
-    {
-      id: 3,
-      nombre: "Carlos Rodríguez",
-      ofrece: "Reparación de computadoras",
-      necesita: "Diseño gráfico",
-      contacto: "+54 11 5555-1234",
-    },
-    {
-      id: 4,
-      nombre: "Laura Martínez",
-      ofrece: "Clases de inglés",
-      necesita: "Fotografía para portfolio",
-      contacto: "laura@email.com",
-    },
-  ],
+// Reutilizar la estructura de items de Market
+interface MarketItem {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  precio: number;
+  rubro: string;
+  ubicacion: string;
+  distancia: number;
+  imagen: string;
+  vendedor: string;
+  rating: number;
+  favorito: boolean;
+  detalles: Record<string, string>;
+}
+
+interface User {
+  nombre: string;
+  ofrece: string;
+  necesita: string;
+  contacto: string;
+  saldo: number;
+  limite: number;
+  id: number;
+  precioOferta?: number; // Precio en IX del servicio/producto que ofrece
+}
+
+// Mock data - En producción vendría del backend
+const mockItems: MarketItem[] = [
+  {
+    id: 1,
+    titulo: "Clases de inglés online",
+    descripcion: "Clases personalizadas de inglés para todos los niveles",
+    precio: 50,
+    rubro: "servicios",
+    ubicacion: "Palermo, CABA",
+    distancia: 2.5,
+    imagen: "https://via.placeholder.com/300x200?text=Clases+Ingles",
+    vendedor: "María García",
+    rating: 4.8,
+    favorito: false,
+    detalles: {
+      tipo: "Clases",
+      modalidad: "Online",
+      experiencia: "Profesional"
+    }
+  },
+  {
+    id: 2,
+    titulo: "Reparación de computadoras",
+    descripcion: "Servicio técnico profesional para PC y notebooks",
+    precio: 80,
+    rubro: "servicios",
+    ubicacion: "Belgrano, CABA",
+    distancia: 5.2,
+    imagen: "https://via.placeholder.com/300x200?text=Reparacion+PC",
+    vendedor: "Carlos Rodríguez",
+    rating: 4.9,
+    favorito: true,
+    detalles: {
+      tipo: "Reparaciones",
+      modalidad: "Presencial",
+      experiencia: "Profesional"
+    }
+  },
+  {
+    id: 3,
+    titulo: "Pan casero artesanal",
+    descripcion: "Pan de masa madre, hecho a mano con ingredientes orgánicos",
+    precio: 30,
+    rubro: "alimentos",
+    ubicacion: "Villa Crespo, CABA",
+    distancia: 3.8,
+    imagen: "https://via.placeholder.com/300x200?text=Pan+Casero",
+    vendedor: "Panadería Don José",
+    rating: 5.0,
+    favorito: false,
+    detalles: {
+      tipo: "Artesanal",
+      conservacion: "Fresco",
+      cantidad: "Familiar"
+    }
+  },
+  {
+    id: 4,
+    titulo: "Diseño de logos",
+    descripcion: "Diseño profesional de identidad visual para tu marca",
+    precio: 120,
+    rubro: "servicios",
+    ubicacion: "San Telmo, CABA",
+    distancia: 7.1,
+    imagen: "https://via.placeholder.com/300x200?text=Diseño+Logo",
+    vendedor: "Ana Fernández",
+    rating: 4.7,
+    favorito: false,
+    detalles: {
+      tipo: "Diseño",
+      modalidad: "Online",
+      experiencia: "Profesional"
+    }
+  },
+  {
+    id: 5,
+    titulo: "Bicicleta usada",
+    descripcion: "Bicicleta de montaña en excelente estado, solo 2 años de uso",
+    precio: 200,
+    rubro: "productos",
+    ubicacion: "Caballito, CABA",
+    distancia: 4.3,
+    imagen: "https://via.placeholder.com/300x200?text=Bicicleta",
+    vendedor: "Pedro Gómez",
+    rating: 4.6,
+    favorito: false,
+    detalles: {
+      categoria: "Deportes",
+      estado: "Usado - Como nuevo",
+      entrega: "Retiro"
+    }
+  },
+];
+
+const RUBROS = {
+  servicios: { label: "Servicios", icon: "🔧" },
+  productos: { label: "Productos", icon: "📦" },
+  alimentos: { label: "Alimentos", icon: "🍎" },
+  experiencias: { label: "Experiencias", icon: "🎭" }
 };
 
 const Coincidencias = () => {
-  const [userName, setUserName] = useState("Usuario");
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [favoritos, setFavoritos] = useState<number[]>([]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("intercambius_user");
     if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setUserName(user.nombre.split(" ")[0]);
+      const userData = JSON.parse(savedUser);
+      setUser(userData);
+      // Si no tiene precioOferta, asignar uno por defecto basado en su oferta
+      if (!userData.precioOferta) {
+        userData.precioOferta = 100; // Valor por defecto
+        localStorage.setItem("intercambius_user", JSON.stringify(userData));
+        setUser(userData);
+      }
     }
   }, []);
 
-  const handleContactar = (contacto: string) => {
-    if (contacto.startsWith("+")) {
-      window.open(`https://wa.me/${contacto.replace(/\D/g, "")}`, "_blank");
-    } else {
-      window.open(`mailto:${contacto}`, "_blank");
-    }
+  // Filtrar coincidencias: mismo valor o aproximado (±20%)
+  const coincidencias = useMemo(() => {
+    if (!user || !user.precioOferta) return [];
+
+    const precioUsuario = user.precioOferta;
+    const margen = precioUsuario * 0.2; // 20% de margen
+    const precioMin = precioUsuario - margen;
+    const precioMax = precioUsuario + margen;
+
+    return mockItems.filter(item => {
+      // Filtrar por precio aproximado
+      const precioAproximado = item.precio >= precioMin && item.precio <= precioMax;
+      
+      // Verificar que el usuario tenga crédito disponible (puede tener negativo hasta el límite)
+      const saldoEnPesos = convertIXToPesos(user.saldo);
+      const precioItemEnPesos = convertIXToPesos(item.precio);
+      const nuevoSaldo = saldoEnPesos - precioItemEnPesos;
+      const tieneCredito = nuevoSaldo >= -LIMITE_CREDITO_NEGATIVO;
+
+      return precioAproximado && tieneCredito;
+    });
+  }, [user]);
+
+  const toggleFavorito = (id: number) => {
+    setFavoritos(prev => 
+      prev.includes(id) 
+        ? prev.filter(f => f !== id)
+        : [...prev, id]
+    );
   };
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 text-center">
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const saldoEnPesos = convertIXToPesos(user.saldo);
+  const puedeComprar = saldoEnPesos > -LIMITE_CREDITO_NEGATIVO;
 
   return (
     <Layout>
@@ -65,142 +206,143 @@ const Coincidencias = () => {
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-6 h-6 text-gold" />
             <h1 className="text-2xl md:text-3xl font-bold">
-              Tus coincidencias
+              Mis coincidencias
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Personas que podrían intercambiar con vos
+            Productos y servicios con valor similar a lo que ofrecés ({formatCurrency(user.precioOferta || 0)})
           </p>
         </div>
 
-        {/* Section: Te necesitan */}
-        <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <ArrowDownLeft className="w-5 h-5 text-primary" />
-            </div>
+        {/* Alerta de crédito */}
+        {!puedeComprar && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Has alcanzado el límite de crédito negativo ({formatCurrency(LIMITE_CREDITO_NEGATIVO, 'ARS')}). 
+              Necesitás generar créditos positivos para continuar intercambiando.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Info de crédito disponible */}
+        <div className="bg-card rounded-lg p-4 border border-border mb-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Te necesitan</h2>
-              <p className="text-sm text-muted-foreground">
-                Estas personas necesitan lo que vos ofrecés
+              <p className="text-sm text-muted-foreground mb-1">Crédito disponible</p>
+              <p className="text-lg font-semibold">
+                {formatCurrency(user.saldo)} 
+                <span className="text-sm text-muted-foreground ml-2">
+                  (Límite: {formatCurrency(-LIMITE_CREDITO_NEGATIVO, 'ARS')})
+                </span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground mb-1">Valor de tu oferta</p>
+              <p className="text-lg font-semibold gold-text">
+                {formatCurrency(user.precioOferta || 0)}
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            {mockCoincidencias.teNecesitan.map((item) => (
-              <CoincidenciaCard
-                key={item.id}
-                nombre={item.nombre}
-                highlight={item.necesita}
-                secondary={item.ofrece}
-                highlightLabel="Necesita"
-                secondaryLabel="A cambio ofrece"
-                type="necesita"
-                onContactar={() => handleContactar(item.contacto)}
-              />
+        {/* Grid de coincidencias */}
+        {coincidencias.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {coincidencias.map(item => (
+              <Card 
+                key={item.id} 
+                className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
+                onClick={() => navigate(`/market/${item.id}`)}
+              >
+                <div className="relative group">
+                  <img
+                    src={item.imagen}
+                    alt={item.titulo}
+                    className="w-full h-48 object-cover transition-transform duration-200 group-hover:scale-105"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 bg-background/95 hover:bg-background backdrop-blur-sm text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorito(item.id);
+                    }}
+                  >
+                    <Heart
+                      className={`w-5 h-5 transition-all ${
+                        favoritos.includes(item.id) 
+                          ? "fill-red-500 text-red-500" 
+                          : "text-foreground/70 hover:text-red-500"
+                      }`}
+                    />
+                  </Button>
+                  <Badge className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50">
+                    {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
+                    {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
+                  </Badge>
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <h3 className="font-semibold text-base line-clamp-2 flex-1 hover:text-gold transition-colors">
+                      {item.titulo}
+                    </h3>
+                    <span className="text-xl font-bold gold-text flex-shrink-0">
+                      {formatCurrency(item.precio)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {item.descripcion}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      <span className="truncate max-w-[120px]">{item.ubicacion}</span>
+                    </div>
+                    <span className="flex-shrink-0">{item.distancia} km</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-yellow-500">★</span>
+                      <span className="font-medium">{item.rating}</span>
+                      <span className="text-muted-foreground truncate max-w-[100px]">
+                        {item.vendedor}
+                      </span>
+                    </div>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      className="bg-gold hover:bg-gold/90 text-primary-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/market/${item.id}`);
+                      }}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-1" />
+                      Ver más
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
-
-          {mockCoincidencias.teNecesitan.length === 0 && (
-            <EmptyState message="Todavía no hay nadie que necesite lo que ofrecés" />
-          )}
-        </section>
-
-        {/* Section: Vos necesitás */}
-        <section>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-              <ArrowUpRight className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Ofrecen lo que necesitás</h2>
-              <p className="text-sm text-muted-foreground">
-                Estas personas ofrecen lo que vos estás buscando
-              </p>
-            </div>
+        ) : (
+          <div className="bg-card rounded-xl border border-border p-8 text-center">
+            <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-2">
+              No encontramos coincidencias con el valor de tu oferta
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {user.precioOferta 
+                ? `Buscamos productos/servicios con valor similar a ${formatCurrency(user.precioOferta)} (±20%)`
+                : "Configurá el valor de tu oferta en tu perfil"}
+            </p>
           </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            {mockCoincidencias.vosNecesitas.map((item) => (
-              <CoincidenciaCard
-                key={item.id}
-                nombre={item.nombre}
-                highlight={item.ofrece}
-                secondary={item.necesita}
-                highlightLabel="Ofrece"
-                secondaryLabel="Necesita"
-                type="ofrece"
-                onContactar={() => handleContactar(item.contacto)}
-              />
-            ))}
-          </div>
-
-          {mockCoincidencias.vosNecesitas.length === 0 && (
-            <EmptyState message="Todavía no encontramos quién ofrezca lo que necesitás" />
-          )}
-        </section>
+        )}
       </div>
     </Layout>
   );
 };
-
-interface CoincidenciaCardProps {
-  nombre: string;
-  highlight: string;
-  secondary: string;
-  highlightLabel: string;
-  secondaryLabel: string;
-  type: "necesita" | "ofrece";
-  onContactar: () => void;
-}
-
-const CoincidenciaCard = ({
-  nombre,
-  highlight,
-  secondary,
-  highlightLabel,
-  secondaryLabel,
-  type,
-  onContactar,
-}: CoincidenciaCardProps) => (
-  <div className="bg-card rounded-xl border border-border p-5 hover:border-gold/30 transition-all duration-300">
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-gold/5 flex items-center justify-center">
-        <span className="font-bold gold-text">{nombre.charAt(0)}</span>
-      </div>
-      <span className="font-medium">{nombre}</span>
-    </div>
-
-    <div className="space-y-3 mb-4">
-      <div className={`p-3 rounded-lg ${type === "necesita" ? "bg-primary/5 border border-primary/20" : "bg-secondary border border-border"}`}>
-        <p className={`text-xs font-medium mb-1 ${type === "necesita" ? "text-primary" : "text-foreground"}`}>
-          {highlightLabel}
-        </p>
-        <p className="text-sm">{highlight}</p>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground mb-1">{secondaryLabel}</p>
-        <p className="text-sm text-muted-foreground">{secondary}</p>
-      </div>
-    </div>
-
-    <Button 
-      variant="gold" 
-      size="sm" 
-      className="w-full"
-      onClick={onContactar}
-    >
-      <MessageCircle className="w-4 h-4 mr-2" />
-      Contactar
-    </Button>
-  </div>
-);
-
-const EmptyState = ({ message }: { message: string }) => (
-  <div className="bg-card rounded-xl border border-border p-8 text-center">
-    <p className="text-muted-foreground">{message}</p>
-  </div>
-);
 
 export default Coincidencias;

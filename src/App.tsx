@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
+import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Dashboard from "./pages/Dashboard";
 import Ofertas from "./pages/Ofertas";
@@ -13,6 +14,7 @@ import ProductoDetalle from "./pages/ProductoDetalle";
 import Coincidencias from "./pages/Coincidencias";
 import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -25,13 +27,35 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/ofertas" element={<Ofertas />} />
             <Route path="/market" element={<Market />} />
             <Route path="/market/:id" element={<ProductoDetalle />} />
-            <Route path="/coincidencias" element={<Coincidencias />} />
-            <Route path="/registrar-intercambio" element={<RegistrarIntercambio />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/coincidencias" 
+              element={
+                <ProtectedRoute>
+                  <Coincidencias />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/registrar-intercambio" 
+              element={
+                <ProtectedRoute>
+                  <RegistrarIntercambio />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/ofertas" element={<Ofertas />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -79,27 +79,47 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.to || 
-              (item.to !== "/" && location.pathname.startsWith(item.to));
+          {/* Market siempre visible */}
+          <Link
+            to="/market"
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              location.pathname.startsWith("/market")
+                ? "text-foreground bg-muted"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Market
+          </Link>
+          
+          {/* Items protegidos solo si está autenticado */}
+          {(() => {
+            const token = localStorage.getItem("intercambius_token");
+            if (!token) return null;
             
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                  isActive
-                    ? "text-foreground bg-muted"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+            return navItems.filter(item => item.to !== "/market").map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.to || 
+                (item.to !== "/" && location.pathname.startsWith(item.to));
+              
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isActive
+                      ? "text-foreground bg-muted"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            });
+          })()}
         </nav>
 
         {/* Right side actions */}
@@ -120,23 +140,41 @@ const Header = () => {
           </Button>
 
           {/* Desktop CTA Button */}
-          {!isMobile && (
-            <>
-              {isHome ? (
-                <Link to="/registro">
-                  <Button variant="gold" size="default" className="hidden sm:flex">
-                    Sumarme
-                  </Button>
-                </Link>
-              ) : (
+          {!isMobile && (() => {
+            const token = localStorage.getItem("intercambius_token");
+            const isAuthenticated = !!token;
+
+            if (isAuthenticated) {
+              return (
                 <Link to="/dashboard">
                   <Button variant="gold-outline" size="default" className="hidden sm:flex">
                     Mi cuenta
                   </Button>
                 </Link>
-              )}
-            </>
-          )}
+              );
+            } else {
+              return isHome ? (
+                <>
+                  <Link to="/login">
+                    <Button variant="ghost" size="default" className="hidden sm:flex">
+                      Iniciar sesión
+                    </Button>
+                  </Link>
+                  <Link to="/registro">
+                    <Button variant="gold" size="default" className="hidden sm:flex">
+                      Sumarme
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <Link to="/login">
+                  <Button variant="gold" size="default" className="hidden sm:flex">
+                    Iniciar sesión
+                  </Button>
+                </Link>
+              );
+            }
+          })()}
 
           {/* Mobile Menu Button */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -182,57 +220,100 @@ const Header = () => {
                     <span className="font-medium">Inicio</span>
                   </button>
 
-                  <Separator className="my-2" />
+                  {/* Market link (público) */}
+                  <button
+                    onClick={() => handleNavClick("/market")}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                      location.pathname.startsWith("/market")
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    )}
+                  >
+                    <ShoppingBag className="h-5 w-5" />
+                    <span className="font-medium">Market</span>
+                  </button>
 
-                  {/* Main nav items */}
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.to || 
-                      (item.to !== "/" && location.pathname.startsWith(item.to));
+                  {(() => {
+                    const token = localStorage.getItem("intercambius_token");
+                    if (!token) return null;
                     
                     return (
-                      <button
-                        key={item.to}
-                        onClick={() => handleNavClick(item.to)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
-                          isActive
-                            ? "bg-muted text-foreground"
-                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                        )}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="font-medium">{item.label}</span>
-                      </button>
+                      <>
+                        <Separator className="my-2" />
+                        {/* Main nav items (solo si está autenticado) */}
+                        {navItems.filter(item => item.to !== "/market").map((item) => {
+                          const Icon = item.icon;
+                          const isActive = location.pathname === item.to || 
+                            (item.to !== "/" && location.pathname.startsWith(item.to));
+                          
+                          return (
+                            <button
+                              key={item.to}
+                              onClick={() => handleNavClick(item.to)}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                                isActive
+                                  ? "bg-muted text-foreground"
+                                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                              )}
+                            >
+                              <Icon className="h-5 w-5" />
+                              <span className="font-medium">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </>
                     );
-                  })}
+                  })()}
 
                   <Separator className="my-2" />
 
                   {/* CTA Button en mobile */}
-                  {isHome ? (
-                    <Link to="/registro" className="block">
-                      <Button 
-                        variant="gold" 
-                        className="w-full justify-start gap-3 h-auto py-3"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <LogIn className="h-5 w-5" />
-                        <span className="font-medium">Sumarme</span>
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link to="/dashboard" className="block">
-                      <Button 
-                        variant="gold-outline" 
-                        className="w-full justify-start gap-3 h-auto py-3"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <User className="h-5 w-5" />
-                        <span className="font-medium">Mi cuenta</span>
-                      </Button>
-                    </Link>
-                  )}
+                  {(() => {
+                    const token = localStorage.getItem("intercambius_token");
+                    const isAuthenticated = !!token;
+
+                    if (isAuthenticated) {
+                      return (
+                        <Link to="/dashboard" className="block">
+                          <Button 
+                            variant="gold-outline" 
+                            className="w-full justify-start gap-3 h-auto py-3"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <User className="h-5 w-5" />
+                            <span className="font-medium">Mi cuenta</span>
+                          </Button>
+                        </Link>
+                      );
+                    } else {
+                      return (
+                        <>
+                          <Link to="/login" className="block mb-2">
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-start gap-3 h-auto py-3"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              <LogIn className="h-5 w-5" />
+                              <span className="font-medium">Iniciar sesión</span>
+                            </Button>
+                          </Link>
+                          <Link to="/registro" className="block">
+                            <Button 
+                              variant="gold" 
+                              className="w-full justify-start gap-3 h-auto py-3"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              <LogIn className="h-5 w-5" />
+                              <span className="font-medium">Sumarme</span>
+                            </Button>
+                          </Link>
+                        </>
+                      );
+                    }
+                  })()}
                 </nav>
 
                 {/* Footer del menú mobile */}
