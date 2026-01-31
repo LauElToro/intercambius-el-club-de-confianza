@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Ofertas from "./pages/Ofertas";
 import Market from "./pages/Market";
 import ProductoDetalle from "./pages/ProductoDetalle";
+import Perfil from "./pages/Perfil";
 import Coincidencias from "./pages/Coincidencias";
 import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import CrearProducto from "./pages/CrearProducto";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/registro" element={<Registro />} />
               <Route path="/market" element={<Market />} />
               <Route path="/market/:id" element={<ProductoDetalle />} />
+              <Route path="/perfil/:id" element={<Perfil />} />
               <Route 
                 path="/dashboard" 
                 element={

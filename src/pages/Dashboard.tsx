@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { intercambiosService } from "@/services/intercambios.service";
+import { marketService } from "@/services/market.service";
 import { Loader2 } from "lucide-react";
 
 function formatFechaRelativa(dateStr: string): string {
@@ -36,6 +37,12 @@ const Dashboard = () => {
   const { data: intercambios = [] } = useQuery({
     queryKey: ['intercambios', currentUser?.id],
     queryFn: () => intercambiosService.getByUserId(currentUser!.id!),
+    enabled: !!currentUser?.id,
+  });
+
+  const { data: misProductos = [] } = useQuery({
+    queryKey: ['marketItems', 'mis-productos', currentUser?.id],
+    queryFn: () => marketService.getItems({ vendedorId: currentUser!.id! }),
     enabled: !!currentUser?.id,
   });
 
@@ -140,7 +147,9 @@ const Dashboard = () => {
           <Link to="/crear-producto" className="block">
             <ProfileCard
               title="Mis productos/servicios"
-              content="Aún no has creado ningún producto o servicio. ¡Crea uno ahora!"
+              content={misProductos.length > 0 
+                ? `Tenés ${misProductos.length} producto${misProductos.length !== 1 ? 's' : ''} publicado${misProductos.length !== 1 ? 's' : ''}. ¡Agregá más!`
+                : "Aún no has creado ningún producto o servicio. ¡Crea uno ahora!"}
               icon={<ArrowUpRight className="w-5 h-5 text-primary" />}
               type="productos"
             />

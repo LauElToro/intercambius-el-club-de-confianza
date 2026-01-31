@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2 } from "lucide-react";
-import { convertIXToPesos, LIMITE_CREDITO_NEGATIVO_PESOS, formatCurrency } from "@/lib/currency";
+import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/contexts/AuthContext";
+import { userService } from "@/services/user.service";
 import { coincidenciasService } from "@/services/coincidencias.service";
 import { MarketItem } from "@/services/market.service";
 
@@ -24,16 +25,23 @@ const Coincidencias = () => {
   const { user } = useAuth();
   const [favoritos, setFavoritos] = useState<number[]>([]);
 
-  // Obtener coincidencias del backend
+  const { data: userData } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
+
+  const currentUser = userData || user;
+
   const { data: coincidencias = [], isLoading, error } = useQuery({
-    queryKey: ['coincidencias', user?.id],
+    queryKey: ['coincidencias', currentUser?.id],
     queryFn: () => {
-      if (!user?.id) {
+      if (!currentUser?.id) {
         throw new Error('Usuario no autenticado');
       }
-      return coincidenciasService.getCoincidencias(user.id);
+      return coincidenciasService.getCoincidencias(currentUser.id);
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.id,
   });
 
   const toggleFavorito = (id: number) => {
@@ -44,18 +52,20 @@ const Coincidencias = () => {
     );
   };
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-gold mb-4" />
           <p className="text-muted-foreground">Cargando...</p>
         </div>
       </Layout>
     );
   }
 
-  const saldoEnPesos = convertIXToPesos(user.saldo);
-  const puedeComprar = saldoEnPesos > -LIMITE_CREDITO_NEGATIVO_PESOS;
+  const saldo = Number(currentUser.saldo) || 0;
+  const limite = Number(currentUser.limite) || 150000;
+  const puedeComprar = saldo > -limite;
 
   return (
     <Layout>
@@ -77,7 +87,7 @@ const Coincidencias = () => {
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Has alcanzado el límite de crédito negativo ({formatCurrency(LIMITE_CREDITO_NEGATIVO_PESOS, 'ARS')}). 
+              Has alcanzado el límite de crédito negativo ({limite.toLocaleString('es-AR')} IX). 
               Necesitás generar créditos positivos para continuar intercambiando.
             </AlertDescription>
           </Alert>
@@ -89,9 +99,9 @@ const Coincidencias = () => {
             <div>
               <p className="text-sm text-muted-foreground mb-1">Crédito disponible</p>
               <p className="text-lg font-semibold">
-                {formatCurrency(user.saldo)} 
+                {formatCurrency(saldo)}
                 <span className="text-sm text-muted-foreground ml-2">
-                  (Límite: {formatCurrency(-LIMITE_CREDITO_NEGATIVO_PESOS, 'ARS')})
+                  (Límite: {formatCurrency(-limite)})
                 </span>
               </p>
             </div>
