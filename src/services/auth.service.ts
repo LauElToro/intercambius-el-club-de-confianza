@@ -23,9 +23,6 @@ export interface User {
   nombre: string;
   email: string;
   contacto: string;
-  ofrece: string;
-  necesita: string;
-  precioOferta: number;
   saldo: number;
   limite: number;
   rating?: number;
@@ -33,6 +30,10 @@ export interface User {
   ubicacion: string;
   verificado: boolean;
   miembroDesde: string;
+  // Campos opcionales - se completan cuando crea productos/servicios
+  ofrece?: string;
+  necesita?: string;
+  precioOferta?: number;
 }
 
 export const authService = {
