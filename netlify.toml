@@ -1,0 +1,39 @@
+[build]
+  # Para Vite
+  command = "npm run build"
+  publish = "dist"
+
+  [build.environment]
+    VITE_API_URL = "https://ticket-backend-nine.vercel.app/api"
+
+# Opcional: config local con Netlify CLI
+[dev]
+  command = "npm run dev"
+  port = 5173
+  publish = "dist"
+
+# SPA fallback (por si no usás el _redirects del public)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Cache fuerte para assets versionados de Vite
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Evitar cache agresivo del HTML
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# (Opcional) Headers de seguridad básicos
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
