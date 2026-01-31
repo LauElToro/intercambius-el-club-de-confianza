@@ -144,11 +144,11 @@ const Dashboard = () => {
 
         {/* Profile Cards */}
         <div className="grid md:grid-cols-2 gap-6">
-          <Link to="/crear-producto" className="block">
+          <Link to="/mis-publicaciones" className="block">
             <ProfileCard
               title="Mis productos/servicios"
               content={misProductos.length > 0 
-                ? `Tenés ${misProductos.length} producto${misProductos.length !== 1 ? 's' : ''} publicado${misProductos.length !== 1 ? 's' : ''}. ¡Agregá más!`
+                ? `Tenés ${misProductos.length} producto${misProductos.length !== 1 ? 's' : ''} publicado${misProductos.length !== 1 ? 's' : ''}. ¡Editá o agregá más!`
                 : "Aún no has creado ningún producto o servicio. ¡Crea uno ahora!"}
               icon={<ArrowUpRight className="w-5 h-5 text-primary" />}
               type="productos"
@@ -165,7 +165,12 @@ const Dashboard = () => {
         </div>
 
         <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Últimos movimientos</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Últimos movimientos</h2>
+            <Link to="/historial">
+              <Button variant="ghost" size="sm">Ver historial completo</Button>
+            </Link>
+          </div>
           {intercambios.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center">
               Aún no tenés movimientos. Registrá un intercambio para verlo acá.

@@ -15,6 +15,9 @@ import Perfil from "./pages/Perfil";
 import Coincidencias from "./pages/Coincidencias";
 import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import CrearProducto from "./pages/CrearProducto";
+import EditarProducto from "./pages/EditarProducto";
+import MisPublicaciones from "./pages/MisPublicaciones";
+import Historial from "./pages/Historial";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -72,6 +75,30 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <CrearProducto />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/editar-producto/:id" 
+                element={
+                  <ProtectedRoute>
+                    <EditarProducto />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/mis-publicaciones" 
+                element={
+                  <ProtectedRoute>
+                    <MisPublicaciones />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/historial" 
+                element={
+                  <ProtectedRoute>
+                    <Historial />
                   </ProtectedRoute>
                 } 
               />

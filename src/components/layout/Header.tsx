@@ -9,7 +9,9 @@ import {
   Users, 
   User,
   Home,
-  LogIn
+  LogIn,
+  FileText,
+  Receipt
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -39,7 +41,9 @@ const Header = () => {
 
   const navItems = [
     { to: "/market", label: "Market", icon: ShoppingBag },
-    { to: "/coincidencias", label: "Coincidencias", icon: Users }
+    { to: "/coincidencias", label: "Coincidencias", icon: Users },
+    { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
+    { to: "/historial", label: "Historial", icon: Receipt }
   ];
 
   const handleNavClick = (to: string) => {

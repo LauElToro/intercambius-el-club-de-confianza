@@ -4,6 +4,7 @@ export interface VendedorInfo {
   id: number;
   nombre: string;
   avatar?: string;
+  contacto?: string;
   rating: number;
   totalResenas: number;
   ubicacion?: string;

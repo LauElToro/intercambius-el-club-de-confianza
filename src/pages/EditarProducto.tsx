@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,13 +14,21 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocationPicker } from "@/components/location/LocationPicker";
+
 import { FICHAS_TECNICAS } from "@/lib/fichas-tecnicas";
 
-const CrearProducto = () => {
+const EditarProducto = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const { data: item, isLoading } = useQuery({
+    queryKey: ['marketItem', id],
+    queryFn: () => marketService.getItemById(Number(id!)),
+    enabled: !!id,
+  });
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -36,22 +44,37 @@ const CrearProducto = () => {
 
   const [nuevaCaracteristica, setNuevaCaracteristica] = useState("");
 
-  const createMutation = useMutation({
-    mutationFn: async (data: CreateMarketItemData) => {
-      return await marketService.createItem(data);
-    },
+  useEffect(() => {
+    if (item) {
+      setFormData({
+        titulo: item.titulo || "",
+        descripcion: item.descripcion || "",
+        precio: String(item.precio || ""),
+        rubro: item.rubro || "",
+        ubicacion: item.ubicacion || user?.ubicacion || "",
+        imagen: null,
+        imagenPreview: item.imagen || "",
+        detalles: item.detalles || {},
+        caracteristicas: item.caracteristicas || [],
+      });
+    }
+  }, [item, user?.ubicacion]);
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<CreateMarketItemData> & { imagen?: string } }) =>
+      marketService.updateItem(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['marketItems'] });
       toast({
-        title: "¡Producto creado!",
-        description: "Tu producto/servicio ya está disponible en el market.",
+        title: "¡Producto actualizado!",
+        description: "Los cambios se guardaron correctamente.",
       });
-      navigate("/market");
+      navigate("/mis-publicaciones");
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear el producto",
+        description: error.message || "No se pudo actualizar",
         variant: "destructive",
       });
     },
@@ -70,49 +93,38 @@ const CrearProducto = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id || !item) return;
 
-    if (!formData.imagen) {
-      toast({
-        title: "Imagen requerida",
-        description: "Por favor, subí una imagen de tu producto/servicio",
-        variant: "destructive",
-      });
-      return;
+    let imagenUrl = item.imagen;
+    if (formData.imagen) {
+      try {
+        const uploadResult = await api.upload(formData.imagen);
+        imagenUrl = uploadResult.url;
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message || "Error al subir imagen", variant: "destructive" });
+        return;
+      }
     }
 
-    try {
-      // Subir imagen primero
-      const uploadResult = await api.upload(formData.imagen);
-
-      // Crear el item
-      const itemData: CreateMarketItemData = {
+    updateMutation.mutate({
+      id: Number(id),
+      data: {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         precio: parseInt(formData.precio),
         rubro: formData.rubro,
         ubicacion: formData.ubicacion,
-        imagen: uploadResult.url,
+        imagen: imagenUrl,
         detalles: formData.detalles,
         caracteristicas: formData.caracteristicas,
-      };
-
-      createMutation.mutate(itemData);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo crear el producto",
-        variant: "destructive",
-      });
-    }
+      },
+    });
   };
 
   const handleDetalleChange = (key: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      detalles: {
-        ...prev.detalles,
-        [key]: value,
-      },
+      detalles: { ...prev.detalles, [key]: value },
     }));
   };
 
@@ -135,28 +147,38 @@ const CrearProducto = () => {
 
   const fichaTecnica = formData.rubro ? FICHAS_TECNICAS[formData.rubro] : null;
 
+  if (isLoading || !item) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 flex justify-center min-h-[40vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (item.vendedorId !== user?.id) {
+    toast({ title: "No autorizado", description: "No podés editar esta publicación", variant: "destructive" });
+    navigate("/mis-publicaciones");
+    return null;
+  }
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-6"
-        >
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver
         </Button>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Crear producto o servicio</CardTitle>
+            <CardTitle className="text-2xl">Editar producto o servicio</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Información básica */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Información básica</h3>
-
                 <div className="space-y-2">
                   <Label htmlFor="titulo">Título *</Label>
                   <Input
@@ -167,7 +189,6 @@ const CrearProducto = () => {
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="descripcion">Descripción *</Label>
                   <Textarea
@@ -179,7 +200,6 @@ const CrearProducto = () => {
                     required
                   />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="rubro">Rubro *</Label>
@@ -198,7 +218,6 @@ const CrearProducto = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="precio">Precio (IX) *</Label>
                     <Input
@@ -212,60 +231,35 @@ const CrearProducto = () => {
                     />
                   </div>
                 </div>
-
                 <LocationPicker
                   value={formData.ubicacion}
-                  onChange={(location, lat, lng, radius) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      ubicacion: location,
-                    }));
-                  }}
+                  onChange={(location) => setFormData(prev => ({ ...prev, ubicacion: location }))}
                   label="Ubicación"
-                  required
                 />
               </div>
 
-              {/* Imagen */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Imagen</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="imagen">Imagen del producto/servicio *</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="imagen"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                    <label htmlFor="imagen">
-                      <Button type="button" variant="outline" asChild>
-                        <span>
-                          <Upload className="w-4 h-4 mr-2" />
-                          Subir imagen
-                        </span>
-                      </Button>
-                    </label>
-                    {formData.imagenPreview && (
-                      <img
-                        src={formData.imagenPreview}
-                        alt="Preview"
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
-                    )}
-                  </div>
+                <div className="flex items-center gap-4">
+                  <Input type="file" accept="image/*" onChange={handleImageChange} className="hidden" id="imagen" />
+                  <label htmlFor="imagen">
+                    <Button type="button" variant="outline" asChild>
+                      <span><Upload className="w-4 h-4 mr-2" />Cambiar imagen</span>
+                    </Button>
+                  </label>
+                  {formData.imagenPreview && (
+                    <img src={formData.imagenPreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+                  )}
                 </div>
               </div>
 
-              {/* Ficha técnica */}
               {fichaTecnica && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Ficha técnica</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {Object.entries(fichaTecnica).map(([key, field]) => (
                       <div key={key} className="space-y-2">
-                        <Label htmlFor={key}>{field.label}</Label>
+                        <Label>{field.label}</Label>
                         {field.type === "select" ? (
                           <Select
                             value={formData.detalles[key] || ""}
@@ -275,24 +269,19 @@ const CrearProducto = () => {
                               <SelectValue placeholder={`Seleccionar ${field.label.toLowerCase()}`} />
                             </SelectTrigger>
                             <SelectContent>
-                              {field.options.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
+                              {(field.options || []).map((opt) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         ) : field.type === "date" ? (
                           <Input
-                            id={key}
                             type="date"
                             value={formData.detalles[key] || ""}
                             onChange={(e) => handleDetalleChange(key, e.target.value)}
                           />
                         ) : (
                           <Input
-                            id={key}
-                            type="text"
                             value={formData.detalles[key] || ""}
                             onChange={(e) => handleDetalleChange(key, e.target.value)}
                             placeholder={field.placeholder || field.label}
@@ -304,35 +293,24 @@ const CrearProducto = () => {
                 </div>
               )}
 
-              {/* Características */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Características destacadas</h3>
+                <h3 className="text-lg font-semibold">Características</h3>
                 <div className="flex gap-2">
                   <Input
                     value={nuevaCaracteristica}
                     onChange={(e) => setNuevaCaracteristica(e.target.value)}
-                    placeholder="Ej: Incluye materiales, Garantía 6 meses..."
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        agregarCaracteristica();
-                      }
-                    }}
+                    placeholder="Ej: Incluye materiales..."
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), agregarCaracteristica())}
                   />
                   <Button type="button" onClick={agregarCaracteristica} variant="outline">
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {formData.caracteristicas.map((caracteristica, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-surface rounded">
-                      <span>{caracteristica}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => eliminarCaracteristica(index)}
-                      >
+                  {formData.caracteristicas.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-surface rounded">
+                      <span>{c}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => eliminarCaracteristica(i)}>
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -341,21 +319,11 @@ const CrearProducto = () => {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate(-1)}
-                  className="flex-1"
-                >
+                <Button type="button" variant="outline" onClick={() => navigate(-1)} className="flex-1">
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  variant="gold"
-                  className="flex-1"
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? "Creando..." : "Publicar"}
+                <Button type="submit" variant="gold" className="flex-1" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Guardando..." : "Guardar cambios"}
                 </Button>
               </div>
             </form>
@@ -366,4 +334,4 @@ const CrearProducto = () => {
   );
 };
 
-export default CrearProducto;
+export default EditarProducto;

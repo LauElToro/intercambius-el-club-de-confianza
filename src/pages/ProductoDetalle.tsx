@@ -17,7 +17,10 @@ import {
   Clock,
   User,
   Award,
-  Loader2
+  Loader2,
+  CreditCard,
+  Phone,
+  Mail
 } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
 
@@ -94,9 +97,9 @@ const ProductoDetalle = () => {
                          item.rubro === "productos" ? "📦 Producto" :
                          item.rubro === "alimentos" ? "🍎 Alimento" : "🎭 Experiencia"}
                       </Badge>
-                      {item.precio && (
+                      {item.precio != null && (
                         <span className="text-3xl font-bold gold-text">
-                          {item.precio} IX
+                          {item.precio.toLocaleString('es-AR')} IX
                         </span>
                       )}
                     </div>
@@ -143,6 +146,23 @@ const ProductoDetalle = () => {
                     </div>
                   </div>
                 )}
+
+                <Separator />
+
+                {/* Medio de pago */}
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-gold" />
+                    Medio de pago
+                  </h3>
+                  <div className="bg-surface rounded-lg p-4 space-y-1">
+                    <p className="font-medium">Créditos IX (tokens)</p>
+                    <p className="text-muted-foreground text-sm">
+                      Precio: <span className="font-semibold text-foreground">{item.precio?.toLocaleString('es-AR') ?? 0} IX</span>. 
+                      Se transfieren al confirmar el intercambio.
+                    </p>
+                  </div>
+                </div>
 
                 <Separator />
 
@@ -196,6 +216,21 @@ const ProductoDetalle = () => {
                       <MapPin className="w-3 h-3" />
                       <span>{vendedor.ubicacion}</span>
                     </div>
+                    {vendedor.contacto && (
+                      <div className="space-y-2 mb-3">
+                        <p className="text-xs font-medium text-muted-foreground">Forma de contacto</p>
+                        <a
+                          href={vendedor.contacto.startsWith('+') ? `tel:${vendedor.contacto}` : `mailto:${vendedor.contacto}`}
+                          className="flex items-center gap-2 text-sm text-gold hover:underline"
+                        >
+                          {vendedor.contacto.includes('@') ? (
+                            <><Mail className="w-4 h-4" />{vendedor.contacto}</>
+                          ) : (
+                            <><Phone className="w-4 h-4" />{vendedor.contacto}</>
+                          )}
+                        </a>
+                      </div>
+                    )}
                     <Link to={`/perfil/${vendedor.id}`}>
                       <Button variant="outline" className="w-full">
                         <User className="w-4 h-4 mr-2" />
@@ -234,17 +269,31 @@ const ProductoDetalle = () => {
             {/* Botones de acción */}
             <Card>
               <CardContent className="pt-6 space-y-3">
-                <Button className="w-full bg-gold hover:bg-gold/90 text-primary-foreground" size="lg">
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Contactar vendedor
+                {vendedor?.contacto && (
+                  <a href={vendedor.contacto.startsWith('+') ? `tel:${vendedor.contacto}` : `mailto:${vendedor.contacto}`} className="block">
+                    <Button className="w-full bg-gold hover:bg-gold/90 text-primary-foreground" size="lg">
+                      <MessageCircle className="w-5 h-5 mr-2" />
+                      Contactar vendedor
+                    </Button>
+                  </a>
+                )}
+                {!vendedor?.contacto && vendedor && (
+                  <Link to={`/perfil/${vendedor.id}`}>
+                    <Button className="w-full bg-gold hover:bg-gold/90 text-primary-foreground" size="lg">
+                      <MessageCircle className="w-5 h-5 mr-2" />
+                      Ver perfil para contactar
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="outline" className="w-full" size="lg" asChild>
+                  <Link to="/registrar-intercambio">Registrar intercambio</Link>
                 </Button>
-                <Button variant="outline" className="w-full" size="lg">
-                  Hacer una oferta
-                </Button>
-                <div className="text-xs text-center text-muted-foreground pt-2">
-                  <Clock className="w-3 h-3 inline mr-1" />
-                  Publicado hace 2 días
-                </div>
+                {item.createdAt && (
+                  <div className="text-xs text-center text-muted-foreground pt-2">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Publicado {new Date(item.createdAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
