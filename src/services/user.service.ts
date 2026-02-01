@@ -15,12 +15,7 @@ export const userService = {
 
   async updateUser(data: Partial<User>): Promise<User> {
     try {
-      const user = authService.getCurrentUser();
-      if (!user) {
-        throw new ApiError('No autorizado', 401);
-      }
-      
-      return await api.put<User>(`/api/users/${user.id}`, data);
+      return await api.put<User>('/api/users/me', data);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
@@ -40,6 +35,3 @@ export const userService = {
     }
   },
 };
-
-// Re-export para evitar import circular
-import { authService } from './auth.service';

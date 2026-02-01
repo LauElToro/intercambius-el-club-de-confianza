@@ -20,10 +20,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Cargar usuario desde localStorage al iniciar
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    const loadUser = async () => {
+      if (authService.getToken()) {
+        const fresh = await authService.refreshFromApi();
+        setUser(fresh);
+      } else {
+        setUser(authService.getCurrentUser());
+      }
+      setLoading(false);
+    };
+    loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -53,8 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUser = async () => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
+    try {
+      const currentUser = await authService.refreshFromApi?.() ?? authService.getCurrentUser();
+      setUser(currentUser);
+    } catch {
+      setUser(authService.getCurrentUser());
+    }
   };
 
   return (

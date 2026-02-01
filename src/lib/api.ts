@@ -92,7 +92,7 @@ export const api = {
   
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   
-  upload: async (file: File): Promise<{ url: string; pathname: string; mediaType?: 'image' | 'video' }> => {
+  upload: async (file: File, tipo?: 'fotoPerfil' | 'banner' | 'market'): Promise<{ url: string; pathname: string; mediaType?: 'image' | 'video' }> => {
     const token = localStorage.getItem('intercambius_token');
     if (!token) {
       throw new ApiError('No autorizado', 401);
@@ -100,6 +100,7 @@ export const api = {
 
     const formData = new FormData();
     formData.append('image', file);
+    if (tipo) formData.append('tipo', tipo);
 
     const response = await fetch(`${API_URL}/api/upload`, {
       method: 'POST',

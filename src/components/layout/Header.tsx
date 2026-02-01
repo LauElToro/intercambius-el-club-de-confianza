@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
@@ -167,6 +167,9 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="default" className="hidden sm:flex gap-2">
                       <Avatar className="h-8 w-8">
+                        {(user as any)?.fotoPerfil && (
+                          <AvatarImage src={(user as any).fotoPerfil} alt={user?.nombre} />
+                        )}
                         <AvatarFallback className="bg-gold/20 text-gold text-sm">
                           {user?.nombre?.slice(0, 2).toUpperCase() ?? "?"}
                         </AvatarFallback>
@@ -179,6 +182,12 @@ const Header = () => {
                       <Link to="/dashboard">
                         <User className="h-4 w-4 mr-2" />
                         Mi cuenta
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={`/perfil/${user?.id}`}>
+                        <User className="h-4 w-4 mr-2" />
+                        Mi perfil
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem

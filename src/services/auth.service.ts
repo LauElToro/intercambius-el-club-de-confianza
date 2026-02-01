@@ -30,7 +30,10 @@ export interface User {
   ubicacion: string;
   verificado: boolean;
   miembroDesde: string;
-  // Campos opcionales - se completan cuando crea productos/servicios
+  bio?: string;
+  fotoPerfil?: string;
+  banner?: string;
+  redesSociales?: Record<string, string>;
   ofrece?: string;
   necesita?: string;
   precioOferta?: number;
@@ -86,6 +89,18 @@ export const authService = {
       return JSON.parse(userStr);
     } catch {
       return null;
+    }
+  },
+
+  async refreshFromApi(): Promise<User | null> {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const user = await import('@/services/user.service').then(m => m.userService.getCurrentUser());
+      localStorage.setItem('intercambius_user', JSON.stringify(user));
+      return user;
+    } catch {
+      return this.getCurrentUser();
     }
   },
 
