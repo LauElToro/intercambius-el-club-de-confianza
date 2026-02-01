@@ -61,8 +61,8 @@ const Dashboard = () => {
     return null;
   }
 
-  const saldo = Number(currentUser.saldo) || 0;
-  const limite = Number(currentUser.limite) || 150000;
+  const saldo = Number(currentUser?.saldo ?? 0) || 0;
+  const limite = Number(currentUser?.limite ?? 0) || 150000;
   const saldoPositivo = saldo >= 0;
   const porcentajeCredito = limite > 0 ? Math.abs(saldo) / limite * 100 : 0;
 
@@ -115,7 +115,7 @@ const Dashboard = () => {
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               <span className="w-2 h-2 bg-gold/50 rounded-full" />
-              IX = Créditos de Intercambius. No es dinero real, es valor de intercambio.
+              IX = Token respaldado de Intercambius para intercambios dentro del club.
             </p>
           </div>
         </div>

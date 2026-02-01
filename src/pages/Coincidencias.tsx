@@ -63,8 +63,8 @@ const Coincidencias = () => {
     );
   }
 
-  const saldo = Number(currentUser.saldo) || 0;
-  const limite = Number(currentUser.limite) || 150000;
+  const saldo = Number(currentUser?.saldo ?? 0) || 0;
+  const limite = Number(currentUser?.limite ?? 0) || 150000;
   const puedeComprar = saldo > -limite;
 
   return (

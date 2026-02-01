@@ -38,8 +38,8 @@ const Landing = () => {
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in"
             style={{ animationDelay: "0.3s" }}
           >
-            Un sistema de crédito mutuo basado en confianza. 
-            No es dinero, es confianza organizada entre personas.
+            Sistema de crédito mutuo con tokens respaldados. 
+            Confianza organizada entre personas.
           </p>
 
           <div 
@@ -108,15 +108,15 @@ const Landing = () => {
                 <ul className="space-y-3 text-muted-foreground">
                   <li className="flex items-center gap-3">
                     <span className="w-2 h-2 bg-gold rounded-full" />
-                    No es dinero tradicional
+                    Token respaldado
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-2 h-2 bg-gold rounded-full" />
-                    No es criptomoneda
+                    Para intercambios dentro del club
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-2 h-2 bg-gold rounded-full" />
-                    Es confianza organizada
+                    Confianza organizada entre personas
                   </li>
                 </ul>
               </div>
@@ -164,7 +164,7 @@ const Landing = () => {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              "No es dinero, es confianza organizada"
+              Token respaldado. Confianza organizada.
             </p>
           </div>
         </div>

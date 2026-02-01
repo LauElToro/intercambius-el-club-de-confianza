@@ -85,9 +85,9 @@ const ProductoDetalle = () => {
     ? item.images
     : (item?.imagen ? [{ url: item.imagen, mediaType: 'image' as const }] : []);
 
-  const saldo = Number(usuario?.saldo) ?? 0;
-  const limite = Number(usuario?.limite) ?? 150000;
-  const precio = item?.precio ?? 0;
+  const saldo = Number(usuario?.saldo ?? 0) || 0;
+  const limite = Number(usuario?.limite ?? 0) || 150000;
+  const precio = Number(item?.precio ?? 0) || 0;
   const puedeGastar = saldo + limite;
   const puedeComprar = !!item && (saldo - precio >= -limite);
 
