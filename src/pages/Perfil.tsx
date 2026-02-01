@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Star, ArrowLeft, MessageCircle, Loader2 } from "lucide-react";
+import { MapPin, Star, ArrowLeft, Loader2 } from "lucide-react";
 import { userService } from "@/services/user.service";
 import { marketService } from "@/services/market.service";
 
@@ -89,10 +89,9 @@ const Perfil = () => {
                     ({usuario.totalResenas ?? 0} reseñas)
                   </span>
                 </div>
-                <Button className="bg-gold hover:bg-gold/90 text-primary-foreground">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Contactar
-                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Para contactar, comprá o contratá uno de sus productos. Podrás chatear después de la compra.
+                </p>
               </div>
             </div>
           </CardContent>

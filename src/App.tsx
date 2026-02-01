@@ -18,6 +18,7 @@ import EditarProducto from "./pages/EditarProducto";
 import MisPublicaciones from "./pages/MisPublicaciones";
 import Historial from "./pages/Historial";
 import Favoritos from "./pages/Favoritos";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -100,6 +101,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Favoritos />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/chat" 
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/chat/:conversacionId" 
+                element={
+                  <ProtectedRoute>
+                    <Chat />
                   </ProtectedRoute>
                 } 
               />

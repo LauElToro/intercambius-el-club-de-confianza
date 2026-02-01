@@ -12,7 +12,8 @@ import {
   LogIn,
   FileText,
   Receipt,
-  Heart
+  Heart,
+  MessageCircle
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -44,6 +45,7 @@ const Header = () => {
     { to: "/market", label: "Market", icon: ShoppingBag },
     { to: "/coincidencias", label: "Coincidencias", icon: Users },
     { to: "/favoritos", label: "Favoritos", icon: Heart },
+    { to: "/chat", label: "Mensajes", icon: MessageCircle },
     { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
     { to: "/historial", label: "Historial", icon: Receipt }
   ];

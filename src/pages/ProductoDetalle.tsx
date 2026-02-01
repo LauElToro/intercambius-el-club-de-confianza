@@ -12,7 +12,6 @@ import {
   ArrowLeft, 
   MapPin, 
   Star, 
-  MessageCircle, 
   Heart, 
   Share2,
   CheckCircle2,
@@ -20,9 +19,7 @@ import {
   User,
   Award,
   Loader2,
-  CreditCard,
-  Phone,
-  Mail
+  CreditCard
 } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
@@ -62,12 +59,14 @@ const ProductoDetalle = () => {
 
   const checkoutMutation = useMutation({
     mutationFn: () => checkoutService.pay(Number(id!)),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['marketItem', id] });
       queryClient.invalidateQueries({ queryKey: ['intercambios'] });
-      toast({ title: "¡Compra exitosa!", description: "El intercambio fue registrado automáticamente." });
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      toast({ title: "¡Compra exitosa!", description: "Ya podés coordinar la entrega con el vendedor por chat." });
       setCheckoutOpen(false);
+      if (data.conversacionId) navigate(`/chat/${data.conversacionId}`);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "No se pudo completar el pago", variant: "destructive" });
@@ -339,21 +338,6 @@ const ProductoDetalle = () => {
                       <MapPin className="w-3 h-3" />
                       <span>{vendedor.ubicacion}</span>
                     </div>
-                    {vendedor.contacto && (
-                      <div className="space-y-2 mb-3">
-                        <p className="text-xs font-medium text-muted-foreground">Forma de contacto</p>
-                        <a
-                          href={vendedor.contacto.startsWith('+') ? `tel:${vendedor.contacto}` : `mailto:${vendedor.contacto}`}
-                          className="flex items-center gap-2 text-sm text-gold hover:underline"
-                        >
-                          {vendedor.contacto.includes('@') ? (
-                            <><Mail className="w-4 h-4" />{vendedor.contacto}</>
-                          ) : (
-                            <><Phone className="w-4 h-4" />{vendedor.contacto}</>
-                          )}
-                        </a>
-                      </div>
-                    )}
                     <Link to={`/perfil/${vendedor.id}`}>
                       <Button variant="outline" className="w-full">
                         <User className="w-4 h-4 mr-2" />
@@ -392,22 +376,6 @@ const ProductoDetalle = () => {
             {/* Botones de acción */}
             <Card>
               <CardContent className="pt-6 space-y-3">
-                {vendedor?.contacto && (
-                  <a href={vendedor.contacto.startsWith('+') ? `tel:${vendedor.contacto}` : `mailto:${vendedor.contacto}`} className="block">
-                    <Button className="w-full bg-gold hover:bg-gold/90 text-primary-foreground" size="lg">
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      Contactar vendedor
-                    </Button>
-                  </a>
-                )}
-                {!vendedor?.contacto && vendedor && (
-                  <Link to={`/perfil/${vendedor.id}`}>
-                    <Button className="w-full bg-gold hover:bg-gold/90 text-primary-foreground" size="lg">
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      Ver perfil para contactar
-                    </Button>
-                  </Link>
-                )}
                 {usuario && vendedor && item.vendedorId !== usuario.id && (
                   <Button
                     className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
@@ -415,7 +383,7 @@ const ProductoDetalle = () => {
                     onClick={() => setCheckoutOpen(true)}
                   >
                     <CreditCard className="w-5 h-5 mr-2" />
-                    Pagar con IX
+                    {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'}
                   </Button>
                 )}
                 {item.createdAt && (

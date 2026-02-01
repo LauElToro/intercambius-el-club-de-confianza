@@ -1,15 +1,18 @@
 import api, { ApiError } from '@/lib/api';
 
 export interface CheckoutResponse {
-  id: number;
-  usuarioId: number;
-  otraPersonaId: number;
-  otraPersonaNombre: string;
-  descripcion: string;
-  creditos: number;
-  fecha: string;
-  estado: string;
-  marketItemId?: number;
+  intercambio: {
+    id: number;
+    usuarioId: number;
+    otraPersonaId: number;
+    otraPersonaNombre: string;
+    descripcion: string;
+    creditos: number;
+    fecha: string;
+    estado: string;
+    marketItemId?: number;
+  };
+  conversacionId: number;
 }
 
 export const checkoutService = {
