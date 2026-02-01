@@ -10,6 +10,7 @@ import {
   User,
   Home,
   LogIn,
+  LogOut,
   FileText,
   Receipt,
   Heart,
@@ -21,11 +22,20 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const isHome = location.pathname === "/";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -153,11 +163,33 @@ const Header = () => {
 
             if (isAuthenticated) {
               return (
-                <Link to="/dashboard">
-                  <Button variant="gold-outline" size="default" className="hidden sm:flex">
-                    Mi cuenta
-                  </Button>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="default" className="hidden sm:flex gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-gold/20 text-gold text-sm">
+                          {user?.nombre?.slice(0, 2).toUpperCase() ?? "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="max-w-[120px] truncate">{user?.nombre ?? "Mi cuenta"}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard">
+                        <User className="h-4 w-4 mr-2" />
+                        Mi cuenta
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => { logout(); }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Cerrar sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               );
             } else {
               return isHome ? (
@@ -283,16 +315,26 @@ const Header = () => {
 
                     if (isAuthenticated) {
                       return (
-                        <Link to="/dashboard" className="block">
+                        <div className="space-y-2">
+                          <Link to="/dashboard" className="block">
+                            <Button 
+                              variant="gold-outline" 
+                              className="w-full justify-start gap-3 h-auto py-3"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              <User className="h-5 w-5" />
+                              <span className="font-medium">Mi cuenta</span>
+                            </Button>
+                          </Link>
                           <Button 
-                            variant="gold-outline" 
-                            className="w-full justify-start gap-3 h-auto py-3"
-                            onClick={() => setMobileMenuOpen(false)}
+                            variant="ghost" 
+                            className="w-full justify-start gap-3 h-auto py-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => { logout(); setMobileMenuOpen(false); }}
                           >
-                            <User className="h-5 w-5" />
-                            <span className="font-medium">Mi cuenta</span>
+                            <LogOut className="h-5 w-5" />
+                            <span className="font-medium">Cerrar sesión</span>
                           </Button>
-                        </Link>
+                        </div>
                       );
                     } else {
                       return (
