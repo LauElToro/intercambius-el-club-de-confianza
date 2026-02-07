@@ -22,15 +22,13 @@ Marketplace de intercambios y compras dentro de un club de confianza. Sistema de
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         FRONTEND (Netlify)                          │
 │  React + Vite + TypeScript + Tailwind + shadcn/ui                   │
-│  https://[tu-app].netlify.app                                       │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     │ HTTPS / API calls
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         BACKEND (Vercel)                            │
-│  Express + Prisma + PostgreSQL                                      │
-│  https://[tu-backend].vercel.app                                    │
+│  Express + Prisma + PostgreSQL                                      │                                │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     │ Prisma
@@ -236,7 +234,6 @@ Configuración en `netlify.toml`:
   publish = "dist"
 
 [build.environment]
-  VITE_API_URL = "https://[tu-backend].vercel.app"
 ```
 
 ### Backend: Vercel
@@ -344,7 +341,6 @@ npm run dev
 2. **Build command**: `npm run build`
 3. **Publish directory**: `dist`
 4. **Environment variables**:
-   - `VITE_API_URL`: URL del backend (ej. `https://tu-backend.vercel.app`)
 
 ### Backend (Vercel)
 
