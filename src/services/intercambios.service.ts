@@ -1,5 +1,24 @@
 import api, { ApiError } from '@/lib/api';
 
+export interface MarketItemEnIntercambio {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  descripcionCompleta?: string;
+  precio: number;
+  rubro: string;
+  ubicacion?: string;
+  imagen: string;
+  imagenPrincipal?: string;
+  imagenes?: { url: string; alt?: string }[];
+  condition?: string;
+  availability?: string;
+  tipoPago?: string;
+  detalles?: Record<string, string>;
+  caracteristicas?: string[];
+  rating?: number;
+}
+
 export interface Intercambio {
   id: number;
   usuarioId: number;
@@ -10,6 +29,7 @@ export interface Intercambio {
   fecha: string;
   estado: string;
   marketItemId?: number;
+  marketItem?: MarketItemEnIntercambio | null;
   createdAt?: string;
   updatedAt?: string;
 }
