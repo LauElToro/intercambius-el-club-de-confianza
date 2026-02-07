@@ -26,8 +26,11 @@ export interface MarketItem {
   descripcion: string;
   descripcionCompleta?: string; // legacy, usar descripcion
   precio: number;
+  tipoPago?: string; // ix | convenir | pesos | ix_pesos
   rubro: 'servicios' | 'productos' | 'alimentos' | 'experiencias';
   ubicacion: string;
+  lat?: number;
+  lng?: number;
   distancia?: number;
   imagen: string;
   vendedorId: number;
@@ -47,14 +50,23 @@ export interface MarketItemFilters {
   precioMax?: number;
   vendedorId?: number;
   search?: string;
+  /** Latitud del usuario para filtrar por distancia */
+  userLat?: number;
+  /** Longitud del usuario para filtrar por distancia */
+  userLng?: number;
+  /** Distancia máxima en km */
+  distanciaMax?: number;
 }
 
 export interface CreateMarketItemData {
   titulo: string;
   descripcion: string;
   precio: number;
+  tipoPago?: string;
   rubro: 'servicios' | 'productos' | 'alimentos' | 'experiencias';
   ubicacion: string;
+  lat?: number;
+  lng?: number;
   distancia?: number;
   imagen: string;
   images?: ProductMedia[];
@@ -81,6 +93,15 @@ export const marketService = {
       }
       if (filters?.vendedorId) {
         params.append('vendedorId', filters.vendedorId.toString());
+      }
+      if (filters?.userLat !== undefined) {
+        params.append('userLat', filters.userLat.toString());
+      }
+      if (filters?.userLng !== undefined) {
+        params.append('userLng', filters.userLng.toString());
+      }
+      if (filters?.distanciaMax !== undefined) {
+        params.append('distanciaMax', filters.distanciaMax.toString());
       }
 
       const queryString = params.toString();

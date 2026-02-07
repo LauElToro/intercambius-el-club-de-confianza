@@ -95,69 +95,63 @@ export const LocationPicker = ({
   }, [value]);
 
   // Función para obtener ubicación automática
-  const handleGetCurrentLocation = async () => {
+  const tryGetLocation = (highAccuracy: boolean) => {
     if (!navigator.geolocation) {
       setLocationError('Tu navegador no soporta geolocalización');
+      return;
+    }
+    if (!window.isSecureContext) {
+      setLocationError('La geolocalización requiere HTTPS. Asegurate de estar en una conexión segura.');
       return;
     }
 
     setIsGettingLocation(true);
     setLocationError(null);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          // Obtener dirección desde coordenadas
-          const address = await getAddressFromCoordinates(latitude, longitude);
-          
-          setSelectedLocation({
-            lat: latitude,
-            lng: longitude,
-            address: address
-          });
-          
-          onChange(address, latitude, longitude, radius);
-          setLocationError(null);
-        } catch (error) {
-          console.error('Error obteniendo dirección:', error);
-          const fallbackAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          setSelectedLocation({
-            lat: latitude,
-            lng: longitude,
-            address: fallbackAddress
-          });
-          onChange(fallbackAddress, latitude, longitude, radius);
-        } finally {
-          setIsGettingLocation(false);
-        }
-      },
-      (error) => {
+    const onSuccess = async (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      try {
+        const address = await getAddressFromCoordinates(latitude, longitude);
+        setSelectedLocation({ lat: latitude, lng: longitude, address });
+        onChange(address, latitude, longitude, radius);
+        setLocationError(null);
+      } catch (error) {
+        console.error('Error obteniendo dirección:', error);
+        const fallbackAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        setSelectedLocation({ lat: latitude, lng: longitude, address: fallbackAddress });
+        onChange(fallbackAddress, latitude, longitude, radius);
+      } finally {
         setIsGettingLocation(false);
-        let errorMessage = 'No se pudo obtener tu ubicación';
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Permiso de ubicación denegado. Por favor, permite el acceso a tu ubicación en la configuración del navegador.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Información de ubicación no disponible.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Tiempo de espera agotado al obtener la ubicación.';
-            break;
-        }
-        
-        setLocationError(errorMessage);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
       }
-    );
+    };
+
+    const onError = (error: GeolocationPositionError) => {
+      setIsGettingLocation(false);
+      let errorMessage = 'No se pudo obtener tu ubicación';
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          errorMessage = 'Permiso denegado. Si ya lo permitiste en la configuración, probá recargar la página y volver a intentar. También podés elegir una ubicación de la lista o buscar manualmente.';
+          break;
+        case error.POSITION_UNAVAILABLE:
+          errorMessage = 'Ubicación no disponible (GPS/WiFi desactivado o sin señal). Probá elegir una ubicación de la lista.';
+          break;
+        case error.TIMEOUT:
+          errorMessage = 'Tiempo agotado. Probá de nuevo o elegí una ubicación de la lista.';
+          break;
+      }
+      setLocationError(errorMessage);
+    };
+
+    const options: PositionOptions = {
+      enableHighAccuracy: highAccuracy,
+      timeout: 15000,
+      maximumAge: 60000, // Usar posición en caché hasta 1 min (más tolerante)
+    };
+
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
   };
+
+  const handleGetCurrentLocation = () => tryGetLocation(false);
 
   const handleLocationSelect = (location: typeof commonLocations[0]) => {
     setSelectedLocation({ ...location, address: location.name });
@@ -167,14 +161,15 @@ export const LocationPicker = ({
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      // Por ahora, buscar en las ubicaciones comunes
+      const query = searchQuery.trim().toLowerCase();
+      // Buscar: nombre contiene búsqueda O búsqueda contiene nombre (ej: "córdoba" matchea "Córdoba")
       const found = commonLocations.find(
-        loc => loc.name.toLowerCase().includes(searchQuery.toLowerCase())
+        loc => loc.name.toLowerCase().includes(query) || query.includes(loc.name.toLowerCase().split(' - ')[0])
       );
       if (found) {
         handleLocationSelect(found);
       } else {
-        // Si no se encuentra, usar el texto ingresado
+        // Si no se encuentra, usar el texto pero sin coordenadas (no aparecerá en filtro por distancia)
         onChange(searchQuery);
         setSelectedLocation(null);
       }
@@ -209,7 +204,7 @@ export const LocationPicker = ({
           />
         </div>
         
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setLocationError(null); }}>
           <DialogTrigger asChild>
             <Button type="button" variant="outline" size="icon">
               <MapPin className="w-4 h-4" />
@@ -218,6 +213,9 @@ export const LocationPicker = ({
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Seleccionar ubicación</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Para que tu publicación aparezca en búsquedas por distancia, seleccioná una ubicación de la lista o usá tu ubicación actual.
+              </p>
             </DialogHeader>
             
             <div className="space-y-4">
@@ -235,7 +233,18 @@ export const LocationPicker = ({
 
               {locationError && (
                 <Alert variant="destructive">
-                  <AlertDescription>{locationError}</AlertDescription>
+                  <AlertDescription>
+                    <span className="block mb-2">{locationError}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setLocationError(null); handleGetCurrentLocation(); }}
+                      disabled={isGettingLocation}
+                    >
+                      Reintentar
+                    </Button>
+                  </AlertDescription>
                 </Alert>
               )}
 

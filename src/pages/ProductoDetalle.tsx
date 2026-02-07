@@ -19,13 +19,16 @@ import {
   User,
   Award,
   Loader2,
-  CreditCard
+  CreditCard,
+  MessageCircle
 } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
 import { checkoutService } from "@/services/checkout.service";
+import { chatService } from "@/services/chat.service";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
 
 const ProductoDetalle = () => {
@@ -44,6 +47,7 @@ const ProductoDetalle = () => {
   });
 
   const usuario = currentUser || user;
+  const { formatIX } = useCurrencyVariant();
 
   const { data: item, isLoading, error } = useQuery({
     queryKey: ['marketItem', id],
@@ -55,6 +59,17 @@ const ProductoDetalle = () => {
     queryKey: ['favorito', id],
     queryFn: () => favoritosService.isFavorito(Number(id!)),
     enabled: !!id && !!item,
+  });
+
+  const iniciarChatMutation = useMutation({
+    mutationFn: () => chatService.iniciarConversacion({ marketItemId: Number(id!) }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      navigate(`/chat/${data.conversacionId}`);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "No se pudo iniciar la conversación", variant: "destructive" });
+    },
   });
 
   const checkoutMutation = useMutation({
@@ -221,7 +236,7 @@ const ProductoDetalle = () => {
                       </Badge>
                       {item.precio != null && (
                         <span className="text-3xl font-bold gold-text">
-                          {item.precio.toLocaleString('es-AR')} IX
+                          {formatIX(item.precio)}
                         </span>
                       )}
                     </div>
@@ -278,11 +293,32 @@ const ProductoDetalle = () => {
                     Medio de pago
                   </h3>
                   <div className="bg-surface rounded-lg p-4 space-y-1">
-                    <p className="font-medium">Créditos IX (tokens)</p>
-                    <p className="text-muted-foreground text-sm">
-                      Precio: <span className="font-semibold text-foreground">{item.precio?.toLocaleString('es-AR') ?? 0} IX</span>. 
-                      Se transfieren al confirmar el intercambio.
-                    </p>
+                    {item.tipoPago === 'convenir' && (
+                      <>
+                        <p className="font-medium">Pago a convenir</p>
+                        <p className="text-muted-foreground text-sm">
+                          Acordarán el precio y forma de pago por chat cuando lleguen al acuerdo.
+                        </p>
+                      </>
+                    )}
+                    {item.tipoPago === 'pesos' && (
+                      <>
+                        <p className="font-medium">En pesos</p>
+                        <p className="text-muted-foreground text-sm">
+                          El pago se acuerda por fuera de la página. Contactá al vendedor para coordinar.
+                        </p>
+                      </>
+                    )}
+                    {(item.tipoPago === 'ix_pesos' || !item.tipoPago || item.tipoPago === 'ix') && (
+                      <>
+                        <p className="font-medium">Créditos IX</p>
+                        <p className="text-muted-foreground text-sm">
+                          Precio: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>.
+                          {item.tipoPago === 'ix_pesos' && ' También acepta pesos por fuera.'}
+                          {(!item.tipoPago || item.tipoPago === 'ix') && ' Se transfieren al confirmar el intercambio.'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -377,14 +413,37 @@ const ProductoDetalle = () => {
             <Card>
               <CardContent className="pt-6 space-y-3">
                 {usuario && vendedor && item.vendedorId !== usuario.id && (
-                  <Button
-                    className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
-                    size="lg"
-                    onClick={() => setCheckoutOpen(true)}
-                  >
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'}
-                  </Button>
+                  <>
+                    <Button
+                      variant="gold-outline"
+                      className="w-full"
+                      size="lg"
+                      onClick={() => iniciarChatMutation.mutate()}
+                      disabled={iniciarChatMutation.isPending}
+                    >
+                      {iniciarChatMutation.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      ) : (
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                      )}
+                      Contactar al vendedor
+                    </Button>
+                    {(item.tipoPago === 'ix' || item.tipoPago === 'ix_pesos' || !item.tipoPago) && (
+                      <Button
+                        className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
+                        size="lg"
+                        onClick={() => setCheckoutOpen(true)}
+                      >
+                        <CreditCard className="w-5 h-5 mr-2" />
+                        {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'} con IX
+                      </Button>
+                    )}
+                    {(item.tipoPago === 'convenir' || item.tipoPago === 'pesos') && (
+                      <p className="text-sm text-muted-foreground text-center">
+                        Contactá para acordar precio y forma de pago.
+                      </p>
+                    )}
+                  </>
                 )}
                 {item.createdAt && (
                   <div className="text-xs text-center text-muted-foreground pt-2">
@@ -406,25 +465,25 @@ const ProductoDetalle = () => {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{item.titulo}</span>
-                <span className="font-bold">{precio.toLocaleString('es-AR')} IX</span>
+                <span className="font-bold">{formatIX(precio)}</span>
               </div>
               <div className="bg-muted rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Tu saldo</span>
-                  <span>{saldo.toLocaleString('es-AR')} IX</span>
+                  <span>{formatIX(saldo)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Límite negativo</span>
-                  <span>-{limite.toLocaleString('es-AR')} IX</span>
+                  <span>-{formatIX(limite)}</span>
                 </div>
                 <div className="flex justify-between font-medium pt-2 border-t">
                   <span>Podés gastar hasta</span>
-                  <span className="text-gold">{puedeGastar.toLocaleString('es-AR')} IX</span>
+                  <span className="text-gold">{formatIX(puedeGastar)}</span>
                 </div>
               </div>
               {!puedeComprar && (
                 <p className="text-sm text-destructive">
-                  No tenés suficiente crédito. Tu saldo ({saldo.toLocaleString('es-AR')} IX) menos el precio ({precio.toLocaleString('es-AR')} IX) superaría el límite negativo (-{limite.toLocaleString('es-AR')} IX).
+                  No tenés suficiente crédito. Tu saldo ({formatIX(saldo)}) menos el precio ({formatIX(precio)}) superaría el límite negativo (-{formatIX(limite)}).
                 </p>
               )}
             </div>
@@ -436,8 +495,16 @@ const ProductoDetalle = () => {
                 variant="gold"
                 onClick={() => checkoutMutation.mutate()}
                 disabled={!puedeComprar || checkoutMutation.isPending}
+                className="min-w-[140px]"
               >
-                {checkoutMutation.isPending ? "Procesando..." : "Confirmar pago"}
+                {checkoutMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Procesando...
+                  </>
+                ) : (
+                  "Confirmar pago"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

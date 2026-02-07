@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { FICHAS_TECNICAS } from "@/lib/fichas-tecnicas";
+import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
 
 const CrearProducto = () => {
   const navigate = useNavigate();
@@ -22,12 +23,16 @@ const CrearProducto = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     titulo: "",
     descripcion: "",
-    precio: "",
+    precio: "" as string,
+    tipoPago: "ix" as "ix" | "convenir" | "pesos" | "ix_pesos",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: user?.ubicacion || "",
+    lat: undefined as number | undefined,
+    lng: undefined as number | undefined,
     medias: [] as { file: File; preview: string; type: 'image' | 'video' }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
@@ -48,11 +53,15 @@ const CrearProducto = () => {
       navigate("/market");
     },
     onError: (error: any) => {
+      setIsSubmitting(false);
       toast({
         title: "Error",
         description: error.message || "No se pudo crear el producto",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      setIsSubmitting(false);
     },
   });
 
@@ -101,6 +110,7 @@ const CrearProducto = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting || createMutation.isPending) return;
 
     if (formData.medias.length === 0) {
       toast({
@@ -111,6 +121,7 @@ const CrearProducto = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const uploaded: { url: string; mediaType: 'image' | 'video' }[] = [];
       for (let i = 0; i < formData.medias.length; i++) {
@@ -129,12 +140,32 @@ const CrearProducto = () => {
         mediaType: u.mediaType,
       }));
 
+      const precioNum = parsePrecioFromInput(formData.precio);
+      if (precioNum < 1) {
+        toast({ title: "Precio inválido", description: "El precio debe ser al menos 1 IX", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (formData.lat == null || formData.lng == null) {
+        toast({
+          title: "Ubicación requerida",
+          description: "Seleccioná una ubicación del mapa (ej: CABA, Córdoba) para que tu publicación aparezca en búsquedas por distancia.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const itemData: CreateMarketItemData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
-        precio: parseInt(formData.precio),
+        precio: precioNum,
+        tipoPago: formData.tipoPago,
         rubro: formData.rubro,
         ubicacion: formData.ubicacion,
+        lat: formData.lat,
+        lng: formData.lng,
         imagen: firstImage.url,
         images,
         detalles: formData.detalles,
@@ -143,6 +174,7 @@ const CrearProducto = () => {
 
       createMutation.mutate(itemData);
     } catch (error: any) {
+      setIsSubmitting(false);
       toast({
         title: "Error",
         description: error.message || "No se pudo crear el producto",
@@ -248,22 +280,47 @@ const CrearProducto = () => {
                     <Label htmlFor="precio">Precio (IX) *</Label>
                     <Input
                       id="precio"
-                      type="number"
-                      min="1"
-                      value={formData.precio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, precio: e.target.value }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatPrecioForInput(formData.precio)}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '');
+                        setFormData(prev => ({ ...prev, precio: digits }));
+                      }}
                       placeholder="100"
                       required
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoPago">Medio de pago aceptado</Label>
+                    <Select
+                      value={formData.tipoPago}
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, tipoPago: v as typeof formData.tipoPago }))}
+                    >
+                      <SelectTrigger id="tipoPago">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ix">Solo IX (créditos)</SelectItem>
+                        <SelectItem value="ix_pesos">IX y pesos (por fuera)</SelectItem>
+                        <SelectItem value="convenir">Pago a convenir</SelectItem>
+                        <SelectItem value="pesos">En pesos (por fuera de la página)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Si elegís pesos o convenir, acordarán el pago por chat cuando lleguen al acuerdo.
+                    </p>
                   </div>
                 </div>
 
                 <LocationPicker
                   value={formData.ubicacion}
-                  onChange={(location, lat, lng, radius) => {
+                  onChange={(location, lat, lng) => {
                     setFormData(prev => ({
                       ...prev,
                       ubicacion: location,
+                      lat,
+                      lng,
                     }));
                   }}
                   label="Ubicación"
@@ -410,9 +467,9 @@ const CrearProducto = () => {
                   type="submit"
                   variant="gold"
                   className="flex-1"
-                  disabled={createMutation.isPending}
+                  disabled={isSubmitting || createMutation.isPending}
                 >
-                  {createMutation.isPending ? "Creando..." : "Publicar"}
+                  {(isSubmitting || createMutation.isPending) ? "Publicando..." : "Publicar"}
                 </Button>
               </div>
             </form>

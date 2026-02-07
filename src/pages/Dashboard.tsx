@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { intercambiosService } from "@/services/intercambios.service";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { marketService } from "@/services/market.service";
 import { Loader2 } from "lucide-react";
 
@@ -61,6 +62,7 @@ const Dashboard = () => {
     return null;
   }
 
+  const { formatIX } = useCurrencyVariant();
   const saldo = Number(currentUser?.saldo ?? 0) || 0;
   const limite = Number(currentUser?.limite ?? 0) || 150000;
   const saldoPositivo = saldo >= 0;
@@ -86,9 +88,8 @@ const Dashboard = () => {
               <p className="text-muted-foreground mb-2">Tu saldo actual</p>
               <div className="flex items-baseline gap-2">
               <span className={`text-5xl md:text-6xl font-bold ${saldoPositivo ? 'gold-text' : 'text-destructive'}`}>
-                  {saldoPositivo ? '+' : ''}{saldo}
+                  {saldoPositivo ? '+' : ''}{formatIX(saldo)}
                 </span>
-                <span className="text-2xl text-muted-foreground">IX</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 {saldoPositivo 
@@ -106,8 +107,8 @@ const Dashboard = () => {
                 />
               </div>
               <p className="text-sm text-foreground">
-                <span className="text-gold">{Math.abs(saldo)}</span>
-                <span className="text-muted-foreground"> / {limite} IX</span>
+                <span className="text-gold">{formatIX(Math.abs(saldo))}</span>
+                <span className="text-muted-foreground"> / {formatIX(limite)}</span>
               </p>
             </div>
           </div>
@@ -115,7 +116,7 @@ const Dashboard = () => {
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               <span className="w-2 h-2 bg-gold/50 rounded-full" />
-              IX = Token respaldado de Intercambius para intercambios dentro del club.
+              IX = Créditos de Intercambius para intercambios dentro del club.
             </p>
           </div>
         </div>
@@ -179,7 +180,7 @@ const Dashboard = () => {
                     key={i.id}
                     type={i.creditos > 0 ? "recibido" : "enviado"}
                     description={i.descripcion}
-                    amount={Math.abs(i.creditos)}
+                    amountFormatted={formatIX(Math.abs(i.creditos))}
                     date={formatFechaRelativa(i.fecha || i.createdAt || "")}
                   />
                 ))}
@@ -216,11 +217,11 @@ const ProfileCard = ({ title, content, icon }: ProfileCardProps) => (
 interface ActivityItemProps {
   type: "recibido" | "enviado";
   description: string;
-  amount: number;
+  amountFormatted: string;
   date: string;
 }
 
-const ActivityItem = ({ type, description, amount, date }: ActivityItemProps) => (
+const ActivityItem = ({ type, description, amountFormatted, date }: ActivityItemProps) => (
   <div className="bg-card rounded-lg p-4 border border-border flex items-center justify-between">
     <div className="flex items-center gap-3">
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -237,7 +238,7 @@ const ActivityItem = ({ type, description, amount, date }: ActivityItemProps) =>
       </div>
     </div>
     <span className={`font-semibold ${type === "recibido" ? "text-primary" : "text-muted-foreground"}`}>
-      {type === "recibido" ? "+" : "-"}{amount} IX
+      {type === "recibido" ? "+" : "-"}{amountFormatted}
     </span>
   </div>
 );

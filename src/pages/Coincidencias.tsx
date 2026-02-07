@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/currency";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService } from "@/services/user.service";
 import { coincidenciasService } from "@/services/coincidencias.service";
@@ -63,6 +63,7 @@ const Coincidencias = () => {
     );
   }
 
+  const { formatIX } = useCurrencyVariant();
   const saldo = Number(currentUser?.saldo ?? 0) || 0;
   const limite = Number(currentUser?.limite ?? 0) || 150000;
   const puedeComprar = saldo > -limite;
@@ -87,7 +88,7 @@ const Coincidencias = () => {
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Has alcanzado el límite de crédito negativo ({limite.toLocaleString('es-AR')} IX). 
+              Has alcanzado el límite de crédito negativo ({formatIX(limite)}). 
               Necesitás generar créditos positivos para continuar intercambiando.
             </AlertDescription>
           </Alert>
@@ -99,9 +100,9 @@ const Coincidencias = () => {
             <div>
               <p className="text-sm text-muted-foreground mb-1">Crédito disponible</p>
               <p className="text-lg font-semibold">
-                {formatCurrency(saldo)}
+                {formatIX(saldo)}
                 <span className="text-sm text-muted-foreground ml-2">
-                  (Límite: {formatCurrency(-limite)})
+                  (Límite: {formatIX(-limite)})
                 </span>
               </p>
             </div>
@@ -175,7 +176,7 @@ const Coincidencias = () => {
                       {item.titulo}
                     </h3>
                     <span className="text-xl font-bold gold-text flex-shrink-0">
-                      {formatCurrency(item.precio)}
+                      {formatIX(item.precio)}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">

@@ -31,30 +31,29 @@ async function request<T>(
     headers,
   });
 
-  // Verificar Content-Type antes de parsear JSON
   const contentType = response.headers.get('content-type');
   const isJson = contentType && contentType.includes('application/json');
 
   let data: any = {};
-  
-  if (isJson) {
+  const text = await response.text();
+
+  if (response.status === 204 || text.length === 0) {
+    data = {};
+  } else if (isJson) {
     try {
-      data = await response.json();
+      data = text ? JSON.parse(text) : {};
     } catch (e) {
-      // Si falla el parseo JSON, lanzar error
       throw new ApiError(
         'Error al procesar la respuesta del servidor',
         response.status,
-        { raw: await response.text() }
+        { raw: text.substring(0, 200) }
       );
     }
-  } else {
-    // Si no es JSON, probablemente es HTML (error 404, 500, etc.)
-    const text = await response.text();
+  } else if (!response.ok) {
     throw new ApiError(
       `El servidor devolvió una respuesta no válida (${response.status})`,
       response.status,
-      { html: text.substring(0, 200) } // Solo primeros 200 chars para debug
+      { html: text.substring(0, 200) }
     );
   }
 

@@ -9,6 +9,7 @@ export interface Intercambio {
   creditos: number;
   fecha: string;
   estado: string;
+  marketItemId?: number;
   createdAt?: string;
   updatedAt?: string;
 }

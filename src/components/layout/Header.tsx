@@ -14,7 +14,8 @@ import {
   FileText,
   Receipt,
   Heart,
-  MessageCircle
+  MessageCircle,
+  ShoppingCart
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { CurrencySwitch } from "@/components/ui/currency-switch";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
@@ -57,6 +59,7 @@ const Header = () => {
     { to: "/favoritos", label: "Favoritos", icon: Heart },
     { to: "/chat", label: "Mensajes", icon: MessageCircle },
     { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
+    { to: "/mis-compras", label: "Mis compras", icon: ShoppingCart },
     { to: "/historial", label: "Historial", icon: Receipt }
   ];
 
@@ -141,6 +144,8 @@ const Header = () => {
 
         {/* Right side actions */}
         <div className="flex items-center gap-2">
+          {/* IX Variant Switch (IX-ARS / IX-USD) */}
+          <CurrencySwitch />
           {/* Theme Toggle */}
           <Button
             variant="ghost"
@@ -174,14 +179,14 @@ const Header = () => {
                           {user?.nombre?.slice(0, 2).toUpperCase() ?? "?"}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="max-w-[120px] truncate">{user?.nombre ?? "Mi cuenta"}</span>
+                      <span className="max-w-[120px] truncate">{user?.nombre ?? "Cuenta"}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard">
                         <User className="h-4 w-4 mr-2" />
-                        Mi cuenta
+                        Cuenta - Saldo
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -332,7 +337,7 @@ const Header = () => {
                               onClick={() => setMobileMenuOpen(false)}
                             >
                               <User className="h-5 w-5" />
-                              <span className="font-medium">Mi cuenta</span>
+                              <span className="font-medium">Cuenta - Saldo</span>
                             </Button>
                           </Link>
                           <Button 
@@ -375,7 +380,11 @@ const Header = () => {
                 </nav>
 
                 {/* Footer del menú mobile */}
-                <div className="px-4 py-4 border-t">
+                <div className="px-4 py-4 border-t space-y-4">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>IX</span>
+                    <CurrencySwitch />
+                  </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>Tema</span>
                     <Button

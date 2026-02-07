@@ -38,7 +38,7 @@ const Landing = () => {
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in"
             style={{ animationDelay: "0.3s" }}
           >
-            Sistema de crédito mutuo con tokens respaldados. 
+            Sistema de crédito mutuo con créditos de intercambio. 
             Confianza organizada entre personas.
           </p>
 
@@ -108,11 +108,11 @@ const Landing = () => {
                 <ul className="space-y-3 text-muted-foreground">
                   <li className="flex items-center gap-3">
                     <span className="w-2 h-2 bg-gold rounded-full" />
-                    Token respaldado
+                    Créditos de intercambio
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-2 h-2 bg-gold rounded-full" />
-                    Para intercambios dentro del club
+                    Dentro del club de confianza
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="w-2 h-2 bg-gold rounded-full" />
@@ -164,7 +164,7 @@ const Landing = () => {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Token respaldado. Confianza organizada.
+              Créditos de intercambio. Confianza organizada.
             </p>
           </div>
         </div>

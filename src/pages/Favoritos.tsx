@@ -8,7 +8,7 @@ import { ArrowLeft, Heart, MapPin, MessageCircle, Loader2 } from "lucide-react";
 import { favoritosService } from "@/services/favoritos.service";
 import { marketService, MarketItem } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatCurrency } from "@/lib/currency";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 
 const RUBROS: Record<string, { label: string; icon: string }> = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -18,6 +18,7 @@ const RUBROS: Record<string, { label: string; icon: string }> = {
 };
 
 const Favoritos = () => {
+  const { formatIX } = useCurrencyVariant();
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -112,7 +113,7 @@ const Favoritos = () => {
                   <Link to={`/producto/${item.id}`}>
                     <h3 className="font-semibold line-clamp-2 hover:text-gold mb-1">{item.titulo}</h3>
                   </Link>
-                  <p className="font-bold text-gold mb-2">{formatCurrency(item.precio)}</p>
+                  <p className="font-bold text-gold mb-2">{formatIX(item.precio)}</p>
                   {item.ubicacion && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
                       <MapPin className="w-3 h-3" />

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +22,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
-  Loader2
+  Loader2,
+  Navigation
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { marketService, MarketItem } from "@/services/market.service";
@@ -71,11 +73,15 @@ const RUBROS = {
 const Market = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formatIX } = useCurrencyVariant();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"todos" | "productos" | "servicios">("todos");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("todos");
-  const [distanciaMax, setDistanciaMax] = useState([20]);
+  const [distanciaMax, setDistanciaMax] = useState([25]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [precioMin, setPrecioMin] = useState([0]);
   const [precioMax, setPrecioMax] = useState([500000]);
   const [filtrosRubro, setFiltrosRubro] = useState<Record<string, string[]>>({});
@@ -97,16 +103,39 @@ const Market = () => {
     },
   });
 
-  // Obtener items del backend
+  // Obtener items del backend (filtro de distancia en el servidor cuando hay ubicación)
   const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0]],
+    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0]],
     queryFn: () => marketService.getItems({
       rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado as any : undefined,
       tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
       precioMin: precioMin[0],
       precioMax: precioMax[0],
+      userLat: userLocation?.lat,
+      userLng: userLocation?.lng,
+      distanciaMax: userLocation ? distanciaMax[0] : undefined,
     }),
   });
+
+  const getMyLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no soporta geolocalización');
+      return;
+    }
+    setLocationLoading(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocationLoading(false);
+      },
+      (err) => {
+        setLocationLoading(false);
+        setLocationError(err.code === 1 ? 'Permiso denegado' : 'No se pudo obtener la ubicación');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  };
 
   // Obtener filtros específicos del rubro seleccionado
   const filtrosDisponibles = rubroSeleccionado !== "todos" && rubroSeleccionado in RUBROS
@@ -133,10 +162,7 @@ const Market = () => {
         return false;
       }
 
-      // Filtro por distancia (si está disponible)
-      if (item.distancia && item.distancia > distanciaMax[0]) {
-        return false;
-      }
+      // Filtro por distancia: se hace en el servidor cuando hay userLocation
 
       // Filtros específicos del rubro (detalles)
       if (filtrosDisponibles && item.detalles) {
@@ -167,14 +193,16 @@ const Market = () => {
     setSearch("");
     setTipoSeleccionado("todos");
     setRubroSeleccionado("todos");
-    setDistanciaMax([20]);
+    setDistanciaMax([25]);
+    setUserLocation(null);
+    setLocationError(null);
     setPrecioMin([0]);
     setPrecioMax([500000]);
     setFiltrosRubro({});
   };
 
   const tieneFiltrosActivos = search || tipoSeleccionado !== "todos" || rubroSeleccionado !== "todos" || 
-    distanciaMax[0] < 20 || precioMin[0] > 0 || precioMax[0] < 500000 ||
+    userLocation !== null || distanciaMax[0] < 25 || precioMin[0] > 0 || precioMax[0] < 500000 ||
     Object.values(filtrosRubro).some(v => v.length > 0);
 
   return (
@@ -281,15 +309,34 @@ const Market = () => {
                       <Slider
                         value={distanciaMax}
                         onValueChange={setDistanciaMax}
-                        max={50}
+                        max={100}
                         min={1}
                         step={1}
                         className="w-full"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground mt-1">
                         <span>1 km</span>
-                        <span>50 km</span>
+                        <span>100 km</span>
                       </div>
+                      <Button
+                        type="button"
+                        variant={userLocation ? "default" : "outline"}
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={getMyLocation}
+                        disabled={locationLoading}
+                      >
+                        <Navigation className={`w-4 h-4 mr-2 ${locationLoading ? 'animate-spin' : ''}`} />
+                        {locationLoading ? 'Obteniendo...' : userLocation ? 'Ubicación activa' : 'Usar mi ubicación'}
+                      </Button>
+                      {locationError && (
+                        <p className="text-xs text-destructive mt-1">{locationError}</p>
+                      )}
+                      {!userLocation && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Activa tu ubicación para ver solo publicaciones cercanas
+                        </p>
+                      )}
                     </div>
 
                     {/* Precio */}
@@ -307,7 +354,7 @@ const Market = () => {
                             className="w-full"
                           />
                           <div className="text-xs text-muted-foreground mt-1">
-                            {precioMin[0]} IX
+                            {formatIX(precioMin[0])}
                           </div>
                         </div>
                         <div>
@@ -321,7 +368,7 @@ const Market = () => {
                             className="w-full"
                           />
                           <div className="text-xs text-muted-foreground mt-1">
-                            {precioMax[0]} IX
+                            {formatIX(precioMax[0])}
                           </div>
                         </div>
                       </div>
@@ -459,7 +506,7 @@ const Market = () => {
                         {item.titulo}
                       </h3>
                       <span className="text-xl font-bold gold-text flex-shrink-0">
-                        {item.precio} IX
+                        {formatIX(item.precio)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mb-3 line-clamp-2">

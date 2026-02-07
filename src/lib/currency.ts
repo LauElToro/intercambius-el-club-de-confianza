@@ -1,21 +1,41 @@
-// Conversión temporal de IX a pesos argentinos
-// TODO: Integrar con API de cotización en tiempo real
-const IX_TO_PESOS = 1; // 1 IX = 1 peso argentino (temporal)
+// IX en pesos (base) y IX en USD
+// 150000 pesos = 100 USD → 1 USD = 1500 pesos
+export const IX_PESOS_PER_USD = 1500;
 
-export const convertIXToPesos = (ix: number): number => {
-  return ix * IX_TO_PESOS;
+export type IXVariant = 'IX-ARS' | 'IX-USD';
+
+export const convertToUSD = (pesos: number): number => pesos / IX_PESOS_PER_USD;
+
+export const formatIX = (amountPesos: number, variant: IXVariant): string => {
+  if (variant === 'IX-USD') {
+    const usd = amountPesos / IX_PESOS_PER_USD;
+    return `$${usd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  }
+  return `${amountPesos.toLocaleString('es-AR')} IX`;
 };
 
-export const convertPesosToIX = (pesos: number): number => {
-  return pesos / IX_TO_PESOS;
-};
+export const getIXSuffix = (variant: IXVariant): string => 
+  variant === 'IX-USD' ? ' USD' : ' IX';
 
+// Legacy - para compatibilidad
 export const formatCurrency = (amount: number, currency: 'IX' | 'ARS' = 'IX'): string => {
   if (currency === 'ARS') {
     return `$${amount.toLocaleString('es-AR')}`;
   }
-  return `${amount} IX`;
+  return `${amount.toLocaleString('es-AR')} IX`;
 };
 
-export const LIMITE_CREDITO_NEGATIVO_PESOS = 15000; // pesos argentinos
-export const LIMITE_CREDITO_NEGATIVO = LIMITE_CREDITO_NEGATIVO_PESOS; // Alias para compatibilidad
+/** Formatea un valor numérico (string de dígitos) con separador de miles para input */
+export const formatPrecioForInput = (value: string): string => {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  const num = parseInt(digits, 10);
+  if (isNaN(num)) return '';
+  return num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: true });
+};
+
+/** Parsea el valor del input de precio a número (solo dígitos) */
+export const parsePrecioFromInput = (value: string): number => {
+  const digits = value.replace(/\D/g, '');
+  return digits ? parseInt(digits, 10) : 0;
+};

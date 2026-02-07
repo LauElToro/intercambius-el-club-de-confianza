@@ -16,12 +16,14 @@ import Coincidencias from "./pages/Coincidencias";
 import CrearProducto from "./pages/CrearProducto";
 import EditarProducto from "./pages/EditarProducto";
 import MisPublicaciones from "./pages/MisPublicaciones";
+import MisCompras from "./pages/MisCompras";
 import Historial from "./pages/Historial";
 import Favoritos from "./pages/Favoritos";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
+import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +39,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <CurrencyVariantProvider>
           <AuthProvider>
             <Toaster />
             <Sonner />
@@ -89,6 +92,14 @@ const App = () => (
                 } 
               />
               <Route 
+                path="/mis-compras" 
+                element={
+                  <ProtectedRoute>
+                    <MisCompras />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/historial" 
                 element={
                   <ProtectedRoute>
@@ -125,6 +136,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
+          </CurrencyVariantProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

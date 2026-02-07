@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
@@ -8,6 +9,7 @@ import { ArrowLeft, Edit, Trash2, Plus, MapPin, MessageCircle, Loader2 } from "l
 import { marketService, MarketItem } from "@/services/market.service";
 import { intercambiosService } from "@/services/intercambios.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { userService } from "@/services/user.service";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -19,7 +21,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 const RUBROS: Record<string, { label: string; icon: string }> = {
@@ -34,6 +35,7 @@ const MisPublicaciones = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [itemToDelete, setItemToDelete] = useState<MarketItem | null>(null);
 
   const { data: userData } = useQuery({
     queryKey: ['currentUser'],
@@ -42,6 +44,7 @@ const MisPublicaciones = () => {
   });
 
   const currentUser = userData || user;
+  const { formatIX } = useCurrencyVariant();
 
   const { data: productos = [], isLoading } = useQuery({
     queryKey: ['marketItems', 'mis-productos', currentUser?.id],
@@ -62,7 +65,9 @@ const MisPublicaciones = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => marketService.deleteItem(id),
     onSuccess: () => {
+      setItemToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['marketItems'] });
+      queryClient.invalidateQueries({ queryKey: ['marketItems', 'mis-productos'] });
       toast({
         title: "Producto eliminado",
         description: "La publicación fue eliminada correctamente.",
@@ -76,6 +81,18 @@ const MisPublicaciones = () => {
       });
     },
   });
+
+  const handleDeleteClick = (e: React.MouseEvent, item: MarketItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete.id);
+    }
+  };
 
   if (!currentUser) {
     return (
@@ -142,7 +159,7 @@ const MisPublicaciones = () => {
                           {v.usuarioId === currentUser!.id ? v.otraPersonaNombre : "Usuario"} • {new Date(v.fecha || v.createdAt || "").toLocaleDateString('es-AR')}
                         </p>
                       </div>
-                      <span className="font-semibold text-primary">+{Math.abs(v.creditos)} IX</span>
+                      <span className="font-semibold text-primary">+{formatIX(Math.abs(v.creditos))}</span>
                     </div>
                   ))}
                 </div>
@@ -172,7 +189,7 @@ const MisPublicaciones = () => {
                     <Badge variant="secondary" className="text-xs">
                       {RUBROS[item.rubro]?.icon} {RUBROS[item.rubro]?.label ?? item.rubro}
                     </Badge>
-                    <span className="font-bold text-gold">{item.precio} IX</span>
+                    <span className="font-bold text-gold">{formatIX(item.precio)}</span>
                   </div>
                   <Link to={`/producto/${item.id}`}>
                     <h3 className="font-semibold line-clamp-2 hover:text-gold mb-1">
@@ -197,35 +214,19 @@ const MisPublicaciones = () => {
                         <Edit className="w-4 h-4" />
                       </Button>
                     </Link>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Eliminar publicación?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta acción no se puede deshacer. La publicación "{item.titulo}" será eliminada permanentemente.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => deleteMutation.mutate(item.id)}
-                          >
-                            Eliminar
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={(e) => handleDeleteClick(e, item)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending && itemToDelete?.id === item.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -233,6 +234,38 @@ const MisPublicaciones = () => {
           </div>
           </>
         )}
+
+        {/* Diálogo de confirmación de eliminación */}
+        <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar publicación?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. La publicación "{itemToDelete?.titulo}" será eliminada permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive hover:bg-destructive/90"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleConfirmDelete();
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Eliminando...
+                  </>
+                ) : (
+                  'Eliminar'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

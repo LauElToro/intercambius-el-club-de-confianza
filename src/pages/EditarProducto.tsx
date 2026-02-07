@@ -14,7 +14,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocationPicker } from "@/components/location/LocationPicker";
-
+import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
 import { FICHAS_TECNICAS } from "@/lib/fichas-tecnicas";
 
 const EditarProducto = () => {
@@ -34,8 +34,11 @@ const EditarProducto = () => {
     titulo: "",
     descripcion: "",
     precio: "",
+    tipoPago: "ix" as "ix" | "convenir" | "pesos" | "ix_pesos",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: user?.ubicacion || "",
+    lat: undefined as number | undefined,
+    lng: undefined as number | undefined,
     medias: [] as { file?: File; preview: string; type: 'image' | 'video'; url?: string }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
@@ -56,8 +59,11 @@ const EditarProducto = () => {
         titulo: item.titulo || "",
         descripcion: item.descripcion || "",
         precio: String(item.precio || ""),
+        tipoPago: (item.tipoPago || "ix") as "ix" | "convenir" | "pesos" | "ix_pesos",
         rubro: item.rubro || "",
         ubicacion: item.ubicacion || user?.ubicacion || "",
+        lat: item.lat,
+        lng: item.lng,
         medias,
         detalles: item.detalles || {},
         caracteristicas: item.caracteristicas || [],
@@ -141,14 +147,26 @@ const EditarProducto = () => {
         mediaType: u.mediaType,
       }));
 
+      if (formData.lat == null || formData.lng == null) {
+        toast({
+          title: "Ubicación requerida",
+          description: "Seleccioná una ubicación del mapa (ej: CABA, Córdoba) para que tu publicación aparezca en búsquedas por distancia.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       updateMutation.mutate({
         id: Number(id),
         data: {
           titulo: formData.titulo,
           descripcion: formData.descripcion,
-          precio: parseInt(formData.precio),
+          precio: parsePrecioFromInput(formData.precio),
+          tipoPago: formData.tipoPago,
           rubro: formData.rubro,
           ubicacion: formData.ubicacion,
+          lat: formData.lat,
+          lng: formData.lng,
           imagen: firstImage.url,
           images,
           detalles: formData.detalles,
@@ -261,18 +279,45 @@ const EditarProducto = () => {
                     <Label htmlFor="precio">Precio (IX) *</Label>
                     <Input
                       id="precio"
-                      type="number"
-                      min="1"
-                      value={formData.precio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, precio: e.target.value }))}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatPrecioForInput(formData.precio)}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '');
+                        setFormData(prev => ({ ...prev, precio: digits }));
+                      }}
                       placeholder="100"
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoPago">Medio de pago aceptado</Label>
+                    <Select
+                      value={formData.tipoPago}
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, tipoPago: v as typeof formData.tipoPago }))}
+                    >
+                      <SelectTrigger id="tipoPago">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ix">Solo IX (créditos)</SelectItem>
+                        <SelectItem value="ix_pesos">IX y pesos (por fuera)</SelectItem>
+                        <SelectItem value="convenir">Pago a convenir</SelectItem>
+                        <SelectItem value="pesos">En pesos (por fuera de la página)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <LocationPicker
                   value={formData.ubicacion}
-                  onChange={(location) => setFormData(prev => ({ ...prev, ubicacion: location }))}
+                  onChange={(location, lat, lng) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      ubicacion: location,
+                      lat,
+                      lng,
+                    }));
+                  }}
                   label="Ubicación"
                 />
               </div>

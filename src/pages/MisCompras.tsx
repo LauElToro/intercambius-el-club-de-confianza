@@ -4,11 +4,13 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Loader2, Receipt } from "lucide-react";
-import { intercambiosService } from "@/services/intercambios.service";
+import { ArrowLeft, ShoppingBag, Loader2, MessageCircle } from "lucide-react";
+import { intercambiosService, Intercambio } from "@/services/intercambios.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { userService } from "@/services/user.service";
+import { chatService } from "@/services/chat.service";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 function formatFecha(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-AR', {
@@ -20,9 +22,11 @@ function formatFecha(dateStr: string): string {
   });
 }
 
-const Historial = () => {
+const MisCompras = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { formatIX } = useCurrencyVariant();
 
   const { data: userData } = useQuery({
     queryKey: ['currentUser'],
@@ -31,12 +35,20 @@ const Historial = () => {
   });
 
   const currentUser = userData || user;
-  const { formatIX } = useCurrencyVariant();
 
   const { data: intercambios = [], isLoading } = useQuery({
     queryKey: ['intercambios', currentUser?.id],
     queryFn: () => intercambiosService.getByUserId(currentUser!.id!),
     enabled: !!currentUser?.id,
+  });
+
+  const iniciarChatMutation = useMutation({
+    mutationFn: ({ vendedorId, marketItemId }: { vendedorId: number; marketItemId?: number }) =>
+      chatService.iniciarConversacion(marketItemId ? { marketItemId } : { vendedorId }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      navigate(`/chat/${data.conversacionId}`);
+    },
   });
 
   if (!currentUser) {
@@ -49,12 +61,10 @@ const Historial = () => {
     );
   }
 
-  const esRecibido = (i: { usuarioId: number; creditos: number }) =>
-    (i.usuarioId === currentUser.id && i.creditos > 0) ||
-    (i.otraPersonaId === currentUser.id && i.creditos < 0);
-
-  const otraPersona = (i: { usuarioId: number; otraPersonaId: number; otraPersonaNombre: string }) =>
-    i.usuarioId === currentUser.id ? i.otraPersonaNombre : "Usuario";
+  // Compras = intercambios donde el usuario pagó (usuarioId === currentUser y creditos < 0)
+  const compras = intercambios.filter(
+    (i: Intercambio) => i.usuarioId === currentUser.id && i.creditos < 0
+  );
 
   return (
     <Layout>
@@ -65,11 +75,11 @@ const Historial = () => {
         </Button>
 
         <div className="flex items-center gap-3 mb-8">
-          <Receipt className="w-8 h-8 text-gold" />
+          <ShoppingBag className="w-8 h-8 text-gold" />
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Mi historial</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Mis compras</h1>
             <p className="text-muted-foreground">
-              Todo lo que compraste, contrataste o vendiste
+              Productos y servicios que compraste o contrataste
             </p>
           </div>
         </div>
@@ -78,11 +88,11 @@ const Historial = () => {
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gold" />
           </div>
-        ) : intercambios.length === 0 ? (
+        ) : compras.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                Aún no tenés movimientos registrados. Los intercambios se registran automáticamente cuando pagás un producto con IX desde el checkout.
+                Aún no tenés compras. Explorá el market y contactá a los vendedores.
               </p>
               <Button variant="gold" onClick={() => navigate("/market")}>
                 Explorar productos
@@ -91,35 +101,26 @@ const Historial = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {[...intercambios]
+            {[...compras]
               .sort((a, b) => new Date(b.fecha || b.createdAt || 0).getTime() - new Date(a.fecha || a.createdAt || 0).getTime())
               .map((i) => {
-                const recibido = esRecibido(i);
                 const cantidad = Math.abs(i.creditos);
-                const conQuien = otraPersona(i);
+                const marketItemId = (i as any).marketItemId;
                 return (
                   <Card key={i.id} className="hover:border-gold/30 transition-colors">
                     <CardContent className="py-4">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-start gap-3">
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              recibido ? "bg-primary/10" : "bg-secondary"
-                            }`}
-                          >
-                            {recibido ? (
-                              <ArrowDownLeft className="w-6 h-6 text-primary" />
-                            ) : (
-                              <ArrowUpRight className="w-6 h-6 text-muted-foreground" />
-                            )}
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-secondary">
+                            <ShoppingBag className="w-6 h-6 text-muted-foreground" />
                           </div>
                           <div>
                             <p className="font-medium">
-                              {recibido ? "Recibiste" : "Pagaste"} {formatIX(cantidad)}
+                              Pagaste {formatIX(cantidad)}
                             </p>
                             <p className="text-sm text-muted-foreground">{i.descripcion}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              {recibido ? `De: ${conQuien}` : `A: ${conQuien}`} • {formatFecha(i.fecha || i.createdAt || "")}
+                              A: {i.otraPersonaNombre} • {formatFecha(i.fecha || i.createdAt || "")}
                             </p>
                             {i.estado && (
                               <Badge variant={i.estado === "confirmado" ? "default" : "secondary"} className="mt-2 text-xs">
@@ -128,8 +129,19 @@ const Historial = () => {
                             )}
                           </div>
                         </div>
-                        <div className={`text-xl font-bold ${recibido ? "text-primary" : "text-muted-foreground"}`}>
-                          {recibido ? "+" : "-"}{formatIX(cantidad)}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl font-bold text-muted-foreground">
+                            -{formatIX(cantidad)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => iniciarChatMutation.mutate({ vendedorId: i.otraPersonaId, marketItemId })}
+                            disabled={iniciarChatMutation.isPending}
+                          >
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            Contactar
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -143,4 +155,4 @@ const Historial = () => {
   );
 };
 
-export default Historial;
+export default MisCompras;

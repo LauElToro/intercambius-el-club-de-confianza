@@ -11,6 +11,7 @@ import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook,
 import { userService } from "@/services/user.service";
 import { marketService } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { User } from "@/services/auth.service";
 import api from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
@@ -43,6 +44,7 @@ const Perfil = () => {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const esMiPerfil = user && id && Number(id) === user.id;
+  const { formatIX } = useCurrencyVariant();
 
   const { data: usuario, isLoading, error } = useQuery({
     queryKey: ['user', id],
@@ -79,6 +81,8 @@ const Perfil = () => {
       fotoPerfil: usuario?.fotoPerfil ?? '',
       banner: usuario?.banner ?? '',
       redesSociales: usuario?.redesSociales ?? {},
+      ofrece: usuario?.ofrece ?? '',
+      necesita: usuario?.necesita ?? '',
     });
     setEditando(true);
   };
@@ -269,6 +273,18 @@ const Perfil = () => {
                       />
                     </div>
                     <div>
+                      <label className="text-sm font-medium text-muted-foreground">Lo que busco (para intercambios/permutas)</label>
+                      <Textarea
+                        value={formData.necesita ?? ''}
+                        onChange={(e) => setFormData((p) => ({ ...p, necesita: e.target.value }))}
+                        className="mt-1 min-h-[60px]"
+                        placeholder="Ej: Clases de yoga, reparación de celulares, diseño gráfico..."
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Completá esto para que aparezcan coincidencias entre lo que ofrecés y lo que buscás.
+                      </p>
+                    </div>
+                    <div>
                       <label className="text-sm font-medium text-muted-foreground mb-2 block">Redes sociales</label>
                       <div className="space-y-2">
                         {REDES_KEYS.map((key) => {
@@ -307,6 +323,12 @@ const Perfil = () => {
                       </span>
                     </div>
                     {bio && <p className="text-sm text-muted-foreground mb-4">{bio}</p>}
+                    {usuario?.necesita && (
+                      <div className="mb-4 p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Lo que busco</p>
+                        <p className="text-sm text-foreground">{usuario.necesita}</p>
+                      </div>
+                    )}
                     {Object.keys(redesSociales).length > 0 && (
                       <div className="flex flex-wrap gap-3">
                         {REDES_KEYS.map((key) => {
@@ -331,7 +353,7 @@ const Perfil = () => {
                     )}
                     {!esMiPerfil && (
                       <p className="text-sm text-muted-foreground mt-2">
-                        Para contactar, comprá o contratá uno de sus productos. Podrás chatear después de la compra.
+                        Contactá desde el detalle de un producto para hablar antes de comprar.
                       </p>
                     )}
                   </>
@@ -364,7 +386,7 @@ const Perfil = () => {
                       </div>
                       <CardContent className="p-3">
                         <h3 className="font-medium line-clamp-2">{item.titulo}</h3>
-                        <p className="text-gold font-bold">{item.precio} IX</p>
+                        <p className="text-gold font-bold">{formatIX(item.precio)}</p>
                       </CardContent>
                     </Card>
                   </Link>
