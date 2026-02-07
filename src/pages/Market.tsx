@@ -28,7 +28,22 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
+import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Coordenadas de ubicaciones comunes (fallback cuando geolocalización falla)
+const UBICACIONES_COORDENADAS: Record<string, { lat: number; lng: number }> = {
+  "CABA": { lat: -34.6037, lng: -58.3816 },
+  "CABA - Centro": { lat: -34.6037, lng: -58.3816 },
+  "CABA - Palermo": { lat: -34.5885, lng: -58.4204 },
+  "CABA - Belgrano": { lat: -34.5631, lng: -58.4584 },
+  "CABA - Caballito": { lat: -34.6208, lng: -58.4414 },
+  "CABA - San Telmo": { lat: -34.6208, lng: -58.3731 },
+  "La Plata": { lat: -34.9215, lng: -57.9545 },
+  "Mar del Plata": { lat: -38.0055, lng: -57.5426 },
+  "Córdoba": { lat: -31.4201, lng: -64.1888 },
+  "Rosario": { lat: -32.9442, lng: -60.6505 },
+};
 
 // Tipos de rubros y sus filtros específicos
 const RUBROS = {
@@ -73,6 +88,14 @@ const RUBROS = {
 const Market = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
+
+  const usuario = currentUser || user;
   const { formatIX } = useCurrencyVariant();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -135,6 +158,24 @@ const Market = () => {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
+  };
+
+  const usarUbicacionPerfil = () => {
+    const ubicacion = usuario?.ubicacion?.trim();
+    if (!ubicacion) return;
+    const exact = UBICACIONES_COORDENADAS[ubicacion];
+    if (exact) {
+      setUserLocation(exact);
+      setLocationError(null);
+      return;
+    }
+    const match = Object.keys(UBICACIONES_COORDENADAS).find(
+      (k) => ubicacion.toLowerCase().includes(k.toLowerCase())
+    );
+    if (match) {
+      setUserLocation(UBICACIONES_COORDENADAS[match]);
+      setLocationError(null);
+    }
   };
 
   // Obtener filtros específicos del rubro seleccionado
@@ -330,11 +371,31 @@ const Market = () => {
                         {locationLoading ? 'Obteniendo...' : userLocation ? 'Ubicación activa' : 'Usar mi ubicación'}
                       </Button>
                       {locationError && (
-                        <p className="text-xs text-destructive mt-1">{locationError}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {locationError === 'Permiso denegado'
+                            ? 'Activá la ubicación en la configuración del navegador, o usá la de tu perfil.'
+                            : locationError}
+                        </p>
+                      )}
+                      {!userLocation && usuario?.ubicacion && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full mt-1 text-xs h-8"
+                          onClick={usarUbicacionPerfil}
+                        >
+                          Usar "{usuario.ubicacion}" (de mi perfil)
+                        </Button>
+                      )}
+                      {!userLocation && !locationError && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Activa tu ubicación para filtrar por distancia
+                        </p>
                       )}
                       {!userLocation && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Activa tu ubicación para ver solo publicaciones cercanas
+                        <p className="text-xs text-muted-foreground mt-1.5 italic">
+                          Sin ubicación se muestran todas las publicaciones
                         </p>
                       )}
                     </div>

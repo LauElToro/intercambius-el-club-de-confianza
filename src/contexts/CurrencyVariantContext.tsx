@@ -28,8 +28,9 @@ export const CurrencyVariantProvider = ({ children }: { children: ReactNode }) =
 
   const formatIXFn = (amountPesos: number): string => {
     if (variant === 'IX-USD') {
-      const usd = amountPesos / 1500;
-      return `$${usd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true })}`;
+      // 150000 IX (pesos) = 100 IX (USD). Se simplifica dividiendo por 1500.
+      const ixUsd = amountPesos / 1500;
+      return `${ixUsd.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true })} IX`;
     }
     return `${amountPesos.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: true })} IX`;
   };

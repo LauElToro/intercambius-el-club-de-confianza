@@ -8,14 +8,13 @@ export const convertToUSD = (pesos: number): number => pesos / IX_PESOS_PER_USD;
 
 export const formatIX = (amountPesos: number, variant: IXVariant): string => {
   if (variant === 'IX-USD') {
-    const usd = amountPesos / IX_PESOS_PER_USD;
-    return `$${usd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    const ixUsd = amountPesos / IX_PESOS_PER_USD;
+    return `${ixUsd.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true })} IX`;
   }
   return `${amountPesos.toLocaleString('es-AR')} IX`;
 };
 
-export const getIXSuffix = (variant: IXVariant): string => 
-  variant === 'IX-USD' ? ' USD' : ' IX';
+export const getIXSuffix = (variant: IXVariant): string => ' IX';
 
 // Legacy - para compatibilidad
 export const formatCurrency = (amount: number, currency: 'IX' | 'ARS' = 'IX'): string => {
