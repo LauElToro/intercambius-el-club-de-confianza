@@ -28,6 +28,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -97,9 +98,8 @@ const Header = () => {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* Desktop Navigation - solo Market en la barra */}
         <nav className="hidden md:flex items-center gap-1">
-          {/* Market siempre visible */}
           <Link
             to="/market"
             className={cn(
@@ -112,34 +112,6 @@ const Header = () => {
             <ShoppingBag className="h-4 w-4" />
             Market
           </Link>
-          
-          {/* Items protegidos solo si está autenticado */}
-          {(() => {
-            const token = localStorage.getItem("intercambius_token");
-            if (!token) return null;
-            
-            return navItems.filter(item => item.to !== "/market").map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.to || 
-                (item.to !== "/" && location.pathname.startsWith(item.to));
-              
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "text-foreground bg-muted"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            });
-          })()}
         </nav>
 
         {/* Right side actions */}
@@ -182,7 +154,7 @@ const Header = () => {
                       <span className="max-w-[120px] truncate">{user?.nombre ?? "Cuenta"}</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem asChild>
                       <Link to="/dashboard">
                         <User className="h-4 w-4 mr-2" />
@@ -195,6 +167,23 @@ const Header = () => {
                         Mi perfil
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {navItems.filter(item => item.to !== "/market").map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+                      return (
+                        <DropdownMenuItem key={item.to} asChild>
+                          <Link
+                            to={item.to}
+                            className={cn(isActive && "bg-muted")}
+                          >
+                            <Icon className="h-4 w-4 mr-2" />
+                            {item.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => { logout(); }}
                       className="text-destructive focus:text-destructive"

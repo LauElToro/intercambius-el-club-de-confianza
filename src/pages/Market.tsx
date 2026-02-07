@@ -26,6 +26,8 @@ import {
   Navigation
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapView } from "@/components/map/MapView";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
 import { userService } from "@/services/user.service";
@@ -39,10 +41,24 @@ const UBICACIONES_COORDENADAS: Record<string, { lat: number; lng: number }> = {
   "CABA - Belgrano": { lat: -34.5631, lng: -58.4584 },
   "CABA - Caballito": { lat: -34.6208, lng: -58.4414 },
   "CABA - San Telmo": { lat: -34.6208, lng: -58.3731 },
+  "Caballito": { lat: -34.6208, lng: -58.4414 },
+  "Palermo": { lat: -34.5885, lng: -58.4204 },
+  "Belgrano": { lat: -34.5631, lng: -58.4584 },
   "La Plata": { lat: -34.9215, lng: -57.9545 },
   "Mar del Plata": { lat: -38.0055, lng: -57.5426 },
   "Córdoba": { lat: -31.4201, lng: -64.1888 },
   "Rosario": { lat: -32.9442, lng: -60.6505 },
+};
+
+// Alias para matching fuzzy (ej: "caballito bsas" -> Caballito)
+const UBICACION_ALIASES: Record<string, string> = {
+  "caballito": "CABA - Caballito",
+  "caballito bsas": "CABA - Caballito",
+  "caballito buenos aires": "CABA - Caballito",
+  "bsas": "CABA",
+  "buenos aires": "CABA",
+  "capital": "CABA",
+  "capital federal": "CABA",
 };
 
 // Tipos de rubros y sus filtros específicos
@@ -110,6 +126,8 @@ const Market = () => {
   const [filtrosRubro, setFiltrosRubro] = useState<Record<string, string[]>>({});
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
   const [favoritosLocal, setFavoritosLocal] = useState<number[]>([]);
+  const [elegirUbicacionOpen, setElegirUbicacionOpen] = useState(false);
+  const [busquedaUbicacion, setBusquedaUbicacion] = useState("");
 
   const { data: favoritosData = [] } = useQuery({
     queryKey: ['favoritos'],
@@ -126,9 +144,11 @@ const Market = () => {
     },
   });
 
+  const sinLimiteDistancia = distanciaMax[0] >= 100;
+
   // Obtener items del backend (filtro de distancia en el servidor cuando hay ubicación)
   const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0]],
+    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], sinLimiteDistancia],
     queryFn: () => marketService.getItems({
       rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado as any : undefined,
       tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
@@ -136,7 +156,7 @@ const Market = () => {
       precioMax: precioMax[0],
       userLat: userLocation?.lat,
       userLng: userLocation?.lng,
-      distanciaMax: userLocation ? distanciaMax[0] : undefined,
+      distanciaMax: userLocation && !sinLimiteDistancia ? distanciaMax[0] : undefined,
     }),
   });
 
@@ -169,8 +189,16 @@ const Market = () => {
       setLocationError(null);
       return;
     }
+    const ubNorm = ubicacion.toLowerCase().trim();
+    const aliasKey = UBICACION_ALIASES[ubNorm] ?? Object.keys(UBICACION_ALIASES).find((a) => ubNorm.includes(a));
+    const resolvedKey = aliasKey ? (UBICACION_ALIASES[aliasKey] ?? aliasKey) : null;
+    if (resolvedKey && UBICACIONES_COORDENADAS[resolvedKey]) {
+      setUserLocation(UBICACIONES_COORDENADAS[resolvedKey]);
+      setLocationError(null);
+      return;
+    }
     const match = Object.keys(UBICACIONES_COORDENADAS).find(
-      (k) => ubicacion.toLowerCase().includes(k.toLowerCase())
+      (k) => ubNorm.includes(k.toLowerCase()) || k.toLowerCase().includes(ubNorm.split(/\s+/)[0])
     );
     if (match) {
       setUserLocation(UBICACIONES_COORDENADAS[match]);
@@ -345,31 +373,94 @@ const Market = () => {
                     {/* Distancia */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">
-                        Distancia máxima: {distanciaMax[0]} km
+                        Distancia máxima: {distanciaMax[0] >= 100 ? '100+ km (todas)' : `${distanciaMax[0]} km`}
                       </label>
                       <Slider
                         value={distanciaMax}
                         onValueChange={setDistanciaMax}
-                        max={100}
+                        max={120}
                         min={1}
                         step={1}
                         className="w-full"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground mt-1">
                         <span>1 km</span>
-                        <span>100 km</span>
+                        <span>100+ km = todas</span>
                       </div>
-                      <Button
-                        type="button"
-                        variant={userLocation ? "default" : "outline"}
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={getMyLocation}
-                        disabled={locationLoading}
-                      >
-                        <Navigation className={`w-4 h-4 mr-2 ${locationLoading ? 'animate-spin' : ''}`} />
-                        {locationLoading ? 'Obteniendo...' : userLocation ? 'Ubicación activa' : 'Usar mi ubicación'}
-                      </Button>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          type="button"
+                          variant={userLocation ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1"
+                          onClick={getMyLocation}
+                          disabled={locationLoading}
+                        >
+                          <Navigation className={`w-4 h-4 mr-2 ${locationLoading ? 'animate-spin' : ''}`} />
+                          {locationLoading ? 'Obteniendo...' : userLocation ? 'Activa' : 'GPS'}
+                        </Button>
+                        <Dialog open={elegirUbicacionOpen} onOpenChange={setElegirUbicacionOpen}>
+                          <DialogTrigger asChild>
+                            <Button type="button" variant="outline" size="sm" className="flex-1">
+                              <MapPin className="w-4 h-4 mr-2" />
+                              Elegir
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Elegir zona de búsqueda</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-3">
+                              <Input
+                                placeholder="Buscar ciudad, barrio..."
+                                value={busquedaUbicacion}
+                                onChange={(e) => setBusquedaUbicacion(e.target.value)}
+                              />
+                              <MapView
+                                center={userLocation ?? { lat: -34.6037, lng: -58.3816 }}
+                                radiusKm={distanciaMax[0] >= 100 ? 25 : distanciaMax[0]}
+                                height={200}
+                              />
+                              <ScrollArea className="h-36">
+                                <div className="space-y-1">
+                                  {Object.entries(UBICACIONES_COORDENADAS)
+                                    .filter(([name]) => !busquedaUbicacion || name.toLowerCase().includes(busquedaUbicacion.toLowerCase()))
+                                    .map(([name]) => (
+                                      <Button
+                                        key={name}
+                                        type="button"
+                                        variant="ghost"
+                                        className="w-full justify-start"
+                                        onClick={() => {
+                                          setUserLocation(UBICACIONES_COORDENADAS[name]);
+                                          setLocationError(null);
+                                          setElegirUbicacionOpen(false);
+                                        }}
+                                      >
+                                        <MapPin className="w-4 h-4 mr-2" />
+                                        {name}
+                                      </Button>
+                                    ))}
+                                </div>
+                              </ScrollArea>
+                              <p className="text-xs text-muted-foreground">
+                                Se mostrarán publicaciones dentro del radio elegido.
+                              </p>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                      {userLocation && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full mt-1 text-xs"
+                          onClick={() => setUserLocation(null)}
+                        >
+                          Quitar filtro de ubicación
+                        </Button>
+                      )}
                       {locationError && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {locationError === 'Permiso denegado'
