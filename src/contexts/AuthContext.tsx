@@ -5,7 +5,10 @@ import { authService, User } from '@/services/auth.service';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  mfaPending: { mfaToken: string } | null;
   login: (email: string, password: string) => Promise<void>;
+  completeLoginWithMfa: (mfaToken: string, code: string) => Promise<void>;
+  clearMfaPending: () => void;
   register: (data: any) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -17,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mfaPending, setMfaPending] = useState<{ mfaToken: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,23 +37,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const response = await authService.login({ email, password });
-      setUser(response.user);
-      navigate('/dashboard');
-    } catch (error) {
-      throw error;
+    const response = await authService.login({ email, password });
+    if ('mfaRequired' in response && response.mfaRequired) {
+      setMfaPending({ mfaToken: response.mfaToken });
+      return;
     }
+    setUser(response.user);
+    navigate('/dashboard');
   };
 
+  const completeLoginWithMfa = async (mfaToken: string, code: string) => {
+    const response = await authService.verifyMfa(mfaToken, code);
+    setMfaPending(null);
+    setUser(response.user);
+    navigate('/dashboard');
+  };
+
+  const clearMfaPending = () => setMfaPending(null);
+
   const register = async (data: any) => {
-    try {
-      const newUser = await authService.register(data);
-      setUser(newUser);
-      navigate('/dashboard');
-    } catch (error) {
-      throw error;
+    const result = await authService.register(data);
+    if ('mfaRequired' in result && result.mfaRequired) {
+      setMfaPending({ mfaToken: result.mfaToken });
+      navigate('/login');
+      return;
     }
+    setUser(result as User);
+    navigate('/dashboard');
   };
 
   const logout = () => {
@@ -72,7 +86,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         loading,
+        mfaPending,
         login,
+        completeLoginWithMfa,
+        clearMfaPending,
         register,
         logout,
         isAuthenticated: !!user,

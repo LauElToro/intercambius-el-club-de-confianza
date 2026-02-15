@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import OlvideContrasena from "./pages/OlvideContrasena";
+import RestablecerContrasena from "./pages/RestablecerContrasena";
 import Dashboard from "./pages/Dashboard";
 import Ofertas from "./pages/Ofertas";
 import Market from "./pages/Market";
@@ -47,6 +49,8 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
+              <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
+              <Route path="/restablecer-contrasena/:token" element={<RestablecerContrasena />} />
               <Route path="/market" element={<Market />} />
               <Route path="/market/:id" element={<ProductoDetalle />} />
               <Route path="/producto/:id" element={<ProductoDetalle />} />

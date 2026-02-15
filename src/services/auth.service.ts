@@ -18,6 +18,11 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface MfaRequiredResponse {
+  mfaRequired: true;
+  mfaToken: string;
+}
+
 export interface User {
   id: number;
   nombre: string;
@@ -40,15 +45,18 @@ export interface User {
 }
 
 export const authService = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials): Promise<AuthResponse | MfaRequiredResponse> {
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', credentials);
-      
-      // Guardar token y usuario
-      localStorage.setItem('intercambius_token', response.token);
-      localStorage.setItem('intercambius_user', JSON.stringify(response.user));
-      
-      return response;
+      const response = await api.post<AuthResponse | MfaRequiredResponse>('/api/auth/login', credentials);
+
+      if ('mfaRequired' in response && response.mfaRequired) {
+        return response;
+      }
+
+      const authResponse = response as AuthResponse;
+      localStorage.setItem('intercambius_token', authResponse.token);
+      localStorage.setItem('intercambius_user', JSON.stringify(authResponse.user));
+      return authResponse;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
@@ -57,17 +65,41 @@ export const authService = {
     }
   },
 
-  async register(data: RegisterData): Promise<User> {
+  async verifyMfa(mfaToken: string, code: string): Promise<AuthResponse> {
     try {
-      const user = await api.post<User>('/api/auth/register', data);
-      
-      // Hacer login automático después del registro
+      const response = await api.post<AuthResponse>('/api/auth/verify-mfa', { mfaToken, code });
+      localStorage.setItem('intercambius_token', response.token);
+      localStorage.setItem('intercambius_user', JSON.stringify(response.user));
+      return response;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError('Error al verificar el código', 500);
+    }
+  },
+
+  async requestPasswordReset(email: string): Promise<void> {
+    await api.post('/api/auth/forgot-password', { email });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await api.post('/api/auth/reset-password', { token, newPassword });
+  },
+
+  async register(data: RegisterData): Promise<User | MfaRequiredResponse> {
+    try {
+      await api.post<User>('/api/auth/register', data);
+
       const loginResponse = await this.login({
         email: data.email,
         password: data.password,
       });
-      
-      return loginResponse.user;
+
+      if ('mfaRequired' in loginResponse && loginResponse.mfaRequired) {
+        return loginResponse;
+      }
+      return (loginResponse as AuthResponse).user;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
