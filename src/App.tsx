@@ -22,6 +22,8 @@ import MisCompras from "./pages/MisCompras";
 import Historial from "./pages/Historial";
 import Favoritos from "./pages/Favoritos";
 import Chat from "./pages/Chat";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -136,6 +138,8 @@ const App = () => (
                 } 
               />
               <Route path="/ofertas" element={<Ofertas />} />
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
