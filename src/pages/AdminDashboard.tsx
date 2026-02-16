@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -14,10 +16,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   adminService,
   AdminMetrics,
   AdminApiError,
 } from "@/services/admin.service";
+import {
+  exportMetricsToExcel,
+  exportUsersToExcel,
+  exportProductosToExcel,
+  exportIntercambiosToExcel,
+} from "@/lib/exportExcel";
 import {
   Users,
   Package,
@@ -28,12 +46,19 @@ import {
   Loader2,
   Mail,
   BarChart3,
+  Sun,
+  Moon,
+  Download,
+  Ban,
+  ShieldOff,
+  Trash2,
 } from "lucide-react";
 
 type Tab = "metricas" | "usuarios" | "productos" | "intercambios" | "newsletter";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<Tab>("metricas");
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [users, setUsers] = useState<{ data: any[]; total: number; page: number; totalPages: number } | null>(null);
@@ -44,6 +69,19 @@ const AdminDashboard = () => {
   const [newsletter, setNewsletter] = useState({ subject: "", bodyHtml: "", enviarATodos: true });
   const [newsletterSending, setNewsletterSending] = useState(false);
   const [newsletterResult, setNewsletterResult] = useState<string | null>(null);
+  const [userActionLoading, setUserActionLoading] = useState<number | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const quillModules = useMemo(() => ({
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image"],
+      ["clean"],
+    ],
+  }), []);
 
   useEffect(() => {
     if (!adminService.isLoggedIn()) {
@@ -109,9 +147,75 @@ const AdminDashboard = () => {
     navigate("/admin", { replace: true });
   };
 
+  const handleBan = async (userId: number) => {
+    setUserActionLoading(userId);
+    const page = users?.page || 1;
+    try {
+      await adminService.banUser(userId);
+      setUsers(null);
+      loadUsers(page);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUserActionLoading(null);
+    }
+  };
+
+  const handleUnban = async (userId: number) => {
+    setUserActionLoading(userId);
+    const page = users?.page || 1;
+    try {
+      await adminService.unbanUser(userId);
+      setUsers(null);
+      loadUsers(page);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUserActionLoading(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    setUserActionLoading(userId);
+    const page = users?.page || 1;
+    try {
+      await adminService.deleteUser(userId);
+      setDeleteUserId(null);
+      setUsers(null);
+      loadUsers(page);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUserActionLoading(null);
+    }
+  };
+
+  const handleExport = async (type: "metricas" | "usuarios" | "productos" | "intercambios") => {
+    setExporting(type);
+    try {
+      if (type === "metricas" && metrics) {
+        exportMetricsToExcel(metrics);
+      } else if (type === "usuarios") {
+        const res = await adminService.getUsersForExport();
+        exportUsersToExcel(res.data);
+      } else if (type === "productos") {
+        const res = await adminService.getProductosForExport();
+        exportProductosToExcel(res.data);
+      } else if (type === "intercambios") {
+        const res = await adminService.getIntercambiosForExport();
+        exportIntercambiosToExcel(res.data);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newsletter.subject.trim() || !newsletter.bodyHtml.trim()) return;
+    const bodyText = (newsletter.bodyHtml || "").replace(/<[^>]*>/g, "").trim();
+    if (!newsletter.subject.trim() || !bodyText) return;
     setNewsletterSending(true);
     setNewsletterResult(null);
     try {
@@ -147,12 +251,22 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <header className="sticky top-0 z-10 border-b bg-card px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-10 border-b bg-card px-4 py-3 flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold gold-text">Panel Admin — Intercambius</h1>
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Salir
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            aria-label={theme === "dark" ? "Modo claro" : "Modo oscuro"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Salir
+          </Button>
+        </div>
       </header>
 
       <nav className="border-b bg-card px-4 flex gap-1 overflow-x-auto">
@@ -179,6 +293,12 @@ const AdminDashboard = () => {
 
         {tab === "metricas" && metrics && (
           <div className="space-y-6">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => handleExport("metricas")} disabled={!!exporting}>
+                <Download className="w-4 h-4 mr-2" />
+                {exporting === "metricas" ? "..." : "Descargar Excel"}
+              </Button>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -252,9 +372,17 @@ const AdminDashboard = () => {
 
         {tab === "usuarios" && (
           <Card>
-            <CardHeader>
-              <CardTitle>Usuarios</CardTitle>
-              <p className="text-sm text-muted-foreground">Listado de usuarios registrados</p>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Usuarios</CardTitle>
+                <p className="text-sm text-muted-foreground">Listado de usuarios registrados</p>
+              </div>
+              {users && (
+                <Button variant="outline" size="sm" onClick={() => handleExport("usuarios")} disabled={!!exporting}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {exporting === "usuarios" ? "..." : "Excel"}
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {!users ? (
@@ -269,9 +397,11 @@ const AdminDashboard = () => {
                         <TableHead>ID</TableHead>
                         <TableHead>Nombre</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead>Estado</TableHead>
                         <TableHead>Saldo</TableHead>
                         <TableHead>Productos</TableHead>
                         <TableHead>Intercambios</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -280,13 +410,74 @@ const AdminDashboard = () => {
                           <TableCell>{u.id}</TableCell>
                           <TableCell>{u.nombre}</TableCell>
                           <TableCell>{u.email}</TableCell>
+                          <TableCell>
+                            {u.bannedAt ? (
+                              <span className="text-destructive font-medium">Baneado</span>
+                            ) : (
+                              <span className="text-muted-foreground">Activo</span>
+                            )}
+                          </TableCell>
                           <TableCell>{u.saldo} IX</TableCell>
                           <TableCell>{u.productosPublicados}</TableCell>
                           <TableCell>{u.intercambios}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              {u.bannedAt ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Desbanear"
+                                  disabled={userActionLoading === u.id}
+                                  onClick={() => handleUnban(u.id)}
+                                >
+                                  <ShieldOff className="w-4 h-4 text-green-600" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Banear"
+                                  disabled={userActionLoading === u.id}
+                                  onClick={() => handleBan(u.id)}
+                                >
+                                  <Ban className="w-4 h-4 text-amber-600" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Eliminar"
+                                disabled={userActionLoading === u.id}
+                                onClick={() => setDeleteUserId(u.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  <AlertDialog open={deleteUserId != null} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción no se puede deshacer. Se eliminarán todos los datos del usuario (productos, intercambios, mensajes, etc.).
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => deleteUserId != null && handleDeleteUser(deleteUserId)}
+                        >
+                          Eliminar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <div className="flex items-center justify-between mt-4">
                     <p className="text-sm text-muted-foreground">
                       Página {users.page} de {users.totalPages} ({users.total} total)
@@ -318,8 +509,14 @@ const AdminDashboard = () => {
 
         {tab === "productos" && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Productos publicados</CardTitle>
+              {productos && (
+                <Button variant="outline" size="sm" onClick={() => handleExport("productos")} disabled={!!exporting}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {exporting === "productos" ? "..." : "Excel"}
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {!productos ? (
@@ -381,8 +578,14 @@ const AdminDashboard = () => {
 
         {tab === "intercambios" && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Transacciones (intercambios)</CardTitle>
+              {intercambios && (
+                <Button variant="outline" size="sm" onClick={() => handleExport("intercambios")} disabled={!!exporting}>
+                  <Download className="w-4 h-4 mr-2" />
+                  {exporting === "intercambios" ? "..." : "Excel"}
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {!intercambios ? (
@@ -447,7 +650,7 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle>Newsletter — Envío masivo</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Enviar un correo a todos los usuarios o a una lista de emails. Podés usar HTML en el cuerpo.
+                Redactá el correo con formato, imágenes (URL) y enlaces. Se enviará a todos los usuarios no baneados.
               </p>
             </CardHeader>
             <CardContent>
@@ -463,16 +666,16 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="body">Cuerpo (HTML o texto)</Label>
-                  <Textarea
-                    id="body"
-                    value={newsletter.bodyHtml}
-                    onChange={(e) => setNewsletter((s) => ({ ...s, bodyHtml: e.target.value }))}
-                    placeholder="<p>Hola, ...</p> o texto plano"
-                    rows={10}
-                    className="font-mono text-sm"
-                    required
-                  />
+                  <Label>Cuerpo del correo</Label>
+                  <div className="rounded-md border border-input [&_.ql-editor]:min-h-[200px] [&_.ql-container]:border-0 [&_.ql-toolbar]:rounded-t-md [&_.ql-toolbar]:bg-muted/50 [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-input">
+                    <ReactQuill
+                      theme="snow"
+                      value={newsletter.bodyHtml}
+                      onChange={(html) => setNewsletter((s) => ({ ...s, bodyHtml: html }))}
+                      modules={quillModules}
+                      placeholder="Escribí el contenido del newsletter. Podés usar negrita, listas, enlaces e imágenes (insertar imagen → pegar URL)."
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input

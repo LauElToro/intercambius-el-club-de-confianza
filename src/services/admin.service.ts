@@ -142,4 +142,28 @@ export const adminService = {
       body: JSON.stringify(params),
     });
   },
+
+  async banUser(userId: number): Promise<void> {
+    return adminRequest(`/api/admin/users/${userId}/ban`, { method: 'POST' });
+  },
+
+  async unbanUser(userId: number): Promise<void> {
+    return adminRequest(`/api/admin/users/${userId}/unban`, { method: 'POST' });
+  },
+
+  async deleteUser(userId: number): Promise<void> {
+    return adminRequest(`/api/admin/users/${userId}`, { method: 'DELETE' });
+  },
+
+  async getUsersForExport(): Promise<{ data: any[] }> {
+    return adminRequest('/api/admin/users?page=1&limit=10000');
+  },
+
+  async getProductosForExport(): Promise<{ data: any[] }> {
+    return adminRequest('/api/admin/productos?page=1&limit=10000');
+  },
+
+  async getIntercambiosForExport(): Promise<{ data: any[] }> {
+    return adminRequest('/api/admin/intercambios?page=1&limit=10000');
+  },
 };

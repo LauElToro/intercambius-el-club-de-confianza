@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
@@ -129,11 +130,10 @@ const RestablecerContrasena = () => {
               <div className="space-y-2">
                 <Label htmlFor="newPassword">Nueva contraseña</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="newPassword"
                     name="newPassword"
-                    type="password"
                     placeholder="••••••••"
                     value={formData.newPassword}
                     onChange={handleChange}
@@ -147,11 +147,10 @@ const RestablecerContrasena = () => {
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="confirmPassword"
                     name="confirmPassword"
-                    type="password"
                     placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={handleChange}

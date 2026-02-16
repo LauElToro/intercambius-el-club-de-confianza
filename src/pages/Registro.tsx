@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
@@ -179,11 +180,10 @@ const Registro = () => {
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña *</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="password"
                     name="password"
-                    type="password"
                     placeholder="Mínimo 6 caracteres"
                     value={formData.password}
                     onChange={handleChange}
@@ -198,11 +198,10 @@ const Registro = () => {
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                  <PasswordInput
                     id="confirmPassword"
                     name="confirmPassword"
-                    type="password"
                     placeholder="Repetí tu contraseña"
                     value={formData.confirmPassword}
                     onChange={handleChange}

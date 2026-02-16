@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import logo from "@/assets/logo-intercambius.jpeg";
 import { Mail, Lock, Shield } from "lucide-react";
@@ -75,11 +76,10 @@ const AdminLogin = () => {
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
