@@ -37,6 +37,25 @@ import {
   exportIntercambiosToExcel,
 } from "@/lib/exportExcel";
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import {
   Users,
   Package,
   ShoppingCart,
@@ -52,9 +71,18 @@ import {
   Ban,
   ShieldOff,
   Trash2,
+  TrendingUp,
+  Activity,
 } from "lucide-react";
 
 type Tab = "metricas" | "usuarios" | "productos" | "intercambios" | "newsletter";
+
+const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+function formatMes(ym: string) {
+  const [y, m] = ym.split("-");
+  const i = parseInt(m, 10) - 1;
+  return `${MESES[i] || m} ${(y || "").slice(-2)}`;
+}
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -293,45 +321,50 @@ const AdminDashboard = () => {
 
         {tab === "metricas" && metrics && (
           <div className="space-y-6">
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Resumen del negocio</h2>
               <Button variant="outline" size="sm" onClick={() => handleExport("metricas")} disabled={!!exporting}>
                 <Download className="w-4 h-4 mr-2" />
                 {exporting === "metricas" ? "..." : "Descargar Excel"}
               </Button>
             </div>
+
+            {/* KPIs principales */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
+              <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Usuarios</CardTitle>
-                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Usuarios registrados</CardTitle>
+                  <Users className="w-4 h-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{metrics.usuarios.total}</p>
+                  <p className="text-xs text-muted-foreground">Total en la plataforma</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-l-4 border-l-emerald-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Productos publicados</CardTitle>
-                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Productos</CardTitle>
+                  <Package className="w-4 h-4 text-emerald-500" />
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{metrics.productos.total}</p>
                   <p className="text-xs text-muted-foreground">{metrics.productos.activos} activos</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-l-4 border-l-amber-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Ventas / Compras</CardTitle>
-                  <ShoppingCart className="w-4 h-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Transacciones</CardTitle>
+                  <ShoppingCart className="w-4 h-4 text-amber-500" />
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{metrics.ventasCompras.transaccionesTotal}</p>
+                  <p className="text-xs text-muted-foreground">Ventas confirmadas</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-l-4 border-l-violet-500">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Conversaciones</CardTitle>
-                  <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Engagement</CardTitle>
+                  <MessageCircle className="w-4 h-4 text-violet-500" />
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{metrics.contacto.conversacionesTotal}</p>
@@ -339,34 +372,153 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Token (IX) */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Coins className="w-5 h-5" />
-                  Token (IX)
+                  <Coins className="w-5 h-5 text-amber-500" />
+                  Token IX — Circulación y volumen
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">Saldo en usuarios y movimiento en transacciones</p>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Saldo en circulación</p>
-                    <p className="text-xl font-semibold">{metrics.token.saldoEnCirculacion.toLocaleString()} IX</p>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <p className="text-sm font-medium text-muted-foreground">Saldo en circulación</p>
+                    <p className="text-2xl font-bold text-amber-600">{metrics.token.saldoEnCirculacion.toLocaleString()} IX</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Volumen transacciones</p>
-                    <p className="text-xl font-semibold">{metrics.token.volumenTransacciones.toLocaleString()} IX</p>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <p className="text-sm font-medium text-muted-foreground">Volumen transacciones</p>
+                    <p className="text-2xl font-bold">{metrics.token.volumenTransacciones.toLocaleString()} IX</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Gastado (compras)</p>
-                    <p className="text-xl font-semibold">{metrics.token.tokenGastadoCompras.toLocaleString()} IX</p>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <p className="text-sm font-medium text-muted-foreground">Gastado (compras)</p>
+                    <p className="text-2xl font-bold text-red-600">{metrics.token.tokenGastadoCompras.toLocaleString()} IX</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Recibido (ventas)</p>
-                    <p className="text-xl font-semibold">{metrics.token.tokenRecibidoVentas.toLocaleString()} IX</p>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <p className="text-sm font-medium text-muted-foreground">Recibido (ventas)</p>
+                    <p className="text-2xl font-bold text-green-600">{metrics.token.tokenRecibidoVentas.toLocaleString()} IX</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Gráficos */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {metrics.usuarios.porMes && metrics.usuarios.porMes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <TrendingUp className="w-4 h-4" />
+                      Usuarios registrados por mes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ total: { label: "Usuarios" } }} className="h-[240px] w-full">
+                      <BarChart data={metrics.usuarios.porMes.map((d) => ({ ...d, name: formatMes(d.mes) }))} margin={{ left: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tickLine={false} />
+                        <YAxis tickLine={false} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {metrics.ventasCompras.porMes && metrics.ventasCompras.porMes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Activity className="w-4 h-4" />
+                      Transacciones y volumen por mes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ cantidad: { label: "Transacciones" }, volumen: { label: "Volumen IX" } }} className="h-[240px] w-full">
+                      <AreaChart data={metrics.ventasCompras.porMes.map((d) => ({ ...d, name: formatMes(d.mes) }))} margin={{ left: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tickLine={false} />
+                        <YAxis yAxisId="left" tickLine={false} />
+                        <YAxis yAxisId="right" orientation="right" tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Area yAxisId="left" type="monotone" dataKey="cantidad" fill="hsl(var(--chart-1))" stroke="hsl(var(--chart-1))" fillOpacity={0.3} />
+                        <Area yAxisId="right" type="monotone" dataKey="volumen" fill="hsl(var(--chart-2))" stroke="hsl(var(--chart-2))" fillOpacity={0.3} />
+                      </AreaChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {metrics.productos.porEstado && metrics.productos.porEstado.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BarChart3 className="w-4 h-4" />
+                      Productos por estado
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ active: { label: "Activos" }, draft: { label: "Borrador" }, paused: { label: "Pausados" }, sold: { label: "Vendidos" } }} className="h-[240px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Pie
+                            data={metrics.productos.porEstado.map((d) => ({ name: d.estado, value: d.cantidad }))}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {metrics.productos.porEstado.map((_, i) => (
+                              <Cell key={i} fill={["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"][i % 4]} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {metrics.contacto.mensajesPorMes && metrics.contacto.mensajesPorMes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <MessageCircle className="w-4 h-4" />
+                      Mensajes por mes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ total: { label: "Mensajes" } }} className="h-[240px] w-full">
+                      <BarChart data={metrics.contacto.mensajesPorMes.map((d) => ({ ...d, name: formatMes(d.mes) }))} margin={{ left: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tickLine={false} />
+                        <YAxis tickLine={false} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="total" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {(!metrics.usuarios.porMes?.length && !metrics.ventasCompras.porMes?.length && !metrics.productos.porEstado?.length && !metrics.contacto.mensajesPorMes?.length) && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                  <BarChart3 className="w-12 h-12 mb-2 opacity-50" />
+                  <p>No hay datos históricos aún para mostrar gráficos.</p>
+                  <p className="text-sm">Los gráficos aparecerán cuando haya usuarios, transacciones y mensajes.</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 

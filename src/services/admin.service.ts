@@ -46,12 +46,20 @@ async function adminRequest<T>(endpoint: string, options: RequestInit = {}): Pro
 }
 
 export interface AdminMetrics {
-  usuarios: { total: number };
-  productos: { total: number; activos: number };
+  usuarios: {
+    total: number;
+    porMes?: { mes: string; total: number }[];
+  };
+  productos: {
+    total: number;
+    activos: number;
+    porEstado?: { estado: string; cantidad: number }[];
+  };
   ventasCompras: {
     transaccionesTotal: number;
     comprasTotal: number;
     ventasTotal: number;
+    porMes?: { mes: string; cantidad: number; volumen: number }[];
   };
   token: {
     saldoEnCirculacion: number;
@@ -63,6 +71,7 @@ export interface AdminMetrics {
     conversacionesTotal: number;
     mensajesTotal: number;
     paresUnicosContactados: number;
+    mensajesPorMes?: { mes: string; total: number }[];
   };
 }
 
