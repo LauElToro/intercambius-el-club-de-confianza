@@ -101,6 +101,9 @@ export const marketService = {
       if (filters?.vendedorId) {
         params.append('vendedorId', filters.vendedorId.toString());
       }
+      if (filters?.search?.trim()) {
+        params.append('search', filters.search.trim());
+      }
       if (filters?.userLat !== undefined) {
         params.append('userLat', filters.userLat.toString());
       }

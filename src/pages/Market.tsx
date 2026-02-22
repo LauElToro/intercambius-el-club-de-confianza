@@ -120,7 +120,8 @@ const Market = () => {
   const usuario = currentUser || user;
   const { formatIX } = useCurrencyVariant();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"todos" | "productos" | "servicios">("todos");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("todos");
   const [distanciaMax, setDistanciaMax] = useState([25]);
@@ -160,7 +161,7 @@ const Market = () => {
     recordRef.current && clearTimeout(recordRef.current);
     recordRef.current = setTimeout(() => {
       busquedasService.registrar({
-        termino: search,
+        termino: searchApplied,
         seccion: 'market',
         filtros: {
           tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
@@ -172,16 +173,17 @@ const Market = () => {
       });
     }, 800);
     return () => { recordRef.current && clearTimeout(recordRef.current); };
-  }, [search, tipoSeleccionado, rubroSeleccionado, precioMin[0], precioMax[0], distanciaMax[0], userLocation, puedeRegistrarBusquedas, user]);
+  }, [searchApplied, tipoSeleccionado, rubroSeleccionado, precioMin[0], precioMax[0], distanciaMax[0], userLocation, puedeRegistrarBusquedas, user]);
 
-  // Obtener items del backend (paginado, filtro de distancia en servidor)
+  // Obtener items del backend (paginado, filtro de distancia y búsqueda en servidor)
   const { data: marketResponse, isLoading, error } = useQuery({
-    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], sinLimiteDistancia, page],
+    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], sinLimiteDistancia, searchApplied, page],
     queryFn: () => marketService.getItems({
       rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado as any : undefined,
       tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
       precioMin: precioMin[0],
       precioMax: precioMax[0],
+      search: searchApplied.trim() || undefined,
       userLat: userLocation?.lat,
       userLng: userLocation?.lng,
       distanciaMax: userLocation && !sinLimiteDistancia ? distanciaMax[0] : undefined,
@@ -197,7 +199,7 @@ const Market = () => {
   // Reset a página 1 cuando cambian filtros
   useEffect(() => {
     setPage(1);
-  }, [rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0]]);
+  }, [rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], searchApplied]);
 
   // Por defecto usar la ubicación del perfil del usuario
   const appliedProfileLocation = useRef(false);
@@ -292,17 +294,15 @@ const Market = () => {
     });
   };
 
-  // Filtrar items (filtros del lado del cliente para búsqueda y detalles)
+  // Aplicar búsqueda con Enter
+  const aplicarBusqueda = () => {
+    setSearchApplied(searchInput.trim());
+    setPage(1);
+  };
+
+  // Filtrar items (filtros del lado del cliente para detalles del rubro; búsqueda se hace en servidor)
   const itemsFiltrados = useMemo(() => {
     return items.filter((item: MarketItem) => {
-      // Búsqueda por texto
-      if (search && !(item.titulo || '').toLowerCase().includes(search.toLowerCase()) &&
-          !(item.descripcion || '').toLowerCase().includes(search.toLowerCase())) {
-        return false;
-      }
-
-      // Filtro por distancia: se hace en el servidor cuando hay userLocation
-
       // Filtros específicos del rubro (detalles)
       if (filtrosDisponibles && item.detalles) {
         for (const [categoria, valores] of Object.entries(filtrosRubro)) {
@@ -317,7 +317,7 @@ const Market = () => {
 
       return true;
     });
-  }, [items, search, distanciaMax, filtrosRubro, filtrosDisponibles]);
+  }, [items, filtrosRubro, filtrosDisponibles]);
 
   const toggleFavorito = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
@@ -329,7 +329,8 @@ const Market = () => {
   };
 
   const limpiarFiltros = () => {
-    setSearch("");
+    setSearchInput("");
+    setSearchApplied("");
     setTipoSeleccionado("todos");
     setRubroSeleccionado("todos");
     setDistanciaMax([25]);
@@ -341,7 +342,7 @@ const Market = () => {
     setFiltrosRubro({});
   };
 
-  const tieneFiltrosActivos = search || tipoSeleccionado !== "todos" || rubroSeleccionado !== "todos" || 
+  const tieneFiltrosActivos = searchApplied || tipoSeleccionado !== "todos" || rubroSeleccionado !== "todos" || 
     userLocation !== null || distanciaMax[0] < 25 || precioMin[0] > 0 || precioMax[0] < 500000 ||
     Object.values(filtrosRubro).some(v => v.length > 0);
 
@@ -382,18 +383,28 @@ const Market = () => {
 
                 <ScrollArea className="h-[calc(100vh-200px)] pr-4">
                   <div className="space-y-6">
-                    {/* Búsqueda */}
+                    {/* Búsqueda (Enter para buscar, match ~70%) */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">Buscar</label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Buscar productos o servicios..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          aplicarBusqueda();
+                        }}
+                      >
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar... (Enter)"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') aplicarBusqueda();
+                            }}
+                            className="pl-9"
+                          />
+                        </div>
+                      </form>
                     </div>
 
                     {/* Tipo (Productos/Servicios) */}
