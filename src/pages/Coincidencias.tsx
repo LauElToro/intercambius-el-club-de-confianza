@@ -124,21 +124,35 @@ const Coincidencias = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Encontrá lo que te interesa intercambiar
                 </p>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Ej: bicicleta, clases de yoga..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // La búsqueda ya filtra en vivo; Enter o click en lupita confirman
+                    document.getElementById("coincidencias-resultados")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      id="coincidencias-buscar"
+                      placeholder="Ej: bicicleta, clases de yoga..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 pr-2"
+                      aria-label="Buscar en coincidencias"
+                    />
+                  </div>
+                  <Button type="submit" variant="secondary" size="icon" title="Buscar" className="shrink-0">
+                    <Search className="w-4 h-4" />
+                  </Button>
+                </form>
               </div>
             </Card>
           </aside>
 
           {/* Contenido principal */}
-          <div className="flex-1">
+          <div id="coincidencias-resultados" className="flex-1">
         {/* Alerta de crédito */}
         {!puedeComprar && (
           <Alert variant="destructive" className="mb-6">
