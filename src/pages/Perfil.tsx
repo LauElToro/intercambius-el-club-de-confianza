@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe } from "lucide-react";
+import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck } from "lucide-react";
 import { userService } from "@/services/user.service";
 import { marketService } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { User } from "@/services/auth.service";
 import api from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 const REDES_KEYS = ['instagram', 'facebook', 'twitter', 'linkedin', 'web'] as const;
 const REDES_ICONS: Record<string, typeof Instagram> = {
@@ -55,7 +56,7 @@ const Perfil = () => {
   const { data: productos = [] } = useQuery({
     queryKey: ['marketItems', 'perfil', id],
     queryFn: async () => (await marketService.getItems({ vendedorId: Number(id!) })).data,
-    enabled: !!id && !!usuario,
+    enabled: !!id,
   });
 
   const guardarMutation = useMutation({
@@ -139,9 +140,16 @@ const Perfil = () => {
   if (error) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Perfil no encontrado</h1>
+        <div className="container mx-auto px-4 py-16 text-center max-w-md mx-auto">
+          <div className="rounded-full bg-muted/50 w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <Package className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h1 className="text-xl font-bold mb-2">Perfil no encontrado</h1>
+          <p className="text-muted-foreground text-sm mb-6">
+            Este usuario no existe o el enlace puede estar incorrecto.
+          </p>
           <Button onClick={() => navigate(-1)} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Volver
           </Button>
         </div>
@@ -156,14 +164,19 @@ const Perfil = () => {
     .slice(0, 2)
     .toUpperCase() ?? "??";
 
+  const miembroDesdeStr = usuario?.miembroDesde
+    ? new Date(usuario.miembroDesde).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+    : null;
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
+      <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background">
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
           {esMiPerfil && !editando && (
             <Button variant="outline" size="sm" onClick={iniciarEdicion}>
               <Pencil className="w-4 h-4 mr-2" />
@@ -185,12 +198,13 @@ const Perfil = () => {
         </div>
 
         {/* Banner */}
-        <div className="relative rounded-xl overflow-hidden bg-muted h-40 sm:h-52 mb-[-3rem]">
+        <div className="relative rounded-2xl overflow-hidden bg-muted h-44 sm:h-56 mb-[-3.5rem] shadow-lg">
           {banner ? (
             <img src={banner} alt="Banner" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-r from-gold/20 to-gold/5" />
+            <div className="w-full h-full bg-gradient-to-br from-gold/25 via-gold/10 to-gold/5" />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           {esMiPerfil && editando && (
             <>
               <input
@@ -212,12 +226,12 @@ const Perfil = () => {
           )}
         </div>
 
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-md border-0 shadow-black/5">
           <CardContent className="pt-16 pb-6">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               {/* Foto de perfil */}
-              <div className="relative">
-                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
+              <div className="relative flex-shrink-0">
+                <Avatar className="h-32 w-32 border-4 border-background shadow-xl ring-2 ring-gold/20">
                   {fotoPerfil && <AvatarImage src={fotoPerfil} alt={nombre} />}
                   <AvatarFallback className="text-2xl bg-gold/20 text-gold">
                     {iniciales}
@@ -308,29 +322,56 @@ const Perfil = () => {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-2xl font-bold mb-1">{nombre}</h1>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{nombre}</h1>
+                      {usuario?.verificado && (
+                        <Badge variant="secondary" className="gap-1 bg-gold/10 text-gold border-gold/30">
+                          <BadgeCheck className="w-3.5 h-3.5" />
+                          Verificado
+                        </Badge>
+                      )}
+                    </div>
                     {ubicacion && (
-                      <div className="flex items-center gap-1 text-muted-foreground mb-2">
-                        <MapPin className="w-4 h-4" />
+                      <div className="flex items-center gap-1.5 text-muted-foreground mb-3">
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
                         <span>{ubicacion}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 mb-4">
-                      <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                      <span className="font-medium">{usuario.rating ?? 0}/5</span>
-                      <span className="text-sm text-muted-foreground">
-                        ({usuario.totalResenas ?? 0} reseñas)
-                      </span>
+                    {/* Stats */}
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      <div className="flex items-center gap-1.5">
+                        <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+                        <span className="font-semibold">{Number(usuario?.rating ?? 0).toFixed(1)}</span>
+                        <span className="text-sm text-muted-foreground">
+                          ({usuario?.totalResenas ?? 0} reseñas)
+                        </span>
+                      </div>
+                      {miembroDesdeStr && (
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>Miembro desde {miembroDesdeStr}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Package className="w-4 h-4" />
+                        <span>{productos.length} publicación{productos.length !== 1 ? 'es' : ''}</span>
+                      </div>
                     </div>
-                    {bio && <p className="text-sm text-muted-foreground mb-4">{bio}</p>}
+                    {bio && <p className="text-muted-foreground mb-4 leading-relaxed">{bio}</p>}
+                    {usuario?.ofrece && (
+                      <div className="mb-4 p-4 rounded-xl bg-gold/5 border border-gold/20">
+                        <p className="text-xs font-semibold text-gold uppercase tracking-wide mb-1">Lo que ofrece</p>
+                        <p className="text-sm text-foreground">{usuario.ofrece}</p>
+                      </div>
+                    )}
                     {usuario?.necesita && (
-                      <div className="mb-4 p-3 rounded-lg bg-muted/50">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Lo que busco</p>
+                      <div className="mb-4 p-4 rounded-xl bg-muted/50">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Lo que busca</p>
                         <p className="text-sm text-foreground">{usuario.necesita}</p>
                       </div>
                     )}
                     {Object.keys(redesSociales).length > 0 && (
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-3 mb-4">
                         {REDES_KEYS.map((key) => {
                           const url = redesSociales[key];
                           if (!url) return null;
@@ -342,7 +383,7 @@ const Perfil = () => {
                               href={href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-gold hover:underline text-sm"
+                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/60 hover:bg-gold/10 text-gold hover:text-gold transition-colors text-sm"
                             >
                               <Icon className="w-4 h-4" />
                               {REDES_LABELS[key]}
@@ -351,7 +392,19 @@ const Perfil = () => {
                         })}
                       </div>
                     )}
-                    {!esMiPerfil && (
+                    {!esMiPerfil && !user && (
+                      <div className="mt-4 p-4 rounded-xl bg-muted/50 border border-border">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Iniciá sesión para contactar a este vendedor y coordinar compras o intercambios.
+                        </p>
+                        <Link to="/login">
+                          <Button variant="gold" size="sm">
+                            Iniciar sesión para contactar
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                    {!esMiPerfil && user && (
                       <p className="text-sm text-muted-foreground mt-2">
                         Contactá desde el detalle de un producto para hablar antes de comprar.
                       </p>
@@ -363,30 +416,47 @@ const Perfil = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-md border-0 shadow-black/5">
           <CardHeader>
-            <CardTitle>Publicaciones</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-gold" />
+              Publicaciones
+              <Badge variant="secondary" className="font-normal ml-1">{productos.length}</Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {productos.length === 0 ? (
-              <p className="text-muted-foreground py-8 text-center">
-                Este usuario aún no tiene publicaciones.
-              </p>
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-4">
+                  <Package className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">
+                  Este usuario aún no tiene publicaciones.
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Volvé más adelante para ver novedades.
+                </p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {productos.map((item) => (
                   <Link key={item.id} to={`/producto/${item.id}`}>
-                    <Card className="overflow-hidden hover:border-gold/50 transition-colors cursor-pointer">
-                      <div className="aspect-video bg-muted">
+                    <Card className="overflow-hidden hover:border-gold/50 hover:shadow-md transition-all cursor-pointer group h-full">
+                      <div className="relative aspect-video bg-muted overflow-hidden">
                         <img
                           src={item.imagen || "https://via.placeholder.com/300x200"}
                           alt={item.titulo}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
+                        {item.rubro && (
+                          <Badge className="absolute top-2 left-2 text-xs" variant="secondary">
+                            {item.rubro}
+                          </Badge>
+                        )}
                       </div>
-                      <CardContent className="p-3">
-                        <h3 className="font-medium line-clamp-2">{item.titulo}</h3>
-                        <p className="text-gold font-bold">{formatIX(item.precio)}</p>
+                      <CardContent className="p-4">
+                        <h3 className="font-medium line-clamp-2 mb-2">{item.titulo}</h3>
+                        <p className="text-gold font-bold text-lg">{formatIX(item.precio)}</p>
                       </CardContent>
                     </Card>
                   </Link>
@@ -395,6 +465,7 @@ const Perfil = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </Layout>
   );
