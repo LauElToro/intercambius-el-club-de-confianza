@@ -28,6 +28,8 @@ import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
+import { CookieConsentProvider } from "./contexts/CookieConsentContext";
+import { CookieConsentBanner } from "./components/CookieConsentBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +45,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <CookieConsentProvider>
           <CurrencyVariantProvider>
           <AuthProvider>
             <Toaster />
@@ -143,8 +146,10 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CookieConsentBanner />
           </AuthProvider>
           </CurrencyVariantProvider>
+          </CookieConsentProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

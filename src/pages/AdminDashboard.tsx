@@ -73,6 +73,7 @@ import {
   Trash2,
   TrendingUp,
   Activity,
+  Search,
 } from "lucide-react";
 
 type Tab = "metricas" | "usuarios" | "productos" | "intercambios" | "newsletter";
@@ -371,6 +372,18 @@ const AdminDashboard = () => {
                   <p className="text-xs text-muted-foreground">{metrics.contacto.mensajesTotal} mensajes</p>
                 </CardContent>
               </Card>
+              {metrics.busquedas && (
+                <Card className="border-l-4 border-l-emerald-500">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Búsquedas</CardTitle>
+                    <Search className="w-4 h-4 text-emerald-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{metrics.busquedas.total}</p>
+                    <p className="text-xs text-muted-foreground">registradas (6 meses)</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Token (IX) */}
@@ -508,9 +521,56 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {metrics.busquedas?.porMes && metrics.busquedas.porMes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Search className="w-4 h-4" />
+                      Búsquedas por mes
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">Market y Coincidencias (usuarios con cookies aceptadas)</p>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ total: { label: "Búsquedas" } }} className="h-[240px] w-full">
+                      <BarChart data={metrics.busquedas.porMes.map((d) => ({ ...d, name: formatMes(d.mes) }))} margin={{ left: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" tickLine={false} />
+                        <YAxis tickLine={false} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="total" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {metrics.busquedas?.terminosPopulares && metrics.busquedas.terminosPopulares.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <TrendingUp className="w-4 h-4" />
+                      Términos más buscados
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">Últimos 6 meses — para segmentar publicidad</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {metrics.busquedas.terminosPopulares.slice(0, 15).map((t, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center rounded-full border bg-muted/50 px-3 py-1 text-sm"
+                        >
+                          {t.termino || "(solo filtros)"} — <strong className="ml-1">{t.total}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
-            {(!metrics.usuarios.porMes?.length && !metrics.ventasCompras.porMes?.length && !metrics.productos.porEstado?.length && !metrics.contacto.mensajesPorMes?.length) && (
+            {(!metrics.usuarios.porMes?.length && !metrics.ventasCompras.porMes?.length && !metrics.productos.porEstado?.length && !metrics.contacto.mensajesPorMes?.length && !metrics.busquedas?.porMes?.length) && (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                   <BarChart3 className="w-12 h-12 mb-2 opacity-50" />

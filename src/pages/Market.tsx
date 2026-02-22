@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
@@ -32,6 +32,8 @@ import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCookieConsent } from "@/contexts/CookieConsentContext";
+import { busquedasService } from "@/services/busquedas.service";
 
 // Coordenadas de ubicaciones comunes (fallback cuando geolocalización falla)
 const UBICACIONES_COORDENADAS: Record<string, { lat: number; lng: number }> = {
@@ -104,6 +106,7 @@ const RUBROS = {
 const Market = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { puedeRegistrarBusquedas } = useCookieConsent();
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -145,6 +148,27 @@ const Market = () => {
   });
 
   const sinLimiteDistancia = distanciaMax[0] >= 100;
+
+  // Registrar búsqueda cuando cambian filtros (debounced, solo si cookies aceptadas)
+  const recordRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (!puedeRegistrarBusquedas || !user) return;
+    recordRef.current && clearTimeout(recordRef.current);
+    recordRef.current = setTimeout(() => {
+      busquedasService.registrar({
+        termino: search,
+        seccion: 'market',
+        filtros: {
+          tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
+          rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado : undefined,
+          precioMin: precioMin[0],
+          precioMax: precioMax[0],
+          distanciaMax: userLocation ? distanciaMax[0] : undefined,
+        },
+      });
+    }, 800);
+    return () => { recordRef.current && clearTimeout(recordRef.current); };
+  }, [search, tipoSeleccionado, rubroSeleccionado, precioMin[0], precioMax[0], distanciaMax[0], userLocation, puedeRegistrarBusquedas, user]);
 
   // Obtener items del backend (filtro de distancia en el servidor cuando hay ubicación)
   const { data: items = [], isLoading, error } = useQuery({

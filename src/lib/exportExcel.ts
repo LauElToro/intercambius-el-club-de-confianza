@@ -10,8 +10,9 @@ export function exportMetricsToExcel(metrics: {
   ventasCompras: { transaccionesTotal: number };
   token: { saldoEnCirculacion: number; volumenTransacciones: number; tokenGastadoCompras: number; tokenRecibidoVentas: number };
   contacto: { conversacionesTotal: number; mensajesTotal: number };
+  busquedas?: { total: number };
 }) {
-  const ws = XLSX.utils.aoa_to_sheet([
+  const rows: [string, string | number][] = [
     ['Métrica', 'Valor'],
     ['Usuarios totales', metrics.usuarios.total],
     ['Productos totales', metrics.productos.total],
@@ -23,7 +24,11 @@ export function exportMetricsToExcel(metrics: {
     ['Token recibido ventas (IX)', metrics.token.tokenRecibidoVentas],
     ['Conversaciones', metrics.contacto.conversacionesTotal],
     ['Mensajes totales', metrics.contacto.mensajesTotal],
-  ]);
+  ];
+  if (metrics.busquedas) {
+    rows.push(['Búsquedas totales (6m)', metrics.busquedas.total]);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Métricas');
   downloadWorkbook(wb, `intercambius-metricas-${new Date().toISOString().slice(0, 10)}`);

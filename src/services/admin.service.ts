@@ -73,6 +73,11 @@ export interface AdminMetrics {
     paresUnicosContactados: number;
     mensajesPorMes?: { mes: string; total: number }[];
   };
+  busquedas?: {
+    total: number;
+    porMes?: { mes: string; total: number }[];
+    terminosPopulares?: { termino: string; total: number }[];
+  };
 }
 
 export const adminService = {

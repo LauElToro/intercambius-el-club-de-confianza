@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
@@ -6,11 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2, Search } from "lucide-react";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { userService } from "@/services/user.service";
 import { coincidenciasService } from "@/services/coincidencias.service";
+import { busquedasService } from "@/services/busquedas.service";
 import { MarketItem } from "@/services/market.service";
 
 const RUBROS = {
@@ -23,7 +26,9 @@ const RUBROS = {
 const Coincidencias = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { puedeRegistrarBusquedas } = useCookieConsent();
   const [favoritos, setFavoritos] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
 
   const { data: userData } = useQuery({
     queryKey: ['currentUser'],
@@ -52,6 +57,30 @@ const Coincidencias = () => {
     );
   };
 
+  // Registrar búsqueda (debounced, solo si cookies aceptadas)
+  const recordRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (!puedeRegistrarBusquedas || !currentUser?.id) return;
+    recordRef.current && clearTimeout(recordRef.current);
+    recordRef.current = setTimeout(() => {
+      busquedasService.registrar({
+        termino: search,
+        seccion: 'coincidencias',
+      });
+    }, 800);
+    return () => { recordRef.current && clearTimeout(recordRef.current); };
+  }, [search, puedeRegistrarBusquedas, currentUser?.id]);
+
+  const coincidenciasFiltradas = useMemo(() => {
+    const list = Array.isArray(coincidencias) ? coincidencias : [];
+    if (!search.trim()) return list;
+    const q = search.toLowerCase().trim();
+    return list.filter((item: MarketItem) =>
+      (item.titulo || '').toLowerCase().includes(q) ||
+      (item.descripcion || '').toLowerCase().includes(q)
+    );
+  }, [coincidencias, search]);
+
   if (!currentUser) {
     return (
       <Layout>
@@ -71,7 +100,7 @@ const Coincidencias = () => {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-6 h-6 text-gold" />
             <h1 className="text-2xl md:text-3xl font-bold">
@@ -83,6 +112,33 @@ const Coincidencias = () => {
           </p>
         </div>
 
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar: buscador para filtrar coincidencias */}
+          <aside className="lg:w-80 flex-shrink-0 w-full lg:block">
+            <Card className="sticky top-20 border-border">
+              <div className="p-4">
+                <h2 className="font-semibold mb-3 flex items-center gap-2">
+                  <Search className="w-4 h-4" />
+                  Buscar en coincidencias
+                </h2>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Encontrá lo que te interesa intercambiar
+                </p>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Ej: bicicleta, clases de yoga..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </Card>
+          </aside>
+
+          {/* Contenido principal */}
+          <div className="flex-1">
         {/* Alerta de crédito */}
         {!puedeComprar && (
           <Alert variant="destructive" className="mb-6">
@@ -129,9 +185,9 @@ const Coincidencias = () => {
               {error instanceof Error ? error.message : "Intenta de nuevo más tarde"}
             </p>
           </div>
-        ) : Array.isArray(coincidencias) && coincidencias.length > 0 ? (
+        ) : coincidenciasFiltradas.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {coincidencias
+            {coincidenciasFiltradas
               .filter((item: MarketItem) => item && item.id)
               .map((item: MarketItem) => (
               <Card 
@@ -217,7 +273,9 @@ const Coincidencias = () => {
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">
-              No encontramos coincidencias con el valor de tu oferta
+              {search.trim()
+                ? "No hay resultados para tu búsqueda. Probá con otros términos."
+                : "No encontramos coincidencias con el valor de tu oferta"}
             </p>
             <p className="text-sm text-muted-foreground">
               {(!coincidencias || (Array.isArray(coincidencias) && coincidencias.length === 0))
@@ -226,6 +284,8 @@ const Coincidencias = () => {
             </p>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </Layout>
   );
