@@ -50,12 +50,19 @@ export interface MarketItemFilters {
   precioMax?: number;
   vendedorId?: number;
   search?: string;
-  /** Latitud del usuario para filtrar por distancia */
   userLat?: number;
-  /** Longitud del usuario para filtrar por distancia */
   userLng?: number;
-  /** Distancia máxima en km */
   distanciaMax?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface MarketItemsResponse {
+  data: MarketItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface CreateMarketItemData {
@@ -75,7 +82,7 @@ export interface CreateMarketItemData {
 }
 
 export const marketService = {
-  async getItems(filters?: MarketItemFilters): Promise<MarketItem[]> {
+  async getItems(filters?: MarketItemFilters): Promise<MarketItemsResponse> {
     try {
       const params = new URLSearchParams();
       
@@ -103,11 +110,17 @@ export const marketService = {
       if (filters?.distanciaMax !== undefined) {
         params.append('distanciaMax', filters.distanciaMax.toString());
       }
+      if (filters?.page !== undefined) {
+        params.append('page', filters.page.toString());
+      }
+      if (filters?.limit !== undefined) {
+        params.append('limit', filters.limit.toString());
+      }
 
       const queryString = params.toString();
       const endpoint = queryString ? `/api/market?${queryString}` : '/api/market';
       
-      return await api.get<MarketItem[]>(endpoint);
+      return await api.get<MarketItemsResponse>(endpoint);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;

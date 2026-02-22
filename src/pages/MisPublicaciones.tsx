@@ -48,7 +48,7 @@ const MisPublicaciones = () => {
 
   const { data: productos = [], isLoading } = useQuery({
     queryKey: ['marketItems', 'mis-productos', currentUser?.id],
-    queryFn: () => marketService.getItems({ vendedorId: currentUser!.id! }),
+    queryFn: async () => (await marketService.getItems({ vendedorId: currentUser!.id! })).data,
     enabled: !!currentUser?.id,
   });
 

@@ -52,7 +52,7 @@ const UBICACIONES_COORDENADAS: Record<string, { lat: number; lng: number }> = {
   "Rosario": { lat: -32.9442, lng: -60.6505 },
 };
 
-// Alias para matching fuzzy (ej: "caballito bsas" -> Caballito)
+// Alias para matching fuzzy (ej: "caballito bsas" -> Caballito, "mardelpata" -> Mar del Plata)
 const UBICACION_ALIASES: Record<string, string> = {
   "caballito": "CABA - Caballito",
   "caballito bsas": "CABA - Caballito",
@@ -61,6 +61,9 @@ const UBICACION_ALIASES: Record<string, string> = {
   "buenos aires": "CABA",
   "capital": "CABA",
   "capital federal": "CABA",
+  "mardelpata": "Mar del Plata",
+  "mardelplata": "Mar del Plata",
+  "mar del plata": "Mar del Plata",
 };
 
 // Tipos de rubros y sus filtros específicos
@@ -131,6 +134,7 @@ const Market = () => {
   const [favoritosLocal, setFavoritosLocal] = useState<number[]>([]);
   const [elegirUbicacionOpen, setElegirUbicacionOpen] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState("");
+  const [page, setPage] = useState(1);
 
   const { data: favoritosData = [] } = useQuery({
     queryKey: ['favoritos'],
@@ -170,9 +174,9 @@ const Market = () => {
     return () => { recordRef.current && clearTimeout(recordRef.current); };
   }, [search, tipoSeleccionado, rubroSeleccionado, precioMin[0], precioMax[0], distanciaMax[0], userLocation, puedeRegistrarBusquedas, user]);
 
-  // Obtener items del backend (filtro de distancia en el servidor cuando hay ubicación)
-  const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], sinLimiteDistancia],
+  // Obtener items del backend (paginado, filtro de distancia en servidor)
+  const { data: marketResponse, isLoading, error } = useQuery({
+    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], sinLimiteDistancia, page],
     queryFn: () => marketService.getItems({
       rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado as any : undefined,
       tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
@@ -181,8 +185,50 @@ const Market = () => {
       userLat: userLocation?.lat,
       userLng: userLocation?.lng,
       distanciaMax: userLocation && !sinLimiteDistancia ? distanciaMax[0] : undefined,
+      page,
+      limit: 24,
     }),
   });
+
+  const items = marketResponse?.data ?? [];
+  const totalItems = marketResponse?.total ?? 0;
+  const totalPages = marketResponse?.totalPages ?? 1;
+
+  // Reset a página 1 cuando cambian filtros
+  useEffect(() => {
+    setPage(1);
+  }, [rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0]]);
+
+  // Por defecto usar la ubicación del perfil del usuario
+  const appliedProfileLocation = useRef(false);
+  useEffect(() => {
+    const ubicacion = usuario?.ubicacion?.trim();
+    if (!ubicacion || appliedProfileLocation.current) return;
+    const exact = UBICACIONES_COORDENADAS[ubicacion];
+    if (exact) {
+      setUserLocation(exact);
+      setLocationError(null);
+      appliedProfileLocation.current = true;
+      return;
+    }
+    const ubNorm = ubicacion.toLowerCase().trim();
+    const aliasKey = UBICACION_ALIASES[ubNorm] ?? Object.keys(UBICACION_ALIASES).find((a) => ubNorm.includes(a));
+    const resolvedKey = aliasKey ? (UBICACION_ALIASES[aliasKey] ?? aliasKey) : null;
+    if (resolvedKey && UBICACIONES_COORDENADAS[resolvedKey]) {
+      setUserLocation(UBICACIONES_COORDENADAS[resolvedKey]);
+      setLocationError(null);
+      appliedProfileLocation.current = true;
+      return;
+    }
+    const match = Object.keys(UBICACIONES_COORDENADAS).find(
+      (k) => ubNorm.includes(k.toLowerCase()) || k.toLowerCase().includes(ubNorm.split(/\s+/)[0])
+    );
+    if (match) {
+      setUserLocation(UBICACIONES_COORDENADAS[match]);
+      setLocationError(null);
+      appliedProfileLocation.current = true;
+    }
+  }, [usuario?.ubicacion]);
 
   const getMyLocation = () => {
     if (!navigator.geolocation) {
@@ -287,6 +333,7 @@ const Market = () => {
     setTipoSeleccionado("todos");
     setRubroSeleccionado("todos");
     setDistanciaMax([25]);
+    setPage(1);
     setUserLocation(null);
     setLocationError(null);
     setPrecioMin([0]);
@@ -599,10 +646,11 @@ const Market = () => {
 
           {/* Contenido principal */}
           <div className="flex-1">
-            {/* Barra de resultados y toggle de filtros móvil */}
-            <div className="flex items-center justify-between mb-4">
+            {/* Barra de resultados, paginación y toggle de filtros móvil */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <p className="text-sm text-muted-foreground">
-                {itemsFiltrados.length} resultado{itemsFiltrados.length !== 1 ? 's' : ''}
+                {totalItems} resultado{totalItems !== 1 ? 's' : ''}
+                {totalPages > 1 && ` · Página ${page} de ${totalPages}`}
               </p>
               <Button
                 variant="outline"
@@ -723,11 +771,45 @@ const Market = () => {
 
             {!isLoading && !error && itemsFiltrados.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  No se encontraron resultados con los filtros seleccionados
+                <p className="text-muted-foreground mb-2">
+                  {userLocation
+                    ? "No hay publicaciones en tu zona. Probá ampliar el radio, elegir otra ubicación, o quitar el filtro para ver todas."
+                    : "No se encontraron resultados con los filtros seleccionados"}
                 </p>
-                <Button variant="outline" onClick={limpiarFiltros}>
-                  Limpiar filtros
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {userLocation && (
+                    <Button variant="outline" onClick={() => setUserLocation(null)}>
+                      Quitar filtro de ubicación
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={limpiarFiltros}>
+                    Limpiar filtros
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Paginación */}
+            {!isLoading && !error && itemsFiltrados.length > 0 && totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6 pb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground px-2">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Siguiente
                 </Button>
               </div>
             )}

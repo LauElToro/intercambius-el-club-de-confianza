@@ -54,7 +54,7 @@ const Perfil = () => {
 
   const { data: productos = [] } = useQuery({
     queryKey: ['marketItems', 'perfil', id],
-    queryFn: () => marketService.getItems({ vendedorId: Number(id!) }),
+    queryFn: async () => (await marketService.getItems({ vendedorId: Number(id!) })).data,
     enabled: !!id && !!usuario,
   });
 
