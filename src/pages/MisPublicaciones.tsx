@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Plus, MapPin, MessageCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Plus, MapPin, MessageCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
 import { intercambiosService } from "@/services/intercambios.service";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,8 @@ const MisPublicaciones = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [itemToDelete, setItemToDelete] = useState<MarketItem | null>(null);
+  const [page, setPage] = useState(1);
+  const PRODUCTOS_POR_PAGINA = 12;
 
   const { data: userData } = useQuery({
     queryKey: ['currentUser'],
@@ -46,11 +48,21 @@ const MisPublicaciones = () => {
   const currentUser = userData || user;
   const { formatIX } = useCurrencyVariant();
 
-  const { data: productos = [], isLoading } = useQuery({
-    queryKey: ['marketItems', 'mis-productos', currentUser?.id],
-    queryFn: async () => (await marketService.getItems({ vendedorId: currentUser!.id! })).data,
+  const { data: productosResponse, isLoading } = useQuery({
+    queryKey: ['marketItems', 'mis-productos', currentUser?.id, page],
+    queryFn: () => marketService.getItems({
+      vendedorId: currentUser!.id!,
+      page,
+      limit: PRODUCTOS_POR_PAGINA,
+    }),
     enabled: !!currentUser?.id,
   });
+
+  const productos = productosResponse?.data ?? [];
+  const totalProductos = productosResponse?.total ?? 0;
+  const totalPages = productosResponse?.totalPages ?? 1;
+
+  useEffect(() => setPage(1), [currentUser?.id]);
 
   const { data: intercambios = [] } = useQuery({
     queryKey: ['intercambios', currentUser?.id],
@@ -232,6 +244,29 @@ const MisPublicaciones = () => {
               </Card>
             ))}
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                Página {page} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
           </>
         )}
 

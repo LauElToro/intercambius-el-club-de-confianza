@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck } from "lucide-react";
+import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { userService } from "@/services/user.service";
 import { marketService } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +46,8 @@ const Perfil = () => {
 
   const esMiPerfil = user && id && Number(id) === user.id;
   const { formatIX } = useCurrencyVariant();
+  const [pageProductos, setPageProductos] = useState(1);
+  const PRODUCTOS_POR_PAGINA = 12;
 
   const { data: usuario, isLoading, error } = useQuery({
     queryKey: ['user', id],
@@ -53,11 +55,19 @@ const Perfil = () => {
     enabled: !!id,
   });
 
-  const { data: productos = [] } = useQuery({
-    queryKey: ['marketItems', 'perfil', id],
-    queryFn: async () => (await marketService.getItems({ vendedorId: Number(id!) })).data,
+  const { data: productosResponse } = useQuery({
+    queryKey: ['marketItems', 'perfil', id, pageProductos],
+    queryFn: () => marketService.getItems({
+      vendedorId: Number(id!),
+      page: pageProductos,
+      limit: PRODUCTOS_POR_PAGINA,
+    }),
     enabled: !!id,
   });
+
+  const productos = productosResponse?.data ?? [];
+  const totalProductos = productosResponse?.total ?? 0;
+  const totalPagesProductos = productosResponse?.totalPages ?? 1;
 
   const guardarMutation = useMutation({
     mutationFn: (data: Partial<User>) => userService.updateUser(data),
@@ -118,6 +128,10 @@ const Perfil = () => {
       toast({ title: "Error al subir banner", description: err.message, variant: "destructive" });
     }
   };
+
+  useEffect(() => {
+    setPageProductos(1);
+  }, [id]);
 
   const displayData = editando ? formData : usuario;
   const nombre = displayData?.nombre ?? usuario?.nombre ?? '';
@@ -354,7 +368,7 @@ const Perfil = () => {
                       )}
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Package className="w-4 h-4" />
-                        <span>{productos.length} publicación{productos.length !== 1 ? 'es' : ''}</span>
+                        <span>{totalProductos} publicación{totalProductos !== 1 ? 'es' : ''}</span>
                       </div>
                     </div>
                     {bio && <p className="text-muted-foreground mb-4 leading-relaxed">{bio}</p>}
@@ -421,7 +435,7 @@ const Perfil = () => {
             <CardTitle className="flex items-center gap-2">
               <Package className="w-5 h-5 text-gold" />
               Publicaciones
-              <Badge variant="secondary" className="font-normal ml-1">{productos.length}</Badge>
+              <Badge variant="secondary" className="font-normal ml-1">{totalProductos}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -461,6 +475,29 @@ const Perfil = () => {
                     </Card>
                   </Link>
                 ))}
+              </div>
+            )}
+            {productos.length > 0 && totalPagesProductos > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-border">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageProductos((p) => Math.max(1, p - 1))}
+                  disabled={pageProductos <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground px-2">
+                  Página {pageProductos} de {totalPagesProductos}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageProductos((p) => Math.min(totalPagesProductos, p + 1))}
+                  disabled={pageProductos >= totalPagesProductos}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
             )}
           </CardContent>

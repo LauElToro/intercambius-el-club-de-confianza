@@ -41,11 +41,12 @@ const Dashboard = () => {
     enabled: !!currentUser?.id,
   });
 
-  const { data: misProductos = [] } = useQuery({
-    queryKey: ['marketItems', 'mis-productos', currentUser?.id],
-    queryFn: async () => (await marketService.getItems({ vendedorId: currentUser!.id! })).data,
+  const { data: misProductosResponse } = useQuery({
+    queryKey: ['marketItems', 'mis-productos-count', currentUser?.id],
+    queryFn: () => marketService.getItems({ vendedorId: currentUser!.id!, page: 1, limit: 1 }),
     enabled: !!currentUser?.id,
   });
+  const totalMisProductos = misProductosResponse?.total ?? 0;
 
   if (authLoading || userLoading) {
     return (
@@ -142,8 +143,8 @@ const Dashboard = () => {
           <Link to="/mis-publicaciones" className="block">
             <ProfileCard
               title="Mis productos/servicios"
-              content={misProductos.length > 0 
-                ? `Tenés ${misProductos.length} producto${misProductos.length !== 1 ? 's' : ''} publicado${misProductos.length !== 1 ? 's' : ''}. ¡Editá o agregá más!`
+              content={totalMisProductos > 0 
+                ? `Tenés ${totalMisProductos} producto${totalMisProductos !== 1 ? 's' : ''} publicado${totalMisProductos !== 1 ? 's' : ''}. ¡Editá o agregá más!`
                 : "Aún no has creado ningún producto o servicio. ¡Crea uno ahora!"}
               icon={<ArrowUpRight className="w-5 h-5 text-primary" />}
               type="productos"

@@ -31,11 +31,17 @@ import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
 import { CookieConsentProvider } from "./contexts/CookieConsentContext";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
 
+// Cache: staleTime 2 min, gcTime 30 min para reducir consultas y mejorar carga
+const CACHE_STALE_MS = 2 * 60 * 1000;
+const CACHE_GC_MS = 30 * 60 * 1000;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: CACHE_STALE_MS,
+      gcTime: CACHE_GC_MS,
     },
   },
 });
