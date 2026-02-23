@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CurrencySwitch } from "@/components/ui/currency-switch";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
@@ -118,6 +119,8 @@ const Header = () => {
         <div className="flex items-center gap-2">
           {/* IX Variant Switch (IX-ARS / IX-USD) */}
           <CurrencySwitch />
+          {/* Notificaciones (solo si está logueado) */}
+          {!!user && <NotificationDropdown />}
           {/* Theme Toggle */}
           <Button
             variant="ghost"

@@ -79,6 +79,7 @@ const ProductoDetalle = () => {
       queryClient.invalidateQueries({ queryKey: ['marketItem', id] });
       queryClient.invalidateQueries({ queryKey: ['intercambios'] });
       queryClient.invalidateQueries({ queryKey: ['chat'] });
+      queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
       toast({ title: "¡Compra exitosa!", description: "Ya podés coordinar la entrega con el vendedor por chat." });
       setCheckoutOpen(false);
       if (data.conversacionId) navigate(`/chat/${data.conversacionId}`);
