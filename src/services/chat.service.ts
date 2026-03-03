@@ -38,6 +38,21 @@ export const chatService = {
     }
   },
 
+  /** Iniciar conversación e inmediatamente enviar mensaje de intercambio. Para flujo de Coincidencias. */
+  async iniciarIntercambio(opts: {
+    marketItemId: number;
+    miProductoTitulo: string;
+    otroUsuarioNombre?: string;
+  }): Promise<{ conversacionId: number }> {
+    const { conversacionId } = await this.iniciarConversacion({ marketItemId: opts.marketItemId });
+    const saludo = opts.otroUsuarioNombre?.trim()
+      ? `Hola ${opts.otroUsuarioNombre}. `
+      : 'Hola. ';
+    const mensaje = `${saludo}Quiero realizar un intercambio: ${opts.miProductoTitulo}`;
+    await this.enviarMensaje(conversacionId, mensaje);
+    return { conversacionId };
+  },
+
   async getConversaciones(): Promise<Conversacion[]> {
     try {
       return await api.get<Conversacion[]>('/api/chat');

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,13 @@ import { ArrowRight, CheckCircle, Repeat } from "lucide-react";
 
 const RegistrarIntercambio = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const creditosDesdeChat = (location.state as { creditos?: number })?.creditos;
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     otraPersona: "",
     descripcion: "",
-    creditos: "",
+    creditos: creditosDesdeChat != null ? String(creditosDesdeChat) : "",
     fecha: new Date().toISOString().split("T")[0],
   });
 

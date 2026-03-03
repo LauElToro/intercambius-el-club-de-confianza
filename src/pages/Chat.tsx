@@ -6,9 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { chatService, Conversacion, Mensaje } from "@/services/chat.service";
 import { useAuth } from "@/contexts/AuthContext";
-import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag } from "lucide-react";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
+import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, Banknote, Check } from "lucide-react";
 
 const Chat = () => {
   const { conversacionId } = useParams<{ conversacionId?: string }>();
@@ -58,6 +66,42 @@ const Chat = () => {
   };
 
   const truncar = (s: string, n: number) => s.length > n ? s.slice(0, n) + '…' : s;
+
+  const { formatIX } = useCurrencyVariant();
+  const [pagarIxOpen, setPagarIxOpen] = useState(false);
+  const [montoIX, setMontoIX] = useState("");
+
+  const propuestaDelOtro = (() => {
+    const msgs = chatDetalle?.mensajes ?? [];
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i];
+      if (m.senderId !== user?.id) {
+        const match = m.contenido.match(/propongo pagar (\d+)\s*IX/i);
+        if (match) return { monto: parseInt(match[1], 10), mensaje: m };
+        break;
+      }
+    }
+    return null;
+  })();
+
+  const handlePagarConIX = () => {
+    const n = parseInt(montoIX, 10);
+    if (isNaN(n) || n <= 0) return;
+    const texto = `Propongo pagar ${n} IX de diferencia para cerrar el intercambio.`;
+    enviarMutation.mutate(texto, {
+      onSuccess: () => {
+        setPagarIxOpen(false);
+        setMontoIX("");
+      },
+    });
+  };
+
+  const handleAceptarMonto = () => {
+    if (!propuestaDelOtro) return;
+    const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} IX. ¡Cerramos el intercambio!`;
+    enviarMutation.mutate(texto);
+    navigate("/registrar-intercambio", { state: { creditos: propuestaDelOtro.monto } });
+  };
 
   return (
     <Layout>
@@ -169,27 +213,90 @@ const Chat = () => {
                       );})}
                       <div ref={messagesEndRef} />
                     </div>
-                    <div className="p-4 border-t flex gap-2">
-                      <Input
-                        placeholder="Escribí tu mensaje..."
-                        value={mensaje}
-                        onChange={(e) => setMensaje(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleEnviar())}
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="gold"
-                        size="icon"
-                        onClick={handleEnviar}
-                        disabled={!mensaje.trim() || enviarMutation.isPending}
-                      >
-                        {enviarMutation.isPending ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Send className="w-5 h-5" />
-                        )}
-                      </Button>
+                    {propuestaDelOtro && (
+                      <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Te propusieron pagar {formatIX(propuestaDelOtro.monto)} de diferencia
+                        </span>
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={handleAceptarMonto}
+                          disabled={enviarMutation.isPending}
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Aceptar monto
+                        </Button>
+                      </div>
+                    )}
+                    <div className="p-4 border-t flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Escribí tu mensaje..."
+                          value={mensaje}
+                          onChange={(e) => setMensaje(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleEnviar())}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setPagarIxOpen(true)}
+                          title="Pagar con IX"
+                        >
+                          <Banknote className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          variant="gold"
+                          size="icon"
+                          onClick={handleEnviar}
+                          disabled={!mensaje.trim() || enviarMutation.isPending}
+                        >
+                          {enviarMutation.isPending ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Send className="w-5 h-5" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Si hay diferencia de valor, podés proponer pagar con IX</p>
                     </div>
+                    <Dialog open={pagarIxOpen} onOpenChange={setPagarIxOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Pagar con IX</DialogTitle>
+                        </DialogHeader>
+                        <p className="text-sm text-muted-foreground">
+                          Proponé un monto en IX para cubrir la diferencia del intercambio.
+                        </p>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="number"
+                            min={1}
+                            placeholder="Ej: 50"
+                            value={montoIX}
+                            onChange={(e) => setMontoIX(e.target.value)}
+                          />
+                          <span className="text-sm font-medium">IX</span>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setPagarIxOpen(false)}>
+                            Cancelar
+                          </Button>
+                          <Button
+                            variant="gold"
+                            onClick={handlePagarConIX}
+                            disabled={!montoIX || parseInt(montoIX, 10) <= 0 || enviarMutation.isPending}
+                          >
+                            {enviarMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Enviar propuesta"
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </>
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground">
