@@ -87,8 +87,8 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        {/* Logo: si está logueado va a Inicio (dashboard), sino a Landing */}
+        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 md:gap-3 flex-shrink-0">
           <img 
             src={logo} 
             alt="Intercambius" 
@@ -99,8 +99,22 @@ const Header = () => {
           </span>
         </Link>
 
-        {/* Desktop Navigation - solo Market en la barra */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
+          {user && (
+            <Link
+              to="/dashboard"
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                location.pathname === "/dashboard"
+                  ? "text-foreground bg-muted"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <Home className="h-4 w-4" />
+              Inicio
+            </Link>
+          )}
           <Link
             to="/market"
             className={cn(

@@ -9,6 +9,8 @@ import { intercambiosService } from "@/services/intercambios.service";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { marketService } from "@/services/market.service";
 import { Loader2 } from "lucide-react";
+import { WelcomeBanner } from "@/components/onboarding/WelcomeBanner";
+import { ComoFuncionaIX } from "@/components/onboarding/ComoFuncionaIX";
 
 function formatFechaRelativa(dateStr: string): string {
   const date = new Date(dateStr);
@@ -73,7 +75,7 @@ const Dashboard = () => {
     <Layout>
       <div className="container mx-auto px-4 py-8">
         {/* Greeting */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">
             Hola, {currentUser.nombre.split(" ")[0]} 👋
           </h1>
@@ -81,6 +83,11 @@ const Dashboard = () => {
             Este es tu espacio en Intercambius
           </p>
         </div>
+
+        {/* Welcome banner para usuarios nuevos */}
+        <WelcomeBanner
+          isNewUser={totalMisProductos === 0 && intercambios.length === 0}
+        />
 
         {/* Balance Card */}
         <div className="bg-card rounded-2xl p-6 md:p-8 border border-border gold-glow mb-8">
@@ -115,10 +122,11 @@ const Dashboard = () => {
           </div>
 
           <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-xs text-muted-foreground flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex items-center gap-2 mb-1">
               <span className="w-2 h-2 bg-gold/50 rounded-full" />
               IX = Créditos de Intercambius para intercambios dentro del club.
             </p>
+            <ComoFuncionaIX />
           </div>
         </div>
 

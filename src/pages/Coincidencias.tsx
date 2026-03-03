@@ -17,6 +17,7 @@ import { busquedasService } from "@/services/busquedas.service";
 import { marketService, MarketItem } from "@/services/market.service";
 import { chatService } from "@/services/chat.service";
 import { useToast } from "@/components/ui/use-toast";
+import { GuiaCoincidencias } from "@/components/onboarding/GuiaCoincidencias";
 
 const RUBROS = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -158,6 +159,8 @@ const Coincidencias = () => {
             Elegí lo que ofrecés, buscá lo que querés y negociá el intercambio
           </p>
         </div>
+
+        <GuiaCoincidencias />
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar: buscador para filtrar coincidencias */}
@@ -381,16 +384,25 @@ const Coincidencias = () => {
         ) : (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-2">
+            <p className="text-muted-foreground mb-2 font-medium">
               {search.trim()
-                ? "No hay resultados para tu búsqueda. Probá con otros términos."
-                : "No encontramos coincidencias con el valor de tu oferta"}
+                ? "No hay resultados para tu búsqueda"
+                : "No hay coincidencias para mostrar"}
             </p>
-            <p className="text-sm text-muted-foreground">
-              {(!coincidencias || (Array.isArray(coincidencias) && coincidencias.length === 0))
-                ? "Crea productos o servicios para encontrar coincidencias"
-                : "Buscamos productos/servicios con valor similar a los tuyos (±20%)"}
+            <p className="text-sm text-muted-foreground mb-4">
+              {search.trim()
+                ? "Probá con otros términos o activá \"Buscar en todo el marketplace\" en el panel de la izquierda."
+                : misProductos.length === 0
+                  ? "Creá primero un producto o servicio en Mis publicaciones. Así podremos mostrarte coincidencias con valor similar."
+                  : buscarEnMarketplace
+                    ? "Probá otra búsqueda o desactivá \"Buscar en todo el marketplace\" para ver recomendaciones por precio."
+                    : "Buscamos productos con valor similar a los tuyos. Marcá \"Buscar en todo el marketplace\" para explorar más opciones."}
             </p>
+            {misProductos.length === 0 && (
+              <Button variant="gold" onClick={() => navigate("/crear-producto")}>
+                Crear mi primer producto
+              </Button>
+            )}
           </div>
         )}
           </div>

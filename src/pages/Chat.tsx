@@ -122,7 +122,23 @@ const Chat = () => {
                 </div>
               ) : !conversaciones?.length ? (
                 <p className="text-sm text-muted-foreground p-4 text-center">
-                  Aún no tenés conversaciones. Comprá o contratá algo para contactarte con el vendedor.
+                  Aún no tenés conversaciones. Para empezar: andá a{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/coincidencias")}
+                    className="text-gold hover:underline font-medium"
+                  >
+                    Intercambios
+                  </button>
+                  {" "}o{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/market")}
+                    className="text-gold hover:underline font-medium"
+                  >
+                    Market
+                  </button>
+                  , elegí algo que te interese y escribí una propuesta.
                 </p>
               ) : (
                 <div className="divide-y">
@@ -307,7 +323,9 @@ const Chat = () => {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
                 <MessageCircle className="w-16 h-16 mb-4 opacity-50" />
-                <p className="text-center">Seleccioná una conversación o comprá algo para empezar a chatear.</p>
+                <p className="text-center text-muted-foreground">
+                  Seleccioná una conversación de la lista o buscá productos en Intercambios / Market para contactar.
+                </p>
               </div>
             )}
           </Card>
