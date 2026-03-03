@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/layout/Layout";
-import { ArrowLeft, Upload, Plus, X } from "lucide-react";
+import { ArrowLeft, Upload, Plus, X, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { marketService, CreateMarketItemData } from "@/services/market.service";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +17,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { FICHAS_TECNICAS } from "@/lib/fichas-tecnicas";
 import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
+import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
+import { isImageNsfw } from "@/lib/nsfwCheck";
+import { userService } from "@/services/user.service";
 
 const CrearProducto = () => {
   const navigate = useNavigate();
@@ -23,22 +27,45 @@ const CrearProducto = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
+  const usuario = currentUser || user;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     titulo: "",
     descripcion: "",
     precio: "" as string,
-    tipoPago: "ix" as "ix" | "convenir" | "pesos" | "ix_pesos",
+    tiposPago: ["ix"] as ("ix" | "convenir" | "pesos" | "ix_pesos")[],
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
-    ubicacion: user?.ubicacion || "",
+    ubicacion: "",
     lat: undefined as number | undefined,
     lng: undefined as number | undefined,
-    medias: [] as { file: File; preview: string; type: 'image' | 'video' }[],
+    medias: [] as { file: File; preview: string; type: "image" | "video" }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
   });
 
+  useEffect(() => {
+    if (hasInicializadoUbicacion.current) return;
+    const ub = usuario?.ubicacion?.trim();
+    if (!ub) return;
+    hasInicializadoUbicacion.current = true;
+    const coords = resolveUbicacionToCoords(ub);
+    setFormData((prev) =>
+      coords
+        ? { ...prev, ubicacion: coords.ubicacion, lat: coords.lat, lng: coords.lng }
+        : { ...prev, ubicacion: ub }
+    );
+  }, [usuario?.ubicacion]);
+
   const [nuevaCaracteristica, setNuevaCaracteristica] = useState("");
+  const [isCheckingMedia, setIsCheckingMedia] = useState(false);
+  const hasInicializadoUbicacion = useRef(false);
+
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateMarketItemData) => {
@@ -65,18 +92,21 @@ const CrearProducto = () => {
     },
   });
 
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    e.target.value = "";
 
-    setFormData((prev) => {
-      let newMedias = [...prev.medias];
+    setIsCheckingMedia(true);
+    try {
+      const toAdd: { file: File; preview: string; type: "image" | "video" }[] = [];
+
       for (const file of files) {
-        const type = file.type.startsWith('video/') ? 'video' as const : 'image' as const;
-        const hasVideo = newMedias.some((m) => m.type === 'video');
-        const imgCount = newMedias.filter((m) => m.type === 'image').length;
+        const type = file.type.startsWith("video/") ? ("video" as const) : ("image" as const);
+        const hasVideo = [...formData.medias, ...toAdd].some((m) => m.type === "video");
+        const imgCount = [...formData.medias, ...toAdd].filter((m) => m.type === "image").length;
 
-        if (type === 'video') {
+        if (type === "video") {
           if (hasVideo) {
             toast({ title: "Máximo 1 video", variant: "destructive" });
             continue;
@@ -91,12 +121,34 @@ const CrearProducto = () => {
             toast({ title: "Máximo 6 imágenes", variant: "destructive" });
             continue;
           }
+          try {
+            const nsfw = await isImageNsfw(file);
+            if (nsfw) {
+              toast({
+                title: "Imagen no permitida",
+                description: "La imagen no cumple con las políticas de contenido de Intercambius.",
+                variant: "destructive",
+              });
+              continue;
+            }
+          } catch {
+            toast({
+              title: "Error al verificar la imagen",
+              description: "No se pudo procesar. Probá con otra imagen.",
+              variant: "destructive",
+            });
+            continue;
+          }
         }
-        newMedias.push({ file, preview: URL.createObjectURL(file), type });
+        toAdd.push({ file, preview: URL.createObjectURL(file), type });
       }
-      return { ...prev, medias: newMedias };
-    });
-    e.target.value = "";
+
+      if (toAdd.length > 0) {
+        setFormData((prev) => ({ ...prev, medias: [...prev.medias, ...toAdd] }));
+      }
+    } finally {
+      setIsCheckingMedia(false);
+    }
   };
 
   const removeMedia = (index: number) => {
@@ -116,6 +168,15 @@ const CrearProducto = () => {
       toast({
         title: "Imagen o video requerido",
         description: "Subí al menos una foto o un video (máx 6 fotos o 5 fotos + 1 video)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.tiposPago.length === 0) {
+      toast({
+        title: "Forma de intercambio requerida",
+        description: "Seleccioná al menos una forma de intercambio aceptada.",
         variant: "destructive",
       });
       return;
@@ -161,7 +222,7 @@ const CrearProducto = () => {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         precio: precioNum,
-        tipoPago: formData.tipoPago,
+        tipoPago: formData.tiposPago.length > 0 ? formData.tiposPago.join(",") : "ix",
         rubro: formData.rubro,
         ubicacion: formData.ubicacion,
         lat: formData.lat,
@@ -291,28 +352,49 @@ const CrearProducto = () => {
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tipoPago">Medio de pago aceptado</Label>
-                    <Select
-                      value={formData.tipoPago}
-                      onValueChange={(v) => setFormData(prev => ({ ...prev, tipoPago: v as typeof formData.tipoPago }))}
-                    >
-                      <SelectTrigger id="tipoPago">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ix">Solo IX (créditos)</SelectItem>
-                        <SelectItem value="ix_pesos">IX y pesos (por fuera)</SelectItem>
-                        <SelectItem value="convenir">Pago a convenir</SelectItem>
-                        <SelectItem value="pesos">En pesos (por fuera de la página)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Si elegís pesos o convenir, acordarán el pago por chat cuando lleguen al acuerdo.
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Formas de intercambio aceptadas</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Podés elegir más de una. Si elegís pesos o convenir, acordarán por chat.
                     </p>
+                    <div className="flex flex-wrap gap-4">
+                      {[
+                        { value: "ix" as const, label: "IX (créditos)" },
+                        { value: "ix_pesos" as const, label: "IX y pesos (por fuera)" },
+                        { value: "convenir" as const, label: "Pago a convenir" },
+                        { value: "pesos" as const, label: "Pesos (por fuera)" },
+                      ].map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={formData.tiposPago.includes(opt.value)}
+                            onCheckedChange={(checked) => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                tiposPago: checked
+                                  ? [...prev.tiposPago, opt.value]
+                                  : prev.tiposPago.filter((t) => t !== opt.value),
+                              }));
+                            }}
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {formData.tiposPago.length === 0 && (
+                      <p className="text-xs text-destructive mt-1">
+                        Seleccioná al menos una forma de intercambio
+                      </p>
+                    )}
                   </div>
                 </div>
 
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Por defecto se usa tu ubicación de perfil. Cambiala solo si el producto está en otro lugar.
+                  </p>
                 <LocationPicker
                   value={formData.ubicacion}
                   onChange={(location, lat, lng) => {
@@ -326,6 +408,7 @@ const CrearProducto = () => {
                   label="Ubicación"
                   required
                 />
+                </div>
               </div>
 
               {/* Imágenes y video */}
@@ -344,10 +427,24 @@ const CrearProducto = () => {
                     className="hidden"
                   />
                   <label htmlFor="medias">
-                    <Button type="button" variant="outline" asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      asChild
+                      disabled={isCheckingMedia}
+                    >
                       <span>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Agregar fotos o video
+                        {isCheckingMedia ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Verificando...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Agregar fotos o video
+                          </>
+                        )}
                       </span>
                     </Button>
                   </label>

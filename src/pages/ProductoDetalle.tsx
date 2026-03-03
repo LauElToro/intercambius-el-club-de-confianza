@@ -291,35 +291,38 @@ const ProductoDetalle = () => {
                 <div>
                   <h3 className="font-semibold mb-2 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-gold" />
-                    Medio de pago
+                    Formas de intercambio
                   </h3>
-                  <div className="bg-surface rounded-lg p-4 space-y-1">
-                    {item.tipoPago === 'convenir' && (
-                      <>
-                        <p className="font-medium">Pago a convenir</p>
-                        <p className="text-muted-foreground text-sm">
-                          Acordarán el precio y forma de pago por chat cuando lleguen al acuerdo.
-                        </p>
-                      </>
-                    )}
-                    {item.tipoPago === 'pesos' && (
-                      <>
-                        <p className="font-medium">En pesos</p>
-                        <p className="text-muted-foreground text-sm">
-                          El pago se acuerda por fuera de la página. Contactá al vendedor para coordinar.
-                        </p>
-                      </>
-                    )}
-                    {(item.tipoPago === 'ix_pesos' || !item.tipoPago || item.tipoPago === 'ix') && (
-                      <>
-                        <p className="font-medium">Créditos IX</p>
-                        <p className="text-muted-foreground text-sm">
-                          Precio: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>.
-                          {item.tipoPago === 'ix_pesos' && ' También acepta pesos por fuera.'}
-                          {(!item.tipoPago || item.tipoPago === 'ix') && ' Se transfieren al confirmar el intercambio.'}
-                        </p>
-                      </>
-                    )}
+                  <div className="bg-surface rounded-lg p-4 space-y-2">
+                    {(() => {
+                      const tipos = (item.tipoPago || "ix").split(",").map((s) => s.trim());
+                      const aceptaIX = tipos.includes("ix") || tipos.includes("ix_pesos");
+                      const aceptaPesos = tipos.includes("pesos") || tipos.includes("ix_pesos");
+                      const aceptaConvenir = tipos.includes("convenir");
+                      const etiquetas: string[] = [];
+                      if (aceptaIX) etiquetas.push("Créditos IX");
+                      if (aceptaPesos) etiquetas.push("Pesos (por fuera)");
+                      if (aceptaConvenir) etiquetas.push("A convenir");
+                      return (
+                        <>
+                          <p className="font-medium">
+                            {etiquetas.join(" • ")}
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            {aceptaIX && (
+                              <>
+                                Precio en IX: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>.
+                                {aceptaPesos && " También acepta pesos por fuera."}
+                                {!aceptaPesos && " Se transfieren al confirmar el intercambio."}
+                              </>
+                            )}
+                            {!aceptaIX && (aceptaConvenir || aceptaPesos) && (
+                              <>Acordarán el precio y forma de pago por chat o por fuera de la página.</>
+                            )}
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -429,7 +432,11 @@ const ProductoDetalle = () => {
                       )}
                       Contactar al vendedor
                     </Button>
-                    {(item.tipoPago === 'ix' || item.tipoPago === 'ix_pesos' || !item.tipoPago) && (
+                    {(() => {
+                      const tipos = (item.tipoPago || "ix").split(",").map((s) => s.trim());
+                      const aceptaIX = tipos.includes("ix") || tipos.includes("ix_pesos");
+                      return aceptaIX;
+                    })() && (
                       <Button
                         className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
                         size="lg"
@@ -439,7 +446,11 @@ const ProductoDetalle = () => {
                         {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'} con IX
                       </Button>
                     )}
-                    {(item.tipoPago === 'convenir' || item.tipoPago === 'pesos') && (
+                    {(() => {
+                      const tipos = (item.tipoPago || "").split(",").map((s) => s.trim());
+                      const soloConvenirPesos = (tipos.includes("convenir") || tipos.includes("pesos")) && !tipos.includes("ix") && !tipos.includes("ix_pesos");
+                      return soloConvenirPesos;
+                    })() && (
                       <p className="text-sm text-muted-foreground text-center">
                         Contactá para acordar precio y forma de pago.
                       </p>

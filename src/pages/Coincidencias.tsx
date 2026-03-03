@@ -152,11 +152,11 @@ const Coincidencias = () => {
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-6 h-6 text-gold" />
             <h1 className="text-2xl md:text-3xl font-bold">
-              Intercambios
+              Intercambius
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Elegí lo que ofrecés, buscá lo que querés y negociá el intercambio
+            Elegí lo que ofrecés, buscá lo que querés y negociá en Intercambius
           </p>
         </div>
 

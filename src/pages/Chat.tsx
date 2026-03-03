@@ -128,7 +128,7 @@ const Chat = () => {
                     onClick={() => navigate("/coincidencias")}
                     className="text-gold hover:underline font-medium"
                   >
-                    Intercambios
+                    Intercambius
                   </button>
                   {" "}o{" "}
                   <button
@@ -324,7 +324,7 @@ const Chat = () => {
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
                 <MessageCircle className="w-16 h-16 mb-4 opacity-50" />
                 <p className="text-center text-muted-foreground">
-                  Seleccioná una conversación de la lista o buscá productos en Intercambios / Market para contactar.
+                  Seleccioná una conversación de la lista o buscá productos en Intercambius / Market para contactar.
                 </p>
               </div>
             )}

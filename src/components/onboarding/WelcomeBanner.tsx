@@ -41,7 +41,7 @@ export const WelcomeBanner = ({
     },
     {
       icon: <ArrowRight className="w-5 h-5" />,
-      title: "2. Buscá intercambios",
+      title: "2. Buscá en Intercambius",
       desc: "En Coincidencias encontrás lo que otros ofrecen, con valor similar al tuyo.",
       to: "/coincidencias",
       cta: "Ver coincidencias",

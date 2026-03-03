@@ -149,8 +149,8 @@ const Historial = () => {
                               {item?.condition && (
                                 <span>• {item.condition}</span>
                               )}
-                              {item?.tipoPago && item.tipoPago !== "ix" && (
-                                <span>• Pago: {item.tipoPago}</span>
+                              {item?.tipoPago && (() => { const t = item.tipoPago.split(",").map(s => s.trim()); return t.length > 1 || t[0] !== "ix"; })() && (
+                                <span>• Pago: {item.tipoPago.split(",").map(s => ({ ix: "IX", ix_pesos: "IX y pesos", convenir: "A convenir", pesos: "Pesos" }[s.trim()] || s.trim())).join(", ")}</span>
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5">
