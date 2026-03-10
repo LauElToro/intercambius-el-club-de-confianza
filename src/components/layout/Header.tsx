@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { userService } from "@/services/user.service";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -34,12 +36,20 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CurrencySwitch } from "@/components/ui/currency-switch";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { HeaderSaldo } from "@/components/layout/HeaderSaldo";
+import { IX_PESOS_PER_USD } from "@/lib/currency";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
+  const usuario = currentUser || user;
   const isHome = location.pathname === "/";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -87,8 +97,8 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo: si está logueado va a Inicio (dashboard), sino a Landing */}
-        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        {/* Logo: siempre lleva a la landing */}
+        <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
           <img 
             src={logo} 
             alt="Intercambius" 
@@ -129,9 +139,9 @@ const Header = () => {
           </Link>
         </nav>
 
-        {/* Right side actions */}
-        <div className="flex items-center gap-2">
-          {/* IX Variant Switch (IX-ARS / IX-USD) */}
+        {/* Right side: saldo IX + equivalente ARS/USD + switch */}
+        <div className="flex items-center gap-3">
+          {usuario && <HeaderSaldo saldo={usuario.saldo ?? 0} />}
           <CurrencySwitch />
           {/* Notificaciones (solo si está logueado) */}
           {!!user && <NotificationDropdown />}
@@ -161,14 +171,14 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="default" className="hidden sm:flex gap-2">
                       <Avatar className="h-8 w-8">
-                        {(user as any)?.fotoPerfil && (
-                          <AvatarImage src={(user as any).fotoPerfil} alt={user?.nombre} />
+                        {(usuario as any)?.fotoPerfil && (
+                          <AvatarImage src={(usuario as any).fotoPerfil} alt={usuario?.nombre} />
                         )}
                         <AvatarFallback className="bg-gold/20 text-gold text-sm">
-                          {user?.nombre?.slice(0, 2).toUpperCase() ?? "?"}
+                          {usuario?.nombre?.slice(0, 2).toUpperCase() ?? "?"}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="max-w-[120px] truncate">{user?.nombre ?? "Cuenta"}</span>
+                      <span className="max-w-[120px] truncate">{usuario?.nombre ?? "Cuenta"}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
@@ -387,6 +397,17 @@ const Header = () => {
 
                 {/* Footer del menú mobile */}
                 <div className="px-4 py-4 border-t space-y-4">
+                  {usuario && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Saldo</p>
+                      <p className="text-lg font-semibold text-gold">
+                        {(usuario.saldo ?? 0).toLocaleString("es-AR")} IX
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ${(usuario.saldo ?? 0).toLocaleString("es-AR")} ARS · {(Number(usuario.saldo ?? 0) / IX_PESOS_PER_USD).toFixed(2)} USD
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>IX</span>
                     <CurrencySwitch />
