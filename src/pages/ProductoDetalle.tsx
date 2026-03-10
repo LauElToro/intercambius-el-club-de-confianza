@@ -298,10 +298,12 @@ const ProductoDetalle = () => {
                       const tipos = (item.tipoPago || "ix").split(",").map((s) => s.trim());
                       const aceptaIX = tipos.includes("ix") || tipos.includes("ix_pesos");
                       const aceptaPesos = tipos.includes("pesos") || tipos.includes("ix_pesos");
+                      const aceptaUSD = tipos.includes("usd");
                       const aceptaConvenir = tipos.includes("convenir");
                       const etiquetas: string[] = [];
                       if (aceptaIX) etiquetas.push("Créditos IX");
                       if (aceptaPesos) etiquetas.push("Pesos (por fuera)");
+                      if (aceptaUSD) etiquetas.push("USD (por fuera)");
                       if (aceptaConvenir) etiquetas.push("A convenir");
                       return (
                         <>
@@ -448,7 +450,7 @@ const ProductoDetalle = () => {
                     )}
                     {(() => {
                       const tipos = (item.tipoPago || "").split(",").map((s) => s.trim());
-                      const soloConvenirPesos = (tipos.includes("convenir") || tipos.includes("pesos")) && !tipos.includes("ix") && !tipos.includes("ix_pesos");
+                      const soloConvenirPesos = (tipos.includes("convenir") || tipos.includes("pesos") || tipos.includes("usd")) && !tipos.includes("ix") && !tipos.includes("ix_pesos");
                       return soloConvenirPesos;
                     })() && (
                       <p className="text-sm text-muted-foreground text-center">

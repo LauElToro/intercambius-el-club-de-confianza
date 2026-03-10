@@ -7,16 +7,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, CheckCircle, Repeat } from "lucide-react";
 
+type StateFromChat = {
+  creditos?: number;
+  tipoPago?: "pesos" | "usd";
+  monto?: number;
+  codigoVerificacion?: string;
+  conversacionId?: number;
+};
+
 const RegistrarIntercambio = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const creditosDesdeChat = (location.state as { creditos?: number })?.creditos;
+  const stateFromChat = (location.state ?? {}) as StateFromChat;
+  const creditosDesdeChat = stateFromChat.creditos;
+  const tipoPagoDesdeChat = stateFromChat.tipoPago;
+  const montoDesdeChat = stateFromChat.monto;
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     otraPersona: "",
     descripcion: "",
     creditos: creditosDesdeChat != null ? String(creditosDesdeChat) : "",
     fecha: new Date().toISOString().split("T")[0],
+    codigoVerificacion: stateFromChat.codigoVerificacion ?? "",
+    tipoPagoExterno: tipoPagoDesdeChat ?? "" as "" | "pesos" | "usd",
+    montoExterno: montoDesdeChat != null ? String(montoDesdeChat) : "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,6 +82,9 @@ const RegistrarIntercambio = () => {
                     descripcion: "",
                     creditos: "",
                     fecha: new Date().toISOString().split("T")[0],
+                    codigoVerificacion: "",
+                    tipoPagoExterno: "",
+                    montoExterno: "",
                   });
                 }}
               >
@@ -123,24 +140,32 @@ const RegistrarIntercambio = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="creditos">Créditos (IX)</Label>
-                  <Input
-                    id="creditos"
-                    name="creditos"
-                    type="number"
-                    placeholder="Ej: 50"
-                    value={formData.creditos}
-                    onChange={handleChange}
-                    required
-                    className="bg-surface border-border focus:border-gold"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Positivo si recibiste, negativo si diste
-                  </p>
-                </div>
-
-                <div className="space-y-2">
+                {!tipoPagoDesdeChat && (
+                  <div className="space-y-2 col-span-2 sm:col-span-1">
+                    <Label htmlFor="creditos">Créditos (IX)</Label>
+                    <Input
+                      id="creditos"
+                      name="creditos"
+                      type="number"
+                      placeholder="Ej: 50"
+                      value={formData.creditos}
+                      onChange={handleChange}
+                      required={!tipoPagoDesdeChat}
+                      className="bg-surface border-border focus:border-gold"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Positivo si recibiste, negativo si diste
+                    </p>
+                  </div>
+                )}
+                {tipoPagoDesdeChat && (
+                  <div className="space-y-2 col-span-2">
+                    <p className="text-sm text-muted-foreground">
+                      Acuerdo por fuera: {montoDesdeChat} {tipoPagoDesdeChat === "pesos" ? "pesos" : "USD"}
+                    </p>
+                  </div>
+                )}
+                <div className="space-y-2 col-span-2 sm:col-span-1">
                   <Label htmlFor="fecha">Fecha</Label>
                   <Input
                     id="fecha"
@@ -152,6 +177,22 @@ const RegistrarIntercambio = () => {
                     className="bg-surface border-border focus:border-gold"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="codigoVerificacion">Código de verificación (opcional)</Label>
+                <Input
+                  id="codigoVerificacion"
+                  name="codigoVerificacion"
+                  placeholder="Si la otra parte te pasó un código de 6 dígitos, ingresalo acá"
+                  value={formData.codigoVerificacion}
+                  onChange={handleChange}
+                  maxLength={6}
+                  className="bg-surface border-border focus:border-gold"
+                />
+                <p className="text-xs text-muted-foreground">
+                  La otra parte puede generar un código con &quot;Aprobar intercambio&quot; en el chat para confirmar.
+                </p>
               </div>
             </div>
 

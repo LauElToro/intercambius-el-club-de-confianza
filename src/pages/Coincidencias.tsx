@@ -70,19 +70,26 @@ const Coincidencias = () => {
 
   const itemsBuscados = marketResult?.data ?? [];
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
   const iniciarIntercambioMutation = useMutation({
     mutationFn: ({
       itemDestino,
-      miProductoTitulo,
+      miProducto,
     }: {
       itemDestino: MarketItem;
-      miProductoTitulo: string;
-    }) =>
-      chatService.iniciarIntercambio({
+      miProducto: MarketItem;
+    }) => {
+      const miProductoImagenUrl =
+        miProducto.images?.[0]?.url || miProducto.imagen || '';
+      return chatService.iniciarIntercambio({
         marketItemId: itemDestino.id,
-        miProductoTitulo,
+        miProductoTitulo: miProducto.titulo,
         otroUsuarioNombre: itemDestino.vendedor?.nombre || '',
-      }),
+        miProductoUrl: miProducto.id ? `${baseUrl}/producto/${miProducto.id}` : undefined,
+        miProductoImagenUrl: miProductoImagenUrl || undefined,
+      });
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       toast({ title: "¡Mensaje enviado!", description: "Ya podés negociar el intercambio por chat." });
@@ -365,7 +372,7 @@ const Coincidencias = () => {
                         }
                         iniciarIntercambioMutation.mutate({
                           itemDestino: item,
-                          miProductoTitulo: miProductoSeleccionado.titulo,
+                          miProducto: miProductoSeleccionado,
                         });
                       }}
                     >

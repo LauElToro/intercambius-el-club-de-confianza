@@ -45,7 +45,8 @@ const EditarProducto = () => {
     titulo: "",
     descripcion: "",
     precio: "",
-    tiposPago: ["ix"] as ("ix" | "convenir" | "pesos" | "ix_pesos")[],
+    tiposPago: ["ix", "pesos", "usd"] as ("ix" | "convenir" | "pesos" | "usd" | "ix_pesos")[],
+    aclaracionPago: "",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: "",
     lat: undefined as number | undefined,
@@ -58,7 +59,7 @@ const EditarProducto = () => {
   const [nuevaCaracteristica, setNuevaCaracteristica] = useState("");
   const [isCheckingMedia, setIsCheckingMedia] = useState(false);
 
-  const tiposValidos = ["ix", "convenir", "pesos", "ix_pesos"] as const;
+  const tiposValidos = ["ix", "convenir", "pesos", "usd", "ix_pesos"] as const;
 
   useEffect(() => {
     if (item) {
@@ -88,7 +89,8 @@ const EditarProducto = () => {
         titulo: item.titulo || "",
         descripcion: item.descripcion || "",
         precio: String(item.precio || ""),
-        tiposPago: tiposPago.length > 0 ? tiposPago : ["ix"],
+        tiposPago: tiposPago.length > 0 ? tiposPago : ["ix", "pesos", "usd"],
+        aclaracionPago: "",
         rubro: item.rubro || "",
         ubicacion: coords?.ubicacion ?? ubicacion,
         lat: item.lat ?? coords?.lat,
@@ -187,14 +189,11 @@ const EditarProducto = () => {
       toast({ title: "Subí al menos una foto o video", variant: "destructive" });
       return;
     }
-    if (formData.tiposPago.length === 0) {
-      toast({
-        title: "Forma de intercambio requerida",
-        description: "Seleccioná al menos una forma de intercambio aceptada.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const tiposPagoFinal = formData.tiposPago.length > 0 ? formData.tiposPago : ["ix", "pesos", "usd"];
+    const descripcionFinal =
+      formData.aclaracionPago?.trim()
+        ? `${formData.descripcion}\n\nAclaraciones formas de pago: ${formData.aclaracionPago.trim()}`
+        : formData.descripcion;
 
     try {
       const uploaded: { url: string; mediaType: 'image' | 'video' }[] = [];
@@ -229,9 +228,9 @@ const EditarProducto = () => {
         id: Number(id),
         data: {
           titulo: formData.titulo,
-          descripcion: formData.descripcion,
+          descripcion: descripcionFinal,
           precio: parsePrecioFromInput(formData.precio),
-          tipoPago: formData.tiposPago.length > 0 ? formData.tiposPago.join(",") : "ix",
+          tipoPago: tiposPagoFinal.join(","),
           rubro: formData.rubro,
           ubicacion: formData.ubicacion,
           lat: formData.lat,
@@ -360,16 +359,17 @@ const EditarProducto = () => {
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Formas de intercambio aceptadas</Label>
+                    <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Podés elegir más de una.
+                      Por defecto aceptás IX, pesos y USD. Desmarcá lo que no quieras aceptar. Es opcional.
                     </p>
                     <div className="flex flex-wrap gap-4">
                       {[
                         { value: "ix" as const, label: "IX (créditos)" },
-                        { value: "ix_pesos" as const, label: "IX y pesos (por fuera)" },
-                        { value: "convenir" as const, label: "Pago a convenir" },
                         { value: "pesos" as const, label: "Pesos (por fuera)" },
+                        { value: "usd" as const, label: "USD (por fuera)" },
+                        { value: "ix_pesos" as const, label: "IX y pesos" },
+                        { value: "convenir" as const, label: "A convenir" },
                       ].map((opt) => (
                         <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
@@ -387,6 +387,14 @@ const EditarProducto = () => {
                         </label>
                       ))}
                     </div>
+                    <Input
+                      placeholder="Aclaraciones (opcional). Ej: no acepto USD en efectivo"
+                      value={formData.aclaracionPago ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, aclaracionPago: e.target.value }))
+                      }
+                      className="mt-2"
+                    />
                   </div>
                 </div>
                 <LocationPicker

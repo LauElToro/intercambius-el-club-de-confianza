@@ -39,7 +39,8 @@ const CrearProducto = () => {
     titulo: "",
     descripcion: "",
     precio: "" as string,
-    tiposPago: ["ix"] as ("ix" | "convenir" | "pesos" | "ix_pesos")[],
+    tiposPago: ["ix", "pesos", "usd"] as ("ix" | "convenir" | "pesos" | "usd" | "ix_pesos")[],
+    aclaracionPago: "",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: "",
     lat: undefined as number | undefined,
@@ -47,6 +48,7 @@ const CrearProducto = () => {
     medias: [] as { file: File; preview: string; type: "image" | "video" }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
+    aclaracionPago: "",
   });
 
   useEffect(() => {
@@ -173,14 +175,7 @@ const CrearProducto = () => {
       return;
     }
 
-    if (formData.tiposPago.length === 0) {
-      toast({
-        title: "Forma de intercambio requerida",
-        description: "Seleccioná al menos una forma de intercambio aceptada.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const tiposPagoFinal = formData.tiposPago.length > 0 ? formData.tiposPago : ["ix", "pesos", "usd"];
 
     setIsSubmitting(true);
     try {
@@ -218,11 +213,16 @@ const CrearProducto = () => {
         return;
       }
 
+      const descripcionFinal =
+        formData.aclaracionPago?.trim()
+          ? `${formData.descripcion}\n\nAclaraciones formas de pago: ${formData.aclaracionPago.trim()}`
+          : formData.descripcion;
+
       const itemData: CreateMarketItemData = {
         titulo: formData.titulo,
-        descripcion: formData.descripcion,
+        descripcion: descripcionFinal,
         precio: precioNum,
-        tipoPago: formData.tiposPago.length > 0 ? formData.tiposPago.join(",") : "ix",
+        tipoPago: tiposPagoFinal.join(","),
         rubro: formData.rubro,
         ubicacion: formData.ubicacion,
         lat: formData.lat,
@@ -353,16 +353,17 @@ const CrearProducto = () => {
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Formas de intercambio aceptadas</Label>
+                    <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Podés elegir más de una. Si elegís pesos o convenir, acordarán por chat.
+                      Por defecto aceptás IX, pesos y USD. Desmarcá lo que no quieras aceptar. Es opcional.
                     </p>
                     <div className="flex flex-wrap gap-4">
                       {[
                         { value: "ix" as const, label: "IX (créditos)" },
-                        { value: "ix_pesos" as const, label: "IX y pesos (por fuera)" },
-                        { value: "convenir" as const, label: "Pago a convenir" },
                         { value: "pesos" as const, label: "Pesos (por fuera)" },
+                        { value: "usd" as const, label: "USD (por fuera)" },
+                        { value: "ix_pesos" as const, label: "IX y pesos" },
+                        { value: "convenir" as const, label: "A convenir" },
                       ].map((opt) => (
                         <label
                           key={opt.value}
@@ -383,11 +384,14 @@ const CrearProducto = () => {
                         </label>
                       ))}
                     </div>
-                    {formData.tiposPago.length === 0 && (
-                      <p className="text-xs text-destructive mt-1">
-                        Seleccioná al menos una forma de intercambio
-                      </p>
-                    )}
+                    <Input
+                      placeholder="Aclaraciones (opcional). Ej: no acepto USD en efectivo"
+                      value={formData.aclaracionPago ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, aclaracionPago: e.target.value }))
+                      }
+                      className="mt-2"
+                    />
                   </div>
                 </div>
 
