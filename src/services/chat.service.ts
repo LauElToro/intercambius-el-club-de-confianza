@@ -41,36 +41,19 @@ export const chatService = {
   /** Prefijo para detectar mensaje estructurado de intercambio */
   INTERCAMBIO_PREFIX: '{"_t":"intercambio"',
 
-  /** Iniciar conversación e inmediatamente enviar mensaje de intercambio. Para flujo de Coincidencias. */
+  /** Iniciar conversación e inmediatamente enviar UN SOLO mensaje de intercambio con cards. */
   async iniciarIntercambio(opts: {
     marketItemId: number;
     miNombre: string;
-    miProductoTitulo: string;
-    miProductoUrl?: string;
-    miProductoImagenUrl?: string;
-    miProductoPrecio?: number;
-    /** Producto del otro usuario que queremos (tu producto) */
-    tuProductoTitulo: string;
-    tuProductoUrl?: string;
-    tuProductoImagenUrl?: string;
-    tuProductoPrecio?: number;
+    miProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string };
+    tuProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string };
   }): Promise<{ conversacionId: number }> {
     const { conversacionId } = await this.iniciarConversacion({ marketItemId: opts.marketItemId });
     const payload = {
       _t: 'intercambio',
       saludo: `¡Hola! Un gusto conectar, soy ${opts.miNombre.trim() || 'Intercambius'}`,
-      miProducto: {
-        titulo: opts.miProductoTitulo,
-        imagen: opts.miProductoImagenUrl,
-        url: opts.miProductoUrl,
-        precio: opts.miProductoPrecio,
-      },
-      tuProducto: {
-        titulo: opts.tuProductoTitulo,
-        imagen: opts.tuProductoImagenUrl,
-        url: opts.tuProductoUrl,
-        precio: opts.tuProductoPrecio,
-      },
+      miProducto: opts.miProducto,
+      tuProducto: opts.tuProducto,
     };
     await this.enviarMensaje(conversacionId, JSON.stringify(payload));
     return { conversacionId };

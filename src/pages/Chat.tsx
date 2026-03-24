@@ -18,47 +18,73 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, Banknote, Check, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
 
-function ProductoCardMini({
+const RUBROS_CHAT: Record<string, { label: string; icon: string }> = {
+  servicios: { label: "Servicios", icon: "🔧" },
+  productos: { label: "Productos", icon: "📦" },
+  alimentos: { label: "Alimentos", icon: "🍎" },
+  experiencias: { label: "Experiencias", icon: "🎭" },
+};
+
+function ProductoCardChat({
   titulo,
+  descripcion,
   imagen,
   url,
   precio,
+  rubro,
   formatIX,
   onNavigate,
 }: {
   titulo: string;
+  descripcion?: string;
   imagen?: string;
   url?: string;
   precio?: number;
+  rubro?: string;
   formatIX: (n: number) => string;
   onNavigate: (path: string) => void;
 }) {
   const id = url?.match(/\/producto\/(\d+)/)?.[1];
+  const rubroInfo = rubro ? RUBROS_CHAT[rubro] : null;
   return (
-    <button
-      type="button"
-      onClick={() => id && onNavigate(`/producto/${id}`)}
-      className="flex gap-3 p-3 rounded-xl border border-border bg-background hover:border-gold/40 hover:bg-muted/50 text-left w-full transition-colors"
-    >
-      <img
-        src={imagen || 'https://via.placeholder.com/80'}
-        alt={titulo}
-        className="w-16 h-16 rounded-lg object-cover shrink-0"
-        onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80'; }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-sm line-clamp-2">{titulo}</p>
-        {precio != null && precio > 0 && (
-          <p className="text-gold font-semibold text-sm mt-0.5">{formatIX(precio)}</p>
-        )}
-        {url && (
-          <span className="inline-flex items-center gap-1 text-xs text-gold mt-1">
+    <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-gold/40 transition-colors">
+      <button
+        type="button"
+        onClick={() => id && onNavigate(`/producto/${id}`)}
+        className="block w-full text-left"
+      >
+        <div className="relative aspect-[4/3] bg-muted">
+          <img
+            src={imagen || 'https://via.placeholder.com/300x200'}
+            alt={titulo}
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200'; }}
+          />
+          {rubroInfo && (
+            <span className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50 rounded-full px-2 py-0.5 text-xs font-medium">
+              {rubroInfo.icon} {rubroInfo.label}
+            </span>
+          )}
+        </div>
+        <div className="p-3">
+          <h4 className="font-semibold text-sm line-clamp-2">{titulo}</h4>
+          {descripcion && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{descripcion}</p>
+          )}
+          <span className="inline-flex items-center gap-1 text-xs text-gold mt-2 hover:underline">
             <ExternalLink className="w-3 h-3" />
-            Ver producto
+            Ver detalle
           </span>
-        )}
-      </div>
-    </button>
+          <div className="flex items-center justify-between mt-2">
+            {precio != null && precio > 0 ? (
+              <span className="text-base font-bold gold-text">{formatIX(precio)}</span>
+            ) : (
+              <span />
+            )}
+          </div>
+        </div>
+      </button>
+    </div>
   );
 }
 
@@ -135,8 +161,8 @@ const Chat = () => {
   const [montoUSD, setMontoUSD] = useState("");
 
   const msgs = chatDetalle?.mensajes ?? [];
-  // Detectar propuesta de intercambio: formato nuevo (JSON) o legado (texto)
-  const parseIntercambio = (c: string): { saludo: string; miProducto: { titulo: string; imagen?: string; url?: string; precio?: number }; tuProducto: { titulo: string; imagen?: string; url?: string; precio?: number } } | null => {
+  // Detectar propuesta de intercambio: formato JSON con cards (un solo mensaje)
+  const parseIntercambio = (c: string): { saludo: string; miProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string }; tuProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string } } | null => {
     try {
       if (c.startsWith(chatService.INTERCAMBIO_PREFIX)) {
         const parsed = JSON.parse(c);
@@ -363,22 +389,26 @@ const Chat = () => {
                                           <p className="text-sm font-medium">{intercambio.saludo}</p>
                                           <div>
                                             <p className="text-sm text-muted-foreground mb-2">Quiero intercambiar mi producto/servicio:</p>
-                                            <ProductoCardMini
+                                            <ProductoCardChat
                                               titulo={intercambio.miProducto.titulo}
+                                              descripcion={intercambio.miProducto.descripcion}
                                               imagen={intercambio.miProducto.imagen}
                                               url={intercambio.miProducto.url}
                                               precio={intercambio.miProducto.precio}
+                                              rubro={intercambio.miProducto.rubro}
                                               formatIX={formatIX}
                                               onNavigate={navigate}
                                             />
                                           </div>
                                           <div>
                                             <p className="text-sm text-muted-foreground mb-2">Por tu producto/servicio:</p>
-                                            <ProductoCardMini
+                                            <ProductoCardChat
                                               titulo={intercambio.tuProducto.titulo}
+                                              descripcion={intercambio.tuProducto.descripcion}
                                               imagen={intercambio.tuProducto.imagen}
                                               url={intercambio.tuProducto.url}
                                               precio={intercambio.tuProducto.precio}
+                                              rubro={intercambio.tuProducto.rubro}
                                               formatIX={formatIX}
                                               onNavigate={navigate}
                                             />
@@ -390,13 +420,14 @@ const Chat = () => {
                                       </div>
                                     );
                                   }
+                                  const textoLegacy = m.contenido.replace(/\*\*/g, '');
                                   return (
                                     <div
                                       className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                                         m.senderId === user?.id ? 'bg-gold text-primary-foreground' : 'bg-muted'
                                       }`}
                                     >
-                                      <p className="text-sm break-words whitespace-pre-wrap">{m.contenido}</p>
+                                      <p className="text-sm break-words whitespace-pre-wrap">{textoLegacy}</p>
                                       <p className={`text-xs mt-1 ${m.senderId === user?.id ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                                         {formatearHora(m.createdAt)}
                                       </p>

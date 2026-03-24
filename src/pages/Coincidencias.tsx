@@ -85,19 +85,25 @@ const Coincidencias = () => {
       itemDestino: MarketItem;
       miProducto: MarketItem;
     }) => {
-      const miProductoImagenUrl = miProducto.images?.[0]?.url || miProducto.imagen || '';
-      const tuProductoImagenUrl = itemDestino.images?.[0]?.url || itemDestino.imagen || '';
       return chatService.iniciarIntercambio({
         marketItemId: itemDestino.id,
         miNombre: currentUser?.nombre || 'Intercambius',
-        miProductoTitulo: miProducto.titulo,
-        miProductoUrl: miProducto.id ? `${baseUrl}/producto/${miProducto.id}` : undefined,
-        miProductoImagenUrl: miProductoImagenUrl || undefined,
-        miProductoPrecio: miProducto.precio,
-        tuProductoTitulo: itemDestino.titulo,
-        tuProductoUrl: itemDestino.id ? `${baseUrl}/producto/${itemDestino.id}` : undefined,
-        tuProductoImagenUrl: tuProductoImagenUrl || undefined,
-        tuProductoPrecio: itemDestino.precio,
+        miProducto: {
+          titulo: miProducto.titulo,
+          descripcion: miProducto.descripcion,
+          imagen: miProducto.images?.[0]?.url || miProducto.imagen,
+          url: miProducto.id ? `${baseUrl}/producto/${miProducto.id}` : undefined,
+          precio: miProducto.precio,
+          rubro: miProducto.rubro,
+        },
+        tuProducto: {
+          titulo: itemDestino.titulo,
+          descripcion: itemDestino.descripcion,
+          imagen: itemDestino.images?.[0]?.url || itemDestino.imagen,
+          url: itemDestino.id ? `${baseUrl}/producto/${itemDestino.id}` : undefined,
+          precio: itemDestino.precio,
+          rubro: itemDestino.rubro,
+        },
       });
     },
     onSuccess: (data) => {
