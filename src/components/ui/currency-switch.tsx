@@ -12,22 +12,22 @@ export const CurrencySwitch = () => {
         size="sm"
         className={cn(
           "h-8 px-3 text-xs font-medium rounded-md transition-colors",
-          variant === 'IX-ARS' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+          variant === 'IOX-ARS' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
         )}
-        onClick={() => setVariant('IX-ARS')}
+        onClick={() => setVariant('IOX-ARS')}
       >
-        IX-ARS
+        IOX-ARS
       </Button>
       <Button
         variant="ghost"
         size="sm"
         className={cn(
           "h-8 px-3 text-xs font-medium rounded-md transition-colors",
-          variant === 'IX-USD' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+          variant === 'IOX-USD' ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
         )}
-        onClick={() => setVariant('IX-USD')}
+        onClick={() => setVariant('IOX-USD')}
       >
-        IX-USD
+        IOX-USD
       </Button>
     </div>
   );

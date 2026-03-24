@@ -189,6 +189,7 @@ const Market = () => {
       distanciaMax: userLocation && !sinLimiteDistancia ? distanciaMax[0] : undefined,
       page,
       limit: 24,
+      soloDisponibles: true,
     }),
   });
 
@@ -303,6 +304,8 @@ const Market = () => {
   // Filtrar items (filtros del lado del cliente para detalles del rubro; búsqueda se hace en servidor)
   const itemsFiltrados = useMemo(() => {
     return items.filter((item: MarketItem) => {
+      // No mostrar publicaciones ya vendidas
+      if (item.disponible === false) return false;
       // Filtros específicos del rubro (detalles)
       if (filtrosDisponibles && item.detalles) {
         for (const [categoria, valores] of Object.entries(filtrosRubro)) {
@@ -575,7 +578,7 @@ const Market = () => {
 
                     {/* Precio */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Precio (IX)</label>
+                      <label className="text-sm font-medium mb-2 block">Precio (IOX)</label>
                       <div className="space-y-3">
                         <div>
                           <label className="text-xs text-muted-foreground mb-1 block">Mínimo</label>

@@ -94,7 +94,7 @@ const Historial = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                Aún no tenés movimientos registrados. Los intercambios se registran automáticamente cuando pagás un producto con IX desde el checkout.
+                Aún no tenés movimientos registrados. Los intercambios se registran automáticamente cuando pagás un producto con IOX desde el checkout.
               </p>
               <Button variant="gold" onClick={() => navigate("/market")}>
                 Explorar productos
@@ -150,7 +150,7 @@ const Historial = () => {
                                 <span>• {item.condition}</span>
                               )}
                               {item?.tipoPago && (() => { const t = item.tipoPago.split(",").map(s => s.trim()); return t.length > 1 || t[0] !== "ix"; })() && (
-                                <span>• Pago: {item.tipoPago.split(",").map(s => ({ ix: "IX", ix_pesos: "IX y pesos", convenir: "A convenir", pesos: "Pesos", usd: "USD" }[s.trim()] || s.trim())).join(", ")}</span>
+                                <span>• Pago: {item.tipoPago.split(",").map(s => ({ ix: "IOX", ix_pesos: "IOX y pesos", convenir: "A convenir", pesos: "Pesos", usd: "USD" }[s.trim()] || s.trim())).join(", ")}</span>
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5">

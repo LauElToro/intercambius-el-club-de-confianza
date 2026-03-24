@@ -30,6 +30,7 @@ import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
+import { CREDIT_LIMIT_DEFAULT, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -74,18 +75,33 @@ const ProductoDetalle = () => {
 
   const checkoutMutation = useMutation({
     mutationFn: () => checkoutService.pay(Number(id!)),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['marketItem', id] });
       queryClient.invalidateQueries({ queryKey: ['intercambios'] });
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
+      const precio = Number(item?.precio ?? 0) || 0;
+      if (data.conversacionId && precio > 0) {
+        try {
+          await chatService.enviarMensaje(data.conversacionId, `Compré este producto por ${formatIX(precio)}.`);
+          queryClient.invalidateQueries({ queryKey: ['chat', String(data.conversacionId)] });
+        } catch {
+          // no bloquear el flujo si falla el mensaje
+        }
+      }
       toast({ title: "¡Compra exitosa!", description: "Ya podés coordinar la entrega con el vendedor por chat." });
       setCheckoutOpen(false);
       if (data.conversacionId) navigate(`/chat/${data.conversacionId}`);
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "No se pudo completar el pago", variant: "destructive" });
+      const msg = error?.data?.error || error?.message || "No se pudo completar el pago";
+      const esLimite = /límite|limite|crédito|credito|insuficiente/i.test(String(msg));
+      toast({
+        title: esLimite ? "Límite de crédito" : "Error",
+        description: esLimite ? "No tenés suficiente crédito disponible. El límite negativo es " + formatIX(limite) + "." : msg,
+        variant: "destructive",
+      });
     },
   });
 
@@ -102,10 +118,11 @@ const ProductoDetalle = () => {
     : (item?.imagen ? [{ url: item.imagen, mediaType: 'image' as const }] : []);
 
   const saldo = Number(usuario?.saldo ?? 0) || 0;
-  const limite = Number(usuario?.limite ?? 0) || 150000;
+  const limite = Number(usuario?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const precio = Number(item?.precio ?? 0) || 0;
   const puedeGastar = saldo + limite;
-  const puedeComprar = !!item && (saldo - precio >= -limite);
+  const enLimiteDeuda = limite > 0 && saldo <= -limite; // Ya debe 100k IOX: solo puede pagar por fuera
+  const puedeComprar = !!item && !enLimiteDeuda && (saldo - precio >= -limite);
 
   if (isLoading) {
     return (
@@ -131,6 +148,7 @@ const ProductoDetalle = () => {
   }
 
   const vendedor = item.vendedor;
+  const disponible = item.disponible !== false;
 
   return (
     <Layout>
@@ -235,6 +253,9 @@ const ProductoDetalle = () => {
                          item.rubro === "productos" ? "📦 Producto" :
                          item.rubro === "alimentos" ? "🍎 Alimento" : "🎭 Experiencia"}
                       </Badge>
+                      {!disponible && (
+                        <Badge variant="destructive">Vendido</Badge>
+                      )}
                       {item.precio != null && (
                         <span className="text-3xl font-bold gold-text">
                           {formatIX(item.precio)}
@@ -301,7 +322,7 @@ const ProductoDetalle = () => {
                       const aceptaUSD = tipos.includes("usd");
                       const aceptaConvenir = tipos.includes("convenir");
                       const etiquetas: string[] = [];
-                      if (aceptaIX) etiquetas.push("Créditos IX");
+                      if (aceptaIX) etiquetas.push("Créditos IOX");
                       if (aceptaPesos) etiquetas.push("Pesos (por fuera)");
                       if (aceptaUSD) etiquetas.push("USD (por fuera)");
                       if (aceptaConvenir) etiquetas.push("A convenir");
@@ -313,7 +334,7 @@ const ProductoDetalle = () => {
                           <p className="text-muted-foreground text-sm">
                             {aceptaIX && (
                               <>
-                                Precio en IX: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>.
+                                Precio en IOX: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>.
                                 {aceptaPesos && " También acepta pesos por fuera."}
                                 {!aceptaPesos && " Se transfieren al confirmar el intercambio."}
                               </>
@@ -434,7 +455,12 @@ const ProductoDetalle = () => {
                       )}
                       Contactar al vendedor
                     </Button>
-                    {(() => {
+                    {disponible && enLimiteDeuda && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400 font-medium text-center py-2">
+                        Llegaste al límite de crédito (-{formatIX(limite)}). Solo podés pagar por fuera de la página hasta que reduzcas tu deuda.
+                      </p>
+                    )}
+                    {disponible && !enLimiteDeuda && (() => {
                       const tipos = (item.tipoPago || "ix").split(",").map((s) => s.trim());
                       const aceptaIX = tipos.includes("ix") || tipos.includes("ix_pesos");
                       return aceptaIX;
@@ -445,7 +471,7 @@ const ProductoDetalle = () => {
                         onClick={() => setCheckoutOpen(true)}
                       >
                         <CreditCard className="w-5 h-5 mr-2" />
-                        {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'} con IX
+                        {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'} con IOX
                       </Button>
                     )}
                     {(() => {
@@ -474,13 +500,16 @@ const ProductoDetalle = () => {
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Pagar con IX</DialogTitle>
+              <DialogTitle>Pagar con IOX</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{item.titulo}</span>
                 <span className="font-bold">{formatIX(precio)}</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Se aplica un {COMISION_IOX_PORCENTAJE}% en IOX (comisión de la plataforma) en cada operación. Quienes venden aceptan siempre este {COMISION_IOX_PORCENTAJE}% en IOX.
+              </p>
               <div className="bg-muted rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Tu saldo</span>

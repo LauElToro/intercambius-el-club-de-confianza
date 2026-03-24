@@ -139,7 +139,7 @@ const Header = () => {
           </Link>
         </nav>
 
-        {/* Right side: saldo IX + equivalente ARS/USD + switch */}
+        {/* Right side: saldo IOX + equivalente ARS/USD + switch */}
         <div className="flex items-center gap-3">
           {usuario && <HeaderSaldo saldo={usuario.saldo ?? 0} />}
           <CurrencySwitch />
@@ -401,7 +401,7 @@ const Header = () => {
                     <div className="rounded-lg border border-border bg-muted/30 p-3">
                       <p className="text-xs text-muted-foreground mb-1">Saldo</p>
                       <p className="text-lg font-semibold text-gold">
-                        {(usuario.saldo ?? 0).toLocaleString("es-AR")} IX
+                        {(usuario.saldo ?? 0).toLocaleString("es-AR")} IOX
                       </p>
                       <p className="text-xs text-muted-foreground">
                         ${(usuario.saldo ?? 0).toLocaleString("es-AR")} ARS · {(Number(usuario.saldo ?? 0) / IX_PESOS_PER_USD).toFixed(2)} USD
@@ -409,7 +409,7 @@ const Header = () => {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>IX</span>
+                    <span>IOX</span>
                     <CurrencySwitch />
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">

@@ -198,7 +198,7 @@ const CrearProducto = () => {
 
       const precioNum = parsePrecioFromInput(formData.precio);
       if (precioNum < 1) {
-        toast({ title: "Precio inválido", description: "El precio debe ser al menos 1 IX", variant: "destructive" });
+        toast({ title: "Precio inválido", description: "El precio debe ser al menos 1 IOX", variant: "destructive" });
         setIsSubmitting(false);
         return;
       }
@@ -338,7 +338,7 @@ const CrearProducto = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="precio">Precio (IX) *</Label>
+                    <Label htmlFor="precio">Precio (IOX) *</Label>
                     <Input
                       id="precio"
                       type="text"
@@ -355,14 +355,14 @@ const CrearProducto = () => {
                   <div className="space-y-2 md:col-span-2">
                     <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Por defecto aceptás IX, pesos y USD. Desmarcá lo que no quieras aceptar. Es opcional.
+                      Por defecto aceptás IOX, pesos y USD. Desmarcá lo que no quieras aceptar. Es opcional.
                     </p>
                     <div className="flex flex-wrap gap-4">
                       {[
-                        { value: "ix" as const, label: "IX (créditos)" },
+                        { value: "ix" as const, label: "IOX (créditos)" },
                         { value: "pesos" as const, label: "Pesos (por fuera)" },
                         { value: "usd" as const, label: "USD (por fuera)" },
-                        { value: "ix_pesos" as const, label: "IX y pesos" },
+                        { value: "ix_pesos" as const, label: "IOX y pesos" },
                         { value: "convenir" as const, label: "A convenir" },
                       ].map((opt) => (
                         <label

@@ -11,7 +11,7 @@ interface HeaderSaldoProps {
   saldo: number;
 }
 
-/** Muestra saldo en IX y equivalentes en ARS y USD en el header */
+/** Muestra saldo en IOX y equivalentes en ARS y USD en el header */
 export const HeaderSaldo = ({ saldo }: HeaderSaldoProps) => {
   const { formatIX } = useCurrencyVariant();
   const saldoNum = Number(saldo) || 0;
@@ -46,7 +46,7 @@ export const HeaderSaldo = ({ saldo }: HeaderSaldoProps) => {
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-xs">
-          <p className="font-semibold mb-1">Tu saldo en IX</p>
+          <p className="font-semibold mb-1">Tu saldo en IOX</p>
           <p className="text-sm text-muted-foreground">
             {formatIX(saldoNum)} · ${saldoNum.toLocaleString("es-AR")} ARS · {usd.toLocaleString("es-AR", { maximumFractionDigits: 2 })} USD
           </p>

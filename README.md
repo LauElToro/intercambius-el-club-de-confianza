@@ -1,6 +1,6 @@
 # Intercambius
 
-Marketplace de intercambios y compras dentro de un club de confianza. Sistema de créditos (IX) para transacciones entre miembros.
+Marketplace de intercambios y compras dentro de un club de confianza. Sistema de créditos (IOX) para transacciones entre miembros.
 
 ---
 
@@ -100,11 +100,11 @@ src/
 
 ### Funcionalidades
 
-- **Marketplace**: filtros por tipo, rubro, precio (IX), distancia con mapa (Leaflet).
-- **Moneda IX**: variante IX-ARS / IX-USD en el header.
+- **Marketplace**: filtros por tipo, rubro, precio (IOX), distancia con mapa (Leaflet).
+- **Moneda IOX**: variante IOX-ARS / IOX-USD en el header.
 - **Favoritos**: guardar productos.
 - **Chat**: contacto con vendedor antes o después de comprar.
-- **Checkout**: compra con IX directamente desde el detalle.
+- **Checkout**: compra con IOX directamente desde el detalle.
 - **Geolocalización**: filtro por distancia (GPS o ubicación manual).
 - **Upload**: fotos de perfil y productos (Vercel Blob).
 
@@ -181,7 +181,7 @@ backend/
 | DELETE | `/api/market/:id` | Eliminar item (auth) |
 | POST | `/api/favoritos/toggle/:id` | Toggle favorito (auth) |
 | GET | `/api/favoritos` | Mis favoritos (auth) |
-| POST | `/api/checkout` | Comprar con IX (auth) |
+| POST | `/api/checkout` | Comprar con IOX (auth) |
 | POST | `/api/chat/iniciar` | Iniciar conversación (auth) |
 | GET | `/api/chat` | Listar conversaciones (auth) |
 | GET | `/api/chat/:id/mensajes` | Mensajes de conversación (auth) |
@@ -383,6 +383,7 @@ Para usar Google Maps en lugar de Leaflet:
 
 ## Documentación adicional
 
+- [docs/NUEVAS-FUNCIONALIDADES.md](./docs/NUEVAS-FUNCIONALIDADES.md) — **Funcionalidades recientes:** flujo de intercambios, onboarding, creación de productos, NSFW.js, branding.
 - [backend/README.md](./backend/README.md) — Detalle del backend, API, auth.
 - [backend/DEPLOY.md](./backend/DEPLOY.md) — Deploy en Vercel, P1001, connection pooling.
 

@@ -47,12 +47,21 @@ export const chatService = {
     miProductoUrl?: string;
     /** URL de la primera imagen del producto que propongo */
     miProductoImagenUrl?: string;
+    /** Descripción y precio para enriquecer la propuesta */
+    miProductoDescripcion?: string;
+    miProductoPrecio?: number;
   }): Promise<{ conversacionId: number }> {
     const { conversacionId } = await this.iniciarConversacion({ marketItemId: opts.marketItemId });
     const saludo = opts.otroUsuarioNombre?.trim()
       ? `Hola ${opts.otroUsuarioNombre}. `
       : 'Hola. ';
-    let mensaje = `${saludo}Quiero realizar un intercambio: ${opts.miProductoTitulo}`;
+    let mensaje = `${saludo}Quiero realizar un intercambio con vos.\n\n**Mi producto:** ${opts.miProductoTitulo}`;
+    if (opts.miProductoDescripcion) {
+      mensaje += `\n${opts.miProductoDescripcion}`;
+    }
+    if (opts.miProductoPrecio != null && opts.miProductoPrecio > 0) {
+      mensaje += `\nPrecio: ${opts.miProductoPrecio} IOX`;
+    }
     if (opts.miProductoUrl) {
       mensaje += `\n\nVer mi producto: ${opts.miProductoUrl}`;
     }

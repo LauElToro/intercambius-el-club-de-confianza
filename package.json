@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "docs:pdf": "npx md-to-pdf docs/DOCUMENTACION-PROYECTO-INTERCAMBIUS.md"
+    "docs:pdf": "npx md-to-pdf docs/NUEVAS-FUNCIONALIDADES.md"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

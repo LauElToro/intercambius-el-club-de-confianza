@@ -386,12 +386,12 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            {/* Token (IX) */}
+            {/* Token (IOX) */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Coins className="w-5 h-5 text-amber-500" />
-                  Token IX — Circulación y volumen
+                  Token IOX — Circulación y volumen
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">Saldo en usuarios y movimiento en transacciones</p>
               </CardHeader>
@@ -399,19 +399,19 @@ const AdminDashboard = () => {
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-lg border bg-muted/30 p-4">
                     <p className="text-sm font-medium text-muted-foreground">Saldo en circulación</p>
-                    <p className="text-2xl font-bold text-amber-600">{metrics.token.saldoEnCirculacion.toLocaleString()} IX</p>
+                    <p className="text-2xl font-bold text-amber-600">{metrics.token.saldoEnCirculacion.toLocaleString()} IOX</p>
                   </div>
                   <div className="rounded-lg border bg-muted/30 p-4">
                     <p className="text-sm font-medium text-muted-foreground">Volumen transacciones</p>
-                    <p className="text-2xl font-bold">{metrics.token.volumenTransacciones.toLocaleString()} IX</p>
+                    <p className="text-2xl font-bold">{metrics.token.volumenTransacciones.toLocaleString()} IOX</p>
                   </div>
                   <div className="rounded-lg border bg-muted/30 p-4">
                     <p className="text-sm font-medium text-muted-foreground">Gastado (compras)</p>
-                    <p className="text-2xl font-bold text-red-600">{metrics.token.tokenGastadoCompras.toLocaleString()} IX</p>
+                    <p className="text-2xl font-bold text-red-600">{metrics.token.tokenGastadoCompras.toLocaleString()} IOX</p>
                   </div>
                   <div className="rounded-lg border bg-muted/30 p-4">
                     <p className="text-sm font-medium text-muted-foreground">Recibido (ventas)</p>
-                    <p className="text-2xl font-bold text-green-600">{metrics.token.tokenRecibidoVentas.toLocaleString()} IX</p>
+                    <p className="text-2xl font-bold text-green-600">{metrics.token.tokenRecibidoVentas.toLocaleString()} IOX</p>
                   </div>
                 </div>
               </CardContent>
@@ -450,7 +450,7 @@ const AdminDashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ChartContainer config={{ cantidad: { label: "Transacciones" }, volumen: { label: "Volumen IX" } }} className="h-[240px] w-full">
+                    <ChartContainer config={{ cantidad: { label: "Transacciones" }, volumen: { label: "Volumen IOX" } }} className="h-[240px] w-full">
                       <AreaChart data={metrics.ventasCompras.porMes.map((d) => ({ ...d, name: formatMes(d.mes) }))} margin={{ left: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                         <XAxis dataKey="name" tickLine={false} />
@@ -629,7 +629,7 @@ const AdminDashboard = () => {
                               <span className="text-muted-foreground">Activo</span>
                             )}
                           </TableCell>
-                          <TableCell>{u.saldo} IX</TableCell>
+                          <TableCell>{u.saldo} IOX</TableCell>
                           <TableCell>{u.productosPublicados}</TableCell>
                           <TableCell>{u.intercambios}</TableCell>
                           <TableCell className="text-right">
@@ -752,7 +752,7 @@ const AdminDashboard = () => {
                         <TableRow key={p.id}>
                           <TableCell>{p.id}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{p.titulo}</TableCell>
-                          <TableCell>{p.precio} IX</TableCell>
+                          <TableCell>{p.precio} IOX</TableCell>
                           <TableCell>{p.status}</TableCell>
                           <TableCell>{p.vendedor?.nombre}</TableCell>
                         </TableRow>
@@ -822,7 +822,7 @@ const AdminDashboard = () => {
                           <TableCell>{i.id}</TableCell>
                           <TableCell>{i.usuario?.nombre}</TableCell>
                           <TableCell>{i.otraPersona?.nombre}</TableCell>
-                          <TableCell>{i.creditos} IX</TableCell>
+                          <TableCell>{i.creditos} IOX</TableCell>
                           <TableCell>{i.estado}</TableCell>
                         </TableRow>
                       ))}

@@ -1,27 +1,27 @@
-// IX en pesos (base) y IX en USD
+// IOX en pesos (base) y IOX en USD
 // 150000 pesos = 100 USD → 1 USD = 1500 pesos
 export const IX_PESOS_PER_USD = 1500;
 
-export type IXVariant = 'IX-ARS' | 'IX-USD';
+export type IXVariant = 'IOX-ARS' | 'IOX-USD';
 
 export const convertToUSD = (pesos: number): number => pesos / IX_PESOS_PER_USD;
 
 export const formatIX = (amountPesos: number, variant: IXVariant): string => {
-  if (variant === 'IX-USD') {
+  if (variant === 'IOX-USD') {
     const ixUsd = amountPesos / IX_PESOS_PER_USD;
-    return `${ixUsd.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true })} IX`;
+    return `${ixUsd.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true })} IOX`;
   }
-  return `${amountPesos.toLocaleString('es-AR')} IX`;
+  return `${amountPesos.toLocaleString('es-AR')} IOX`;
 };
 
-export const getIXSuffix = (variant: IXVariant): string => ' IX';
+export const getIXSuffix = (variant: IXVariant): string => ' IOX';
 
 // Legacy - para compatibilidad
 export const formatCurrency = (amount: number, currency: 'IX' | 'ARS' = 'IX'): string => {
   if (currency === 'ARS') {
     return `$${amount.toLocaleString('es-AR')}`;
   }
-  return `${amount.toLocaleString('es-AR')} IX`;
+  return `${amount.toLocaleString('es-AR')} IOX`;
 };
 
 /** Formatea un valor numérico (string de dígitos) con separador de miles para input */

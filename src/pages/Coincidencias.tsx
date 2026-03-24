@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2, Search, Repeat, Package } from "lucide-react";
@@ -18,6 +19,7 @@ import { marketService, MarketItem } from "@/services/market.service";
 import { chatService } from "@/services/chat.service";
 import { useToast } from "@/components/ui/use-toast";
 import { GuiaCoincidencias } from "@/components/onboarding/GuiaCoincidencias";
+import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 
 const RUBROS = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -64,7 +66,7 @@ const Coincidencias = () => {
 
   const { data: marketResult, isLoading: loadingMarket } = useQuery({
     queryKey: ['marketItems', 'busqueda', search.trim(), currentUser?.id],
-    queryFn: () => marketService.getItems({ search: search.trim(), page: 1, limit: 50 }),
+    queryFn: () => marketService.getItems({ search: search.trim(), page: 1, limit: 50, soloDisponibles: true }),
     enabled: !!currentUser?.id && buscarEnMarketplace,
   });
 
@@ -88,6 +90,8 @@ const Coincidencias = () => {
         otroUsuarioNombre: itemDestino.vendedor?.nombre || '',
         miProductoUrl: miProducto.id ? `${baseUrl}/producto/${miProducto.id}` : undefined,
         miProductoImagenUrl: miProductoImagenUrl || undefined,
+        miProductoDescripcion: miProducto.descripcion || undefined,
+        miProductoPrecio: miProducto.precio,
       });
     },
     onSuccess: (data) => {
@@ -124,9 +128,10 @@ const Coincidencias = () => {
   const coincidenciasFiltradas = useMemo(() => {
     const list = Array.isArray(listaBase) ? listaBase : [];
     const sinPropios = list.filter((item: MarketItem) => item.vendedorId !== currentUser?.id);
-    if (!search.trim() || buscarEnMarketplace) return sinPropios;
+    const disponibles = sinPropios.filter((item: MarketItem) => item.disponible !== false);
+    if (!search.trim() || buscarEnMarketplace) return disponibles;
     const q = search.toLowerCase().trim();
-    return sinPropios.filter(
+    return disponibles.filter(
       (item: MarketItem) =>
         (item.titulo || '').toLowerCase().includes(q) ||
         (item.descripcion || '').toLowerCase().includes(q)
@@ -149,7 +154,8 @@ const Coincidencias = () => {
 
   const { formatIX } = useCurrencyVariant();
   const saldo = Number(currentUser?.saldo ?? 0) || 0;
-  const limite = Number(currentUser?.limite ?? 0) || 150000;
+  const limite = Number(currentUser?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
+  const enLimiteDeuda = limite > 0 && saldo <= -limite; // Ya debe 100k: solo pagar por fuera
   const puedeComprar = saldo > -limite;
 
   return (
@@ -169,49 +175,16 @@ const Coincidencias = () => {
 
         <GuiaCoincidencias />
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar: buscador para filtrar coincidencias */}
-          <aside className="lg:w-80 flex-shrink-0 w-full lg:block">
-            <Card className="sticky top-20 border-border">
-              <div className="p-4 space-y-4">
-                <div>
-                  <h2 className="font-semibold mb-2 flex items-center gap-2">
-                    <Package className="w-4 h-4 text-gold" />
-                    ¿Qué ofrecés a cambio?
-                  </h2>
-                  <p className="text-sm text-muted-foreground mb-2">Producto o servicio que tenés</p>
-                  <select
-                    value={miProductoId ?? ""}
-                    onChange={(e) => setMiProductoId(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Seleccionar...</option>
-                    {misProductos.map((p) => (
-                      <option key={p.id} value={p.id}>{p.titulo}</option>
-                    ))}
-                  </select>
-                  {misProductos.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Creá un producto en{" "}
-                      <button type="button" onClick={() => navigate("/mis-publicaciones")} className="text-gold hover:underline">
-                        Mis publicaciones
-                      </button>
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <h2 className="font-semibold mb-2 flex items-center gap-2">
-                    <Search className="w-4 h-4" />
-                    ¿Qué te interesa?
-                  </h2>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Buscá lo que querés intercambiar
-                  </p>
+        {/* Búsqueda: qué te interesa */}
+        <Card className="border-border mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">¿Qué te interesa?</label>
                 <form
                   className="flex gap-2"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    // La búsqueda ya filtra en vivo; Enter o click en lupita confirman
                     document.getElementById("coincidencias-resultados")?.scrollIntoView({ behavior: "smooth" });
                   }}
                 >
@@ -230,29 +203,94 @@ const Coincidencias = () => {
                     <Search className="w-4 h-4" />
                   </Button>
                 </form>
-                <label className="flex items-center gap-2 mt-3 text-sm text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={buscarEnMarketplace}
-                    onChange={(e) => setBuscarEnMarketplace(e.target.checked)}
-                    className="rounded border-input"
-                  />
-                  Buscar en todo el marketplace
-                </label>
-                </div>
               </div>
-            </Card>
-          </aside>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer self-end sm:self-center">
+                <input
+                  type="checkbox"
+                  checked={buscarEnMarketplace}
+                  onChange={(e) => setBuscarEnMarketplace(e.target.checked)}
+                  className="rounded border-input"
+                />
+                Buscar en todo el marketplace
+              </label>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Contenido principal */}
-          <div id="coincidencias-resultados" className="flex-1">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Tabla izquierda: Mis productos */}
+          <Card className="lg:w-[380px] flex-shrink-0 border-border">
+            <CardHeader className="py-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="w-5 h-5 text-gold" />
+                Mis productos
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Elegí qué ofrecés a cambio para proponer un intercambio
+              </p>
+            </CardHeader>
+            <CardContent className="p-0 pt-0">
+              {misProductos.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Creá un producto en{" "}
+                  <button type="button" onClick={() => navigate("/mis-publicaciones")} className="text-gold hover:underline">
+                    Mis publicaciones
+                  </button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-14">Imagen</TableHead>
+                      <TableHead>Título</TableHead>
+                      <TableHead className="text-right">Precio</TableHead>
+                      <TableHead className="w-24">Elegir</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {misProductos.map((p) => (
+                      <TableRow
+                        key={p.id}
+                        className={miProductoId === p.id ? "bg-gold/10" : ""}
+                        onClick={() => setMiProductoId(miProductoId === p.id ? null : p.id)}
+                      >
+                        <TableCell className="p-2">
+                          <img
+                            src={p.images?.[0]?.url || p.imagen || "https://via.placeholder.com/48"}
+                            alt=""
+                            className="w-12 h-12 rounded object-cover"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[140px] truncate">{p.titulo}</TableCell>
+                        <TableCell className="text-right gold-text">{formatIX(p.precio)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant={miProductoId === p.id ? "default" : "outline"}
+                            size="sm"
+                            className={miProductoId === p.id ? "bg-gold hover:bg-gold/90" : ""}
+                            onClick={(e) => { e.stopPropagation(); setMiProductoId(miProductoId === p.id ? null : p.id); }}
+                          >
+                            {miProductoId === p.id ? "Elegido" : "Elegir"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tabla derecha: Productos que me interesan */}
+          <div id="coincidencias-resultados" className="flex-1 min-w-0">
         {/* Alerta de crédito */}
         {!puedeComprar && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Has alcanzado el límite de crédito negativo ({formatIX(limite)}). 
-              Necesitás generar créditos positivos para continuar intercambiando.
+              {enLimiteDeuda
+                ? `Llegaste al límite de crédito (-${formatIX(limite)}). Solo podés pagar por fuera de la página hasta que reduzcas tu deuda.`
+                : `Has alcanzado el límite de crédito negativo (${formatIX(limite)}). Necesitás generar créditos positivos para continuar intercambiando.`}
             </AlertDescription>
           </Alert>
         )}
@@ -278,7 +316,10 @@ const Coincidencias = () => {
           </div>
         </div>
 
-        {/* Grid de coincidencias */}
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-gold" />
+          Productos que me interesan
+        </h2>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gold" />

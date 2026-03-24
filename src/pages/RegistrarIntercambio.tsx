@@ -142,7 +142,7 @@ const RegistrarIntercambio = () => {
               <div className="grid grid-cols-2 gap-4">
                 {!tipoPagoDesdeChat && (
                   <div className="space-y-2 col-span-2 sm:col-span-1">
-                    <Label htmlFor="creditos">Créditos (IX)</Label>
+                    <Label htmlFor="creditos">Créditos (IOX)</Label>
                     <Input
                       id="creditos"
                       name="creditos"

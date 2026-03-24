@@ -22,6 +22,7 @@ import MisCompras from "./pages/MisCompras";
 import Historial from "./pages/Historial";
 import Favoritos from "./pages/Favoritos";
 import Chat from "./pages/Chat";
+import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -143,6 +144,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Chat />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/registrar-intercambio" 
+                element={
+                  <ProtectedRoute>
+                    <RegistrarIntercambio />
                   </ProtectedRoute>
                 } 
               />

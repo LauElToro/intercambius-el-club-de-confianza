@@ -65,6 +65,19 @@ const Chat = () => {
     return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
+  const etiquetaSeparadorFecha = (d: string) => {
+    const date = new Date(d);
+    const hoy = new Date();
+    const ayer = new Date(hoy);
+    ayer.setDate(ayer.getDate() - 1);
+    if (date.toDateString() === hoy.toDateString()) return 'Hoy';
+    if (date.toDateString() === ayer.toDateString()) return 'Ayer';
+    if (date.getFullYear() !== hoy.getFullYear()) {
+      return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+  };
+
   const truncar = (s: string, n: number) => s.length > n ? s.slice(0, n) + '…' : s;
 
   const { formatIX } = useCurrencyVariant();
@@ -78,14 +91,18 @@ const Chat = () => {
   const [montoUSD, setMontoUSD] = useState("");
 
   const msgs = chatDetalle?.mensajes ?? [];
-  const primerMensajeIntercambio = msgs.find((m) => /quiero realizar un intercambio/i.test(m.contenido));
+  // Solo mostrar "Aprobar intercambio" cuando es una propuesta de intercambio (Coincidencias), no cuando es compra directa.
+  // La propuesta de Coincidencias incluye "Ver mi producto" o "Imagen del producto".
+  const esPropuestaIntercambio = (c: string) =>
+    /quiero realizar un intercambio/i.test(c) && (/ver mi producto/i.test(c) || /imagen del producto/i.test(c));
+  const primerMensajeIntercambio = msgs.find((m) => esPropuestaIntercambio(m.contenido));
   const soyReceptor = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId !== user?.id;
 
   const propuestaDelOtro = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i];
       if (m.senderId !== user?.id) {
-        const matchIX = m.contenido.match(/propongo pagar (\d+)\s*IX/i);
+        const matchIX = m.contenido.match(/propongo pagar (\d+)\s*(?:IX|IOX)/i);
         if (matchIX) return { tipo: "ix" as const, monto: parseInt(matchIX[1], 10), mensaje: m };
         const matchPesos = m.contenido.match(/propongo pagar (\d+)\s*pesos/i);
         if (matchPesos) return { tipo: "pesos" as const, monto: parseInt(matchPesos[1], 10), mensaje: m };
@@ -100,7 +117,7 @@ const Chat = () => {
   const handlePagarConIX = () => {
     const n = parseInt(montoIX, 10);
     if (isNaN(n) || n <= 0) return;
-    const texto = `Propongo pagar ${n} IX de diferencia para cerrar el intercambio.`;
+    const texto = `Propongo pagar ${n} IOX de diferencia para cerrar el intercambio.`;
     enviarMutation.mutate(texto, {
       onSuccess: () => {
         setPagarIxOpen(false);
@@ -136,7 +153,7 @@ const Chat = () => {
   const handleAceptarMonto = () => {
     if (!propuestaDelOtro) return;
     if (propuestaDelOtro.tipo === "ix") {
-      const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} IX. ¡Cerramos el intercambio!`;
+      const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} IOX. ¡Cerramos el intercambio!`;
       enviarMutation.mutate(texto);
       navigate("/registrar-intercambio", { state: { creditos: propuestaDelOtro.monto } });
     } else if (propuestaDelOtro.tipo === "pesos") {
@@ -266,25 +283,38 @@ const Chat = () => {
                       </div>
                     </CardHeader>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-                      {chatDetalle.mensajes.map((m: Mensaje) => {
-                        const esMio = m.senderId === user?.id;
-                        return (
-                        <div
-                          key={m.id}
-                          className={`flex ${esMio ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                              esMio ? 'bg-gold text-primary-foreground' : 'bg-muted'
-                            }`}
-                          >
-                            <p className="text-sm break-words">{m.contenido}</p>
-                            <p className={`text-xs mt-1 ${esMio ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                              {formatearHora(m.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                      );})}
+                      {(() => {
+                        const mensajes = chatDetalle.mensajes;
+                        let ultimaFecha: string | null = null;
+                        return mensajes.map((m: Mensaje) => {
+                          const fechaMsg = m.createdAt.split('T')[0];
+                          const mostrarSeparador = ultimaFecha !== fechaMsg;
+                          if (mostrarSeparador) ultimaFecha = fechaMsg;
+                          return (
+                            <div key={m.id}>
+                              {mostrarSeparador && (
+                                <div className="flex justify-center my-4">
+                                  <span className="text-xs text-muted-foreground bg-muted/80 px-3 py-1 rounded-full">
+                                    {etiquetaSeparadorFecha(m.createdAt)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className={`flex ${m.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                <div
+                                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                                    m.senderId === user?.id ? 'bg-gold text-primary-foreground' : 'bg-muted'
+                                  }`}
+                                >
+                                  <p className="text-sm break-words">{m.contenido}</p>
+                                  <p className={`text-xs mt-1 ${m.senderId === user?.id ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                                    {formatearHora(m.createdAt)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                       <div ref={messagesEndRef} />
                     </div>
                     {propuestaDelOtro && (
@@ -342,7 +372,7 @@ const Chat = () => {
                           variant="outline"
                           size="icon"
                           onClick={() => setPagarIxOpen(true)}
-                          title="Proponer pago con IX"
+                          title="Proponer pago con IOX"
                         >
                           <Banknote className="w-5 h-5" />
                         </Button>
@@ -375,15 +405,15 @@ const Chat = () => {
                           )}
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">Podés proponer IX, pesos o USD (por fuera). Ambos deben aprobar el acuerdo.</p>
+                      <p className="text-xs text-muted-foreground">Podés proponer IOX, pesos o USD (por fuera). Ambos deben aprobar el acuerdo.</p>
                     </div>
                     <Dialog open={pagarIxOpen} onOpenChange={setPagarIxOpen}>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Pagar con IX</DialogTitle>
+                          <DialogTitle>Pagar con IOX</DialogTitle>
                         </DialogHeader>
                         <p className="text-sm text-muted-foreground">
-                          Proponé un monto en IX para cubrir la diferencia del intercambio.
+                          Proponé un monto en IOX para cubrir la diferencia del intercambio.
                         </p>
                         <div className="flex gap-2 items-center">
                           <Input
@@ -393,7 +423,7 @@ const Chat = () => {
                             value={montoIX}
                             onChange={(e) => setMontoIX(e.target.value)}
                           />
-                          <span className="text-sm font-medium">IX</span>
+                          <span className="text-sm font-medium">IOX</span>
                         </div>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setPagarIxOpen(false)}>

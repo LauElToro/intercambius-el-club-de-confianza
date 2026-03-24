@@ -41,6 +41,8 @@ export interface MarketItem {
   createdAt: string;
   updatedAt: string;
   vendedor?: VendedorInfo | null;
+  /** Si false, el producto ya fue vendido y no debe mostrarse como disponible. El backend debe setearlo en false al completar checkout. */
+  disponible?: boolean;
 }
 
 export interface MarketItemFilters {
@@ -55,6 +57,8 @@ export interface MarketItemFilters {
   distanciaMax?: number;
   page?: number;
   limit?: number;
+  /** Si true, solo devolver productos disponibles (no vendidos). Por defecto true al listar el market. */
+  soloDisponibles?: boolean;
 }
 
 export interface MarketItemsResponse {
@@ -118,6 +122,9 @@ export const marketService = {
       }
       if (filters?.limit !== undefined) {
         params.append('limit', filters.limit.toString());
+      }
+      if (filters?.soloDisponibles === true) {
+        params.append('soloDisponibles', 'true');
       }
 
       const queryString = params.toString();
