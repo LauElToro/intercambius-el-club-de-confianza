@@ -5,10 +5,9 @@ import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Sparkles, MapPin, MessageCircle, Heart, AlertCircle, Loader2, Search, Repeat, Package } from "lucide-react";
+import { Sparkles, MapPin, Heart, AlertCircle, Loader2, Search, Repeat, Package, ExternalLink } from "lucide-react";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
@@ -37,6 +36,7 @@ const Coincidencias = () => {
   const [favoritos, setFavoritos] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const [miProductoId, setMiProductoId] = useState<number | null>(null);
+  const [productoInteresadoId, setProductoInteresadoId] = useState<number | null>(null);
   const [buscarEnMarketplace, setBuscarEnMarketplace] = useState(false);
 
   const { data: userData } = useQuery({
@@ -217,72 +217,76 @@ const Coincidencias = () => {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Tabla izquierda: Mis productos */}
-          <Card className="lg:w-[380px] flex-shrink-0 border-border">
-            <CardHeader className="py-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="w-5 h-5 text-gold" />
-                Mis productos
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Elegí qué ofrecés a cambio para proponer un intercambio
-              </p>
-            </CardHeader>
-            <CardContent className="p-0 pt-0">
-              {misProductos.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Creá un producto en{" "}
-                  <button type="button" onClick={() => navigate("/mis-publicaciones")} className="text-gold hover:underline">
-                    Mis publicaciones
-                  </button>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-14">Imagen</TableHead>
-                      <TableHead>Título</TableHead>
-                      <TableHead className="text-right">Precio</TableHead>
-                      <TableHead className="w-24">Elegir</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {misProductos.map((p) => (
-                      <TableRow
-                        key={p.id}
-                        className={miProductoId === p.id ? "bg-gold/10" : ""}
-                        onClick={() => setMiProductoId(miProductoId === p.id ? null : p.id)}
+        <div className="flex flex-col xl:flex-row gap-8">
+          {/* Columna izquierda: Mis productos o servicios */}
+          <div className="xl:w-1/2 flex flex-col">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Package className="w-5 h-5 text-gold" />
+              Mis productos o servicios
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Elegí cuál ofrecés a cambio para proponer un intercambio
+            </p>
+            {misProductos.length === 0 ? (
+              <div className="flex-1 bg-card rounded-xl border border-border p-8 text-center">
+                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">Aún no tenés productos publicados</p>
+                <Button variant="gold" onClick={() => navigate("/mis-publicaciones")}>
+                  Ir a Mis publicaciones
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-1">
+                {misProductos.map((p) => (
+                  <Card
+                    key={p.id}
+                    className={`coincidencia-card cursor-pointer border-border ${
+                      miProductoId === p.id ? "coincidencia-card--selected" : ""
+                    }`}
+                    onClick={() => setMiProductoId(miProductoId === p.id ? null : p.id)}
+                  >
+                    <div className="relative group">
+                      <img
+                        src={p.images?.[0]?.url || p.imagen || "https://via.placeholder.com/300x200"}
+                        alt={p.titulo}
+                        className="w-full h-40 object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                      <Badge className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50">
+                        {RUBROS[p.rubro as keyof typeof RUBROS]?.icon}{" "}
+                        {RUBROS[p.rubro as keyof typeof RUBROS]?.label}
+                      </Badge>
+                      {miProductoId === p.id && (
+                        <div className="absolute top-2 right-2 bg-gold text-primary-foreground rounded-full p-1.5">
+                          <Repeat className="w-4 h-4" />
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-base line-clamp-2 mb-1">{p.titulo}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{p.descripcion}</p>
+                      <button
+                        type="button"
+                        className="text-xs text-gold hover:underline flex items-center gap-1 mb-2"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/producto/${p.id}`); }}
                       >
-                        <TableCell className="p-2">
-                          <img
-                            src={p.images?.[0]?.url || p.imagen || "https://via.placeholder.com/48"}
-                            alt=""
-                            className="w-12 h-12 rounded object-cover"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium max-w-[140px] truncate">{p.titulo}</TableCell>
-                        <TableCell className="text-right gold-text">{formatIX(p.precio)}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant={miProductoId === p.id ? "default" : "outline"}
-                            size="sm"
-                            className={miProductoId === p.id ? "bg-gold hover:bg-gold/90" : ""}
-                            onClick={(e) => { e.stopPropagation(); setMiProductoId(miProductoId === p.id ? null : p.id); }}
-                          >
-                            {miProductoId === p.id ? "Elegido" : "Elegir"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                        <ExternalLink className="w-3 h-3" />
+                        Ver detalle
+                      </button>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold gold-text">{formatIX(p.precio)}</span>
+                        <span className={`text-sm font-medium ${miProductoId === p.id ? "text-gold" : "text-muted-foreground"}`}>
+                          {miProductoId === p.id ? "✓ Elegido" : "Elegir"}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Tabla derecha: Productos que me interesan */}
-          <div id="coincidencias-resultados" className="flex-1 min-w-0">
+          {/* Columna derecha: Los que me interesan */}
+          <div id="coincidencias-resultados" className="xl:w-1/2 flex flex-col min-w-0">
         {/* Alerta de crédito */}
         {!puedeComprar && (
           <Alert variant="destructive" className="mb-6">
@@ -297,7 +301,7 @@ const Coincidencias = () => {
 
         {/* Info de crédito disponible */}
         <div className="bg-card rounded-lg p-4 border border-border mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Crédito disponible</p>
               <p className="text-lg font-semibold">
@@ -307,9 +311,9 @@ const Coincidencias = () => {
                 </span>
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0">
               <p className="text-sm text-muted-foreground mb-1">Tu oferta</p>
-              <p className="text-lg font-semibold gold-text truncate max-w-[200px] ml-auto">
+              <p className="text-lg font-semibold gold-text truncate">
                 {miProductoSeleccionado ? miProductoSeleccionado.titulo : "Seleccioná un producto"}
               </p>
             </div>
@@ -318,8 +322,11 @@ const Coincidencias = () => {
 
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-gold" />
-          Productos que me interesan
+          Los que me interesan
         </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Seleccioná el que querés y hacé clic en "Quiero intercambiar"
+        </p>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gold" />
@@ -334,100 +341,113 @@ const Coincidencias = () => {
             </p>
           </div>
         ) : coincidenciasFiltradas.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-1">
             {coincidenciasFiltradas
               .filter((item: MarketItem) => item && item.id)
-              .map((item: MarketItem) => (
-              <Card 
-                key={item.id} 
-                className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
-                onClick={() => navigate(`/producto/${item.id}`)}
-              >
-                <div className="relative group">
-                  <img
-                    src={item.imagen || 'https://via.placeholder.com/300x200'}
-                    alt={item.titulo || 'Producto'}
-                    className="w-full h-48 object-cover transition-transform duration-200 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200';
-                    }}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 bg-background/95 hover:bg-background backdrop-blur-sm text-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorito(item.id);
-                    }}
+              .map((item: MarketItem) => {
+                const isSelected = productoInteresadoId === item.id;
+                return (
+                  <Card
+                    key={item.id}
+                    className={`coincidencia-card cursor-pointer border-border ${
+                      isSelected ? "coincidencia-card--selected" : ""
+                    }`}
+                    onClick={() => setProductoInteresadoId(isSelected ? null : item.id)}
                   >
-                    <Heart
-                      className={`w-5 h-5 transition-all ${
-                        favoritos.includes(item.id) 
-                          ? "fill-red-500 text-red-500" 
-                          : "text-foreground/70 hover:text-red-500"
-                      }`}
-                    />
-                  </Button>
-                  <Badge className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50">
-                    {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
-                    {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
-                  </Badge>
-                </div>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2 gap-2">
-                    <h3 className="font-semibold text-base line-clamp-2 flex-1 hover:text-gold transition-colors">
-                      {item.titulo}
-                    </h3>
-                    <span className="text-xl font-bold gold-text flex-shrink-0">
-                      {formatIX(item.precio)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {item.descripcion}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      <span className="truncate max-w-[120px]">{item.ubicacion}</span>
-                    </div>
-                    {item.distancia && (
-                      <span className="flex-shrink-0">{item.distancia} km</span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 text-xs">
-                      <span className="text-yellow-500">★</span>
-                      <span className="font-medium">{item.rating || 0}</span>
-                    </div>
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      className="bg-gold hover:bg-gold/90 text-primary-foreground"
-                      disabled={!miProductoSeleccionado || iniciarIntercambioMutation.isPending}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!miProductoSeleccionado) {
-                          toast({ title: "Seleccioná tu producto", description: "Elegí qué ofrecés a cambio en el panel de la izquierda.", variant: "destructive" });
-                          return;
-                        }
-                        iniciarIntercambioMutation.mutate({
-                          itemDestino: item,
-                          miProducto: miProductoSeleccionado,
-                        });
-                      }}
-                    >
-                      {iniciarIntercambioMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                      ) : (
-                        <Repeat className="w-4 h-4 mr-1" />
+                    <div className="relative group">
+                      <img
+                        src={item.images?.[0]?.url || item.imagen || 'https://via.placeholder.com/300x200'}
+                        alt={item.titulo || 'Producto'}
+                        className="w-full h-40 object-cover transition-transform duration-200 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200';
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 bg-background/95 hover:bg-background backdrop-blur-sm text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorito(item.id);
+                        }}
+                      >
+                        <Heart
+                          className={`w-5 h-5 transition-all ${
+                            favoritos.includes(item.id)
+                              ? "fill-red-500 text-red-500"
+                              : "text-foreground/70 hover:text-red-500"
+                          }`}
+                        />
+                      </Button>
+                      <Badge className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm text-foreground border border-border/50">
+                        {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
+                        {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
+                      </Badge>
+                      {isSelected && (
+                        <div className="absolute bottom-2 left-2 bg-gold text-primary-foreground rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
+                          <Repeat className="w-3 h-3" />
+                          Quiero este
+                        </div>
                       )}
-                      Intercambiar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <h3 className="font-semibold text-base line-clamp-2 flex-1 hover:text-gold transition-colors">
+                          {item.titulo}
+                        </h3>
+                        <span className="text-lg font-bold gold-text flex-shrink-0">
+                          {formatIX(item.precio)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                        {item.descripcion}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-3 gap-2">
+                        <button
+                          type="button"
+                          className="text-gold hover:underline flex items-center gap-1 min-w-0"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/producto/${item.id}`); }}
+                        >
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">Ver detalle</span>
+                        </button>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate max-w-[100px]">{item.ubicacion}</span>
+                        </div>
+                        {item.distancia && (
+                          <span className="flex-shrink-0">{item.distancia} km</span>
+                        )}
+                      </div>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="w-full bg-gold hover:bg-gold/90 text-primary-foreground font-semibold py-2"
+                        disabled={!miProductoSeleccionado || iniciarIntercambioMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!miProductoSeleccionado) {
+                            toast({ title: "Seleccioná tu producto", description: "Elegí qué ofrecés a cambio en el panel de la izquierda.", variant: "destructive" });
+                            return;
+                          }
+                          iniciarIntercambioMutation.mutate({
+                            itemDestino: item,
+                            miProducto: miProductoSeleccionado,
+                          });
+                        }}
+                      >
+                        {iniciarIntercambioMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Repeat className="w-4 h-4 mr-2" />
+                        )}
+                        Quiero intercambiar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         ) : (
           <div className="bg-card rounded-xl border border-border p-8 text-center">

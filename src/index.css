@@ -164,6 +164,30 @@
     box-shadow: var(--shadow-gold);
   }
 
+  /* Cards de coincidencias: hover y selected dorado */
+  .coincidencia-card {
+    @apply relative transition-all duration-300 overflow-hidden rounded-xl;
+  }
+  .coincidencia-card::after {
+    content: '';
+    @apply absolute inset-0 rounded-xl pointer-events-none opacity-0 transition-opacity duration-300;
+    box-shadow: inset 0 0 0 2px hsl(var(--gold) / 0.5);
+  }
+  .coincidencia-card:hover {
+    @apply border-gold/50;
+    box-shadow: var(--shadow-gold);
+  }
+  .coincidencia-card:hover::after {
+    @apply opacity-40;
+  }
+  .coincidencia-card.coincidencia-card--selected {
+    @apply border-gold;
+    box-shadow: var(--shadow-gold);
+  }
+  .coincidencia-card.coincidencia-card--selected::after {
+    @apply opacity-100;
+  }
+
   .card-gradient {
     background: var(--gradient-card);
   }
