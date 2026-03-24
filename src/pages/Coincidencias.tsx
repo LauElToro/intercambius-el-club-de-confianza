@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Sparkles, MapPin, Heart, AlertCircle, Loader2, Search, Repeat, Package, ExternalLink } from "lucide-react";
+import { Sparkles, MapPin, Heart, AlertCircle, Loader2, Search, Repeat, Package, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
@@ -19,6 +19,8 @@ import { chatService } from "@/services/chat.service";
 import { useToast } from "@/components/ui/use-toast";
 import { GuiaCoincidencias } from "@/components/onboarding/GuiaCoincidencias";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
+
+const ITEMS_POR_PAGINA = 6;
 
 const RUBROS = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -38,6 +40,7 @@ const Coincidencias = () => {
   const [miProductoId, setMiProductoId] = useState<number | null>(null);
   const [productoInteresadoId, setProductoInteresadoId] = useState<number | null>(null);
   const [buscarEnMarketplace, setBuscarEnMarketplace] = useState(false);
+  const [paginaInteres, setPaginaInteres] = useState(1);
 
   const { data: userData } = useQuery({
     queryKey: ['currentUser'],
@@ -124,6 +127,11 @@ const Coincidencias = () => {
     return () => { recordRef.current && clearTimeout(recordRef.current); };
   }, [search, puedeRegistrarBusquedas, currentUser?.id]);
 
+  // Reset página al cambiar búsqueda o filtros
+  useEffect(() => {
+    setPaginaInteres(1);
+  }, [search, buscarEnMarketplace]);
+
   const listaBase = buscarEnMarketplace ? itemsBuscados : coincidencias;
   const coincidenciasFiltradas = useMemo(() => {
     const list = Array.isArray(listaBase) ? listaBase : [];
@@ -140,6 +148,11 @@ const Coincidencias = () => {
 
   const miProductoSeleccionado = misProductos.find(p => p.id === miProductoId);
   const isLoading = buscarEnMarketplace ? loadingMarket : loadingCoincidencias;
+
+  const totalPaginas = Math.ceil(coincidenciasFiltradas.length / ITEMS_POR_PAGINA) || 1;
+  const paginaInteresClamped = Math.min(Math.max(1, paginaInteres), totalPaginas);
+  const inicio = (paginaInteresClamped - 1) * ITEMS_POR_PAGINA;
+  const coincidenciasPagina = coincidenciasFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
 
   if (!currentUser) {
     return (
@@ -341,8 +354,9 @@ const Coincidencias = () => {
             </p>
           </div>
         ) : coincidenciasFiltradas.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-1">
-            {coincidenciasFiltradas
+          <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {coincidenciasPagina
               .filter((item: MarketItem) => item && item.id)
               .map((item: MarketItem) => {
                 const isSelected = productoInteresadoId === item.id;
@@ -449,6 +463,39 @@ const Coincidencias = () => {
                 );
               })}
           </div>
+
+          {/* Paginación */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between gap-4 mt-6 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                disabled={paginaInteresClamped <= 1}
+                onClick={() => setPaginaInteres(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Anterior
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Página {paginaInteresClamped} de {totalPaginas}
+                <span className="ml-1">
+                  ({coincidenciasFiltradas.length} productos)
+                </span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                disabled={paginaInteresClamped >= totalPaginas}
+                onClick={() => setPaginaInteres(p => Math.min(totalPaginas, p + 1))}
+              >
+                Siguiente
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+          </>
         ) : (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
