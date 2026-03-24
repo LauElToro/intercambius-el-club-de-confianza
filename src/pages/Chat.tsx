@@ -16,7 +16,51 @@ import {
 import { chatService, Conversacion, Mensaje } from "@/services/chat.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
-import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, Banknote, Check, DollarSign, CheckCircle2 } from "lucide-react";
+import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, Banknote, Check, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
+
+function ProductoCardMini({
+  titulo,
+  imagen,
+  url,
+  precio,
+  formatIX,
+  onNavigate,
+}: {
+  titulo: string;
+  imagen?: string;
+  url?: string;
+  precio?: number;
+  formatIX: (n: number) => string;
+  onNavigate: (path: string) => void;
+}) {
+  const id = url?.match(/\/producto\/(\d+)/)?.[1];
+  return (
+    <button
+      type="button"
+      onClick={() => id && onNavigate(`/producto/${id}`)}
+      className="flex gap-3 p-3 rounded-xl border border-border bg-background hover:border-gold/40 hover:bg-muted/50 text-left w-full transition-colors"
+    >
+      <img
+        src={imagen || 'https://via.placeholder.com/80'}
+        alt={titulo}
+        className="w-16 h-16 rounded-lg object-cover shrink-0"
+        onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80'; }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-sm line-clamp-2">{titulo}</p>
+        {precio != null && precio > 0 && (
+          <p className="text-gold font-semibold text-sm mt-0.5">{formatIX(precio)}</p>
+        )}
+        {url && (
+          <span className="inline-flex items-center gap-1 text-xs text-gold mt-1">
+            <ExternalLink className="w-3 h-3" />
+            Ver producto
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
 
 const Chat = () => {
   const { conversacionId } = useParams<{ conversacionId?: string }>();
@@ -91,10 +135,18 @@ const Chat = () => {
   const [montoUSD, setMontoUSD] = useState("");
 
   const msgs = chatDetalle?.mensajes ?? [];
-  // Solo mostrar "Aprobar intercambio" cuando es una propuesta de intercambio (Coincidencias), no cuando es compra directa.
-  // La propuesta de Coincidencias incluye "Ver mi producto" o "Imagen del producto".
+  // Detectar propuesta de intercambio: formato nuevo (JSON) o legado (texto)
+  const parseIntercambio = (c: string): { saludo: string; miProducto: { titulo: string; imagen?: string; url?: string; precio?: number }; tuProducto: { titulo: string; imagen?: string; url?: string; precio?: number } } | null => {
+    try {
+      if (c.startsWith(chatService.INTERCAMBIO_PREFIX)) {
+        const parsed = JSON.parse(c);
+        if (parsed._t === 'intercambio' && parsed.miProducto && parsed.tuProducto) return parsed;
+      }
+    } catch (_) {}
+    return null;
+  };
   const esPropuestaIntercambio = (c: string) =>
-    /quiero realizar un intercambio/i.test(c) && (/ver mi producto/i.test(c) || /imagen del producto/i.test(c));
+    parseIntercambio(c) !== null || (/quiero realizar un intercambio/i.test(c) && (/ver mi producto/i.test(c) || /imagen del producto/i.test(c)));
   const primerMensajeIntercambio = msgs.find((m) => esPropuestaIntercambio(m.contenido));
   const soyReceptor = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId !== user?.id;
 
@@ -300,16 +352,57 @@ const Chat = () => {
                                 </div>
                               )}
                               <div className={`flex ${m.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
-                                <div
-                                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                                    m.senderId === user?.id ? 'bg-gold text-primary-foreground' : 'bg-muted'
-                                  }`}
-                                >
-                                  <p className="text-sm break-words">{m.contenido}</p>
-                                  <p className={`text-xs mt-1 ${m.senderId === user?.id ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                                    {formatearHora(m.createdAt)}
-                                  </p>
-                                </div>
+                                {(() => {
+                                  const intercambio = parseIntercambio(m.contenido);
+                                  if (intercambio) {
+                                    return (
+                                      <div className={`max-w-[85%] sm:max-w-md rounded-2xl overflow-hidden ${
+                                        m.senderId === user?.id ? 'bg-gold/10 border border-gold/30' : 'bg-muted border border-border'
+                                      }`}>
+                                        <div className="p-4 space-y-4">
+                                          <p className="text-sm font-medium">{intercambio.saludo}</p>
+                                          <div>
+                                            <p className="text-sm text-muted-foreground mb-2">Quiero intercambiar mi producto/servicio:</p>
+                                            <ProductoCardMini
+                                              titulo={intercambio.miProducto.titulo}
+                                              imagen={intercambio.miProducto.imagen}
+                                              url={intercambio.miProducto.url}
+                                              precio={intercambio.miProducto.precio}
+                                              formatIX={formatIX}
+                                              onNavigate={navigate}
+                                            />
+                                          </div>
+                                          <div>
+                                            <p className="text-sm text-muted-foreground mb-2">Por tu producto/servicio:</p>
+                                            <ProductoCardMini
+                                              titulo={intercambio.tuProducto.titulo}
+                                              imagen={intercambio.tuProducto.imagen}
+                                              url={intercambio.tuProducto.url}
+                                              precio={intercambio.tuProducto.precio}
+                                              formatIX={formatIX}
+                                              onNavigate={navigate}
+                                            />
+                                          </div>
+                                        </div>
+                                        <p className={`text-xs px-4 pb-2 ${m.senderId === user?.id ? 'text-gold/80' : 'text-muted-foreground'}`}>
+                                          {formatearHora(m.createdAt)}
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div
+                                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                                        m.senderId === user?.id ? 'bg-gold text-primary-foreground' : 'bg-muted'
+                                      }`}
+                                    >
+                                      <p className="text-sm break-words whitespace-pre-wrap">{m.contenido}</p>
+                                      <p className={`text-xs mt-1 ${m.senderId === user?.id ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                                        {formatearHora(m.createdAt)}
+                                      </p>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           );

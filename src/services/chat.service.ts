@@ -38,37 +38,41 @@ export const chatService = {
     }
   },
 
+  /** Prefijo para detectar mensaje estructurado de intercambio */
+  INTERCAMBIO_PREFIX: '{"_t":"intercambio"',
+
   /** Iniciar conversación e inmediatamente enviar mensaje de intercambio. Para flujo de Coincidencias. */
   async iniciarIntercambio(opts: {
     marketItemId: number;
+    miNombre: string;
     miProductoTitulo: string;
-    otroUsuarioNombre?: string;
-    /** URL pública del producto que propongo intercambiar (ej: https://.../producto/123) */
     miProductoUrl?: string;
-    /** URL de la primera imagen del producto que propongo */
     miProductoImagenUrl?: string;
-    /** Descripción y precio para enriquecer la propuesta */
-    miProductoDescripcion?: string;
     miProductoPrecio?: number;
+    /** Producto del otro usuario que queremos (tu producto) */
+    tuProductoTitulo: string;
+    tuProductoUrl?: string;
+    tuProductoImagenUrl?: string;
+    tuProductoPrecio?: number;
   }): Promise<{ conversacionId: number }> {
     const { conversacionId } = await this.iniciarConversacion({ marketItemId: opts.marketItemId });
-    const saludo = opts.otroUsuarioNombre?.trim()
-      ? `Hola ${opts.otroUsuarioNombre}. `
-      : 'Hola. ';
-    let mensaje = `${saludo}Quiero realizar un intercambio con vos.\n\n**Mi producto:** ${opts.miProductoTitulo}`;
-    if (opts.miProductoDescripcion) {
-      mensaje += `\n${opts.miProductoDescripcion}`;
-    }
-    if (opts.miProductoPrecio != null && opts.miProductoPrecio > 0) {
-      mensaje += `\nPrecio: ${opts.miProductoPrecio} IOX`;
-    }
-    if (opts.miProductoUrl) {
-      mensaje += `\n\nVer mi producto: ${opts.miProductoUrl}`;
-    }
-    if (opts.miProductoImagenUrl) {
-      mensaje += `\n\nImagen del producto: ${opts.miProductoImagenUrl}`;
-    }
-    await this.enviarMensaje(conversacionId, mensaje);
+    const payload = {
+      _t: 'intercambio',
+      saludo: `¡Hola! Un gusto conectar, soy ${opts.miNombre.trim() || 'Intercambius'}`,
+      miProducto: {
+        titulo: opts.miProductoTitulo,
+        imagen: opts.miProductoImagenUrl,
+        url: opts.miProductoUrl,
+        precio: opts.miProductoPrecio,
+      },
+      tuProducto: {
+        titulo: opts.tuProductoTitulo,
+        imagen: opts.tuProductoImagenUrl,
+        url: opts.tuProductoUrl,
+        precio: opts.tuProductoPrecio,
+      },
+    };
+    await this.enviarMensaje(conversacionId, JSON.stringify(payload));
     return { conversacionId };
   },
 

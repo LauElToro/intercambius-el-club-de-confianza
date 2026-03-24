@@ -85,16 +85,19 @@ const Coincidencias = () => {
       itemDestino: MarketItem;
       miProducto: MarketItem;
     }) => {
-      const miProductoImagenUrl =
-        miProducto.images?.[0]?.url || miProducto.imagen || '';
+      const miProductoImagenUrl = miProducto.images?.[0]?.url || miProducto.imagen || '';
+      const tuProductoImagenUrl = itemDestino.images?.[0]?.url || itemDestino.imagen || '';
       return chatService.iniciarIntercambio({
         marketItemId: itemDestino.id,
+        miNombre: currentUser?.nombre || 'Intercambius',
         miProductoTitulo: miProducto.titulo,
-        otroUsuarioNombre: itemDestino.vendedor?.nombre || '',
         miProductoUrl: miProducto.id ? `${baseUrl}/producto/${miProducto.id}` : undefined,
         miProductoImagenUrl: miProductoImagenUrl || undefined,
-        miProductoDescripcion: miProducto.descripcion || undefined,
         miProductoPrecio: miProducto.precio,
+        tuProductoTitulo: itemDestino.titulo,
+        tuProductoUrl: itemDestino.id ? `${baseUrl}/producto/${itemDestino.id}` : undefined,
+        tuProductoImagenUrl: tuProductoImagenUrl || undefined,
+        tuProductoPrecio: itemDestino.precio,
       });
     },
     onSuccess: (data) => {
