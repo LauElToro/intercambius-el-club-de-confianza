@@ -1,5 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import Header from "./Header";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfertaCreditoTerminos, hasRespondidoOfertaCredito } from "@/components/credito/OfertaCreditoTerminos";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,9 +25,13 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-background">
       {showHeader && <Header />}
-      <main className={showHeader ? "pt-16" : ""}>
+      <main className={cn(
+        showHeader && "pt-16",
+        showHeader && user?.id && "pb-20 md:pb-0"
+      )}>
         {children}
       </main>
+      {showHeader && user?.id && <MobileBottomNav />}
       {user?.id && (
         <OfertaCreditoTerminos
           userId={user.id}

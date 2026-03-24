@@ -198,6 +198,14 @@
 }
 
 @layer utilities {
+  .safe-area-pb {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }

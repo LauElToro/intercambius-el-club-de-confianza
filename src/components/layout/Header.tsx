@@ -104,7 +104,7 @@ const Header = () => {
             alt="Intercambius" 
             className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover"
           />
-          <span className="text-lg md:text-xl font-semibold gold-text hidden sm:inline-block">
+          <span className="text-base sm:text-lg md:text-xl font-semibold gold-text truncate max-w-[140px] sm:max-w-none">
             Intercambius
           </span>
         </Link>
@@ -140,17 +140,19 @@ const Header = () => {
         </nav>
 
         {/* Right side: saldo IOX + equivalente ARS/USD + switch */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {usuario && <HeaderSaldo saldo={usuario.saldo ?? 0} />}
-          <CurrencySwitch />
+          <div className="hidden md:block">
+            <CurrencySwitch />
+          </div>
           {/* Notificaciones (solo si está logueado) */}
           {!!user && <NotificationDropdown />}
-          {/* Theme Toggle */}
+          {/* Theme Toggle - oculto en mobile (está en el sheet) */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="h-9 w-9"
+            className="hidden md:flex h-9 w-9"
             aria-label="Cambiar tema"
           >
             {theme === "dark" ? (
@@ -245,19 +247,19 @@ const Header = () => {
             }
           })()}
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button - touch target mínimo 44px */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden h-9 w-9"
+                className="md:hidden h-11 w-11 min-h-[44px] min-w-[44px] -mr-1"
                 aria-label="Abrir menú"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0">
+            <SheetContent side="right" className="w-[min(85vw,360px)] sm:w-[400px] p-0 flex flex-col max-h-[100dvh]">
               <div className="flex flex-col h-full">
                 {/* Header del menú mobile */}
                 <SheetHeader className="px-6 pt-6 pb-4 border-b">
@@ -273,35 +275,39 @@ const Header = () => {
                   </div>
                 </SheetHeader>
 
-                {/* Navigation Items */}
-                <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-                  {/* Home link */}
-                  <button
-                    onClick={() => handleNavClick("/")}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
-                      location.pathname === "/"
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    )}
-                  >
-                    <Home className="h-5 w-5" />
-                    <span className="font-medium">Inicio</span>
-                  </button>
+                {/* Navigation Items - touch targets min 44px */}
+                <nav className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                    Principal
+                  </p>
+                  <div className="space-y-1">
+                    {/* Inicio: landing si no logueado, dashboard si logueado */}
+                    <button
+                      onClick={() => handleNavClick(user ? "/dashboard" : "/")}
+                      className={cn(
+                        "w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors min-h-[48px] touch-manipulation",
+                        (user ? location.pathname === "/dashboard" : location.pathname === "/")
+                          ? "bg-gold/10 text-gold border border-gold/20"
+                          : "text-foreground hover:bg-muted active:bg-muted/80"
+                      )}
+                    >
+                      <Home className="h-5 w-5 shrink-0" />
+                      <span className="font-medium">Inicio</span>
+                    </button>
 
-                  {/* Market link (público) */}
-                  <button
-                    onClick={() => handleNavClick("/market")}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
-                      location.pathname.startsWith("/market")
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    )}
-                  >
-                    <ShoppingBag className="h-5 w-5" />
-                    <span className="font-medium">Market</span>
-                  </button>
+                    <button
+                      onClick={() => handleNavClick("/market")}
+                      className={cn(
+                        "w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors min-h-[48px] touch-manipulation",
+                        location.pathname.startsWith("/market")
+                          ? "bg-gold/10 text-gold border border-gold/20"
+                          : "text-foreground hover:bg-muted active:bg-muted/80"
+                      )}
+                    >
+                      <ShoppingBag className="h-5 w-5 shrink-0" />
+                      <span className="font-medium">Market</span>
+                    </button>
+                  </div>
 
                   {(() => {
                     const token = localStorage.getItem("intercambius_token");
@@ -309,36 +315,39 @@ const Header = () => {
                     
                     return (
                       <>
-                        <Separator className="my-2" />
-                        {/* Main nav items (solo si está autenticado) */}
-                        {navItems.filter(item => item.to !== "/market").map((item) => {
-                          const Icon = item.icon;
-                          const isActive = location.pathname === item.to || 
-                            (item.to !== "/" && location.pathname.startsWith(item.to));
-                          
-                          return (
-                            <button
-                              key={item.to}
-                              onClick={() => handleNavClick(item.to)}
-                              className={cn(
-                                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
-                                isActive
-                                  ? "bg-muted text-foreground"
-                                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                              )}
-                            >
-                              <Icon className="h-5 w-5" />
-                              <span className="font-medium">{item.label}</span>
-                            </button>
-                          );
-                        })}
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 mt-6 mb-2">
+                          Mi cuenta
+                        </p>
+                        <div className="space-y-1">
+                          {navItems.filter(item => item.to !== "/market").map((item) => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.to || 
+                              (item.to !== "/" && location.pathname.startsWith(item.to));
+                            
+                            return (
+                              <button
+                                key={item.to}
+                                onClick={() => handleNavClick(item.to)}
+                                className={cn(
+                                  "w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors min-h-[48px] touch-manipulation",
+                                  isActive
+                                    ? "bg-gold/10 text-gold border border-gold/20"
+                                    : "text-foreground hover:bg-muted active:bg-muted/80"
+                                )}
+                              >
+                                <Icon className="h-5 w-5 shrink-0" />
+                                <span className="font-medium">{item.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </>
                     );
                   })()}
 
-                  <Separator className="my-2" />
+                  <Separator className="my-4" />
 
-                  {/* CTA Button en mobile */}
+                  {/* CTA en mobile */}
                   {(() => {
                     const token = localStorage.getItem("intercambius_token");
                     const isAuthenticated = !!token;
@@ -346,92 +355,68 @@ const Header = () => {
                     if (isAuthenticated) {
                       return (
                         <div className="space-y-2">
-                          <Link to="/dashboard" className="block">
-                            <Button 
-                              variant="gold-outline" 
-                              className="w-full justify-start gap-3 h-auto py-3"
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              <User className="h-5 w-5" />
-                              <span className="font-medium">Cuenta - Saldo</span>
-                            </Button>
-                          </Link>
                           <Button 
                             variant="ghost" 
-                            className="w-full justify-start gap-3 h-auto py-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="w-full justify-start gap-4 h-12 px-4 text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation"
                             onClick={() => { logout(); setMobileMenuOpen(false); }}
                           >
-                            <LogOut className="h-5 w-5" />
+                            <LogOut className="h-5 w-5 shrink-0" />
                             <span className="font-medium">Cerrar sesión</span>
                           </Button>
                         </div>
                       );
                     } else {
                       return (
-                        <>
-                          <Link to="/login" className="block mb-2">
-                            <Button 
-                              variant="outline" 
-                              className="w-full justify-start gap-3 h-auto py-3"
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              <LogIn className="h-5 w-5" />
-                              <span className="font-medium">Iniciar sesión</span>
-                            </Button>
-                          </Link>
-                          <Link to="/registro" className="block">
-                            <Button 
-                              variant="gold" 
-                              className="w-full justify-start gap-3 h-auto py-3"
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              <LogIn className="h-5 w-5" />
-                              <span className="font-medium">Sumarme</span>
-                            </Button>
-                          </Link>
-                        </>
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => handleNavClick("/login")}
+                            className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border border-border hover:bg-muted min-h-[48px] touch-manipulation"
+                          >
+                            <LogIn className="h-5 w-5 shrink-0" />
+                            <span className="font-medium">Iniciar sesión</span>
+                          </button>
+                          <button
+                            onClick={() => handleNavClick("/registro")}
+                            className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl bg-gold hover:bg-gold/90 text-primary-foreground min-h-[48px] touch-manipulation font-medium"
+                          >
+                            <User className="h-5 w-5 shrink-0" />
+                            <span>Sumarme</span>
+                          </button>
+                        </div>
                       );
                     }
                   })()}
                 </nav>
 
-                {/* Footer del menú mobile */}
-                <div className="px-4 py-4 border-t space-y-4">
+                {/* Footer: saldo, moneda, tema */}
+                <div className="shrink-0 px-4 py-4 border-t bg-muted/30 space-y-3">
                   {usuario && (
-                    <div className="rounded-lg border border-border bg-muted/30 p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Saldo</p>
-                      <p className="text-lg font-semibold text-gold">
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Tu saldo</p>
+                      <p className="text-xl font-bold gold-text">
                         {(usuario.saldo ?? 0).toLocaleString("es-AR")} IOX
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         ${(usuario.saldo ?? 0).toLocaleString("es-AR")} ARS · {(Number(usuario.saldo ?? 0) / IX_PESOS_PER_USD).toFixed(2)} USD
                       </p>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>IOX</span>
-                    <CurrencySwitch />
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Tema</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                      <span className="text-sm font-medium">Moneda</span>
+                      <CurrencySwitch />
+                    </div>
+                    <button
                       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                      className="h-8 gap-2"
+                      className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium min-h-[48px] touch-manipulation"
                     >
+                      <span>Tema</span>
                       {theme === "dark" ? (
-                        <>
-                          <Sun className="h-4 w-4" />
-                          <span>Claro</span>
-                        </>
+                        <Sun className="h-4 w-4" />
                       ) : (
-                        <>
-                          <Moon className="h-4 w-4" />
-                          <span>Oscuro</span>
-                        </>
+                        <Moon className="h-4 w-4" />
                       )}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </div>
