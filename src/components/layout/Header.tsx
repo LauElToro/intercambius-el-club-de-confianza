@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CurrencySwitch } from "@/components/ui/currency-switch";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { HeaderSaldo } from "@/components/layout/HeaderSaldo";
 import { IX_PESOS_PER_USD } from "@/lib/currency";
@@ -44,6 +45,7 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { variant, setVariant } = useCurrencyVariant();
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: () => userService.getCurrentUser(),
@@ -402,9 +404,28 @@ const Header = () => {
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                    <div className="flex flex-col gap-2 rounded-xl border border-border bg-background p-3">
                       <span className="text-sm font-medium">Moneda</span>
-                      <CurrencySwitch />
+                      <div className="flex rounded-lg border border-border bg-muted/50 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setVariant('IOX-ARS')}
+                          className={`flex-1 min-h-[44px] px-3 text-xs font-medium rounded-md transition-colors touch-manipulation active:scale-[0.98] ${
+                            variant === 'IOX-ARS' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          IOX-ARS
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVariant('IOX-USD')}
+                          className={`flex-1 min-h-[44px] px-3 text-xs font-medium rounded-md transition-colors touch-manipulation active:scale-[0.98] ${
+                            variant === 'IOX-USD' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          IOX-USD
+                        </button>
+                      </div>
                     </div>
                     <button
                       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
