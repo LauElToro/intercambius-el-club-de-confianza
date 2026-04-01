@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { WelcomeBanner } from "@/components/onboarding/WelcomeBanner";
 import { ComoFuncionaIX } from "@/components/onboarding/ComoFuncionaIX";
+import { ReferidosPanel } from "@/components/referidos/ReferidosPanel";
 
 function formatFechaRelativa(dateStr: string): string {
   const date = new Date(dateStr);
@@ -145,6 +146,10 @@ const Dashboard = () => {
               <span>Ver coincidencias</span>
             </Button>
           </Link>
+        </div>
+
+        <div className="mb-8">
+          <ReferidosPanel compact />
         </div>
 
         {/* Profile Cards */}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Receipt, ShoppingBag, MessageCircle, ExternalLink } from "lucide-react";
-import { intercambiosService } from "@/services/intercambios.service";
+import { intercambiosService, Intercambio } from "@/services/intercambios.service";
 import { chatService } from "@/services/chat.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
@@ -36,9 +36,8 @@ const Historial = () => {
 
   const currentUser = userData || user;
 
-  const iniciarChatMutation = useMutation({
-    mutationFn: ({ vendedorId, marketItemId }: { vendedorId: number; marketItemId?: number }) =>
-      chatService.iniciarConversacion(marketItemId ? { marketItemId } : { vendedorId }),
+  const abrirChatIntercambioMutation = useMutation({
+    mutationFn: (i: Intercambio) => chatService.abrirChatIntercambio(i),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       navigate(`/chat/${data.conversacionId}`);
@@ -109,8 +108,8 @@ const Historial = () => {
                 const recibido = esRecibido(i);
                 const cantidad = Math.abs(i.creditos);
                 const conQuien = otraPersona(i);
-                const marketItemId = (i as any).marketItemId;
-                const item = (i as any).marketItem;
+                const marketItemId = i.marketItemId;
+                const item = i.marketItem;
                 const imgUrl = item?.imagenPrincipal || item?.imagen || (item?.imagenes?.[0] as any)?.url;
                 return (
                   <Card key={i.id} className="hover:border-gold/30 transition-colors overflow-hidden">
@@ -190,8 +189,8 @@ const Historial = () => {
                             <Button
                               variant={marketItemId ? "outline" : "default"}
                               size="sm"
-                              onClick={() => iniciarChatMutation.mutate({ vendedorId: i.otraPersonaId, marketItemId })}
-                              disabled={iniciarChatMutation.isPending}
+                              onClick={() => abrirChatIntercambioMutation.mutate(i)}
+                              disabled={abrirChatIntercambioMutation.isPending}
                             >
                               <MessageCircle className="w-4 h-4 mr-1" />
                               Contactar

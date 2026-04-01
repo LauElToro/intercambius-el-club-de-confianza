@@ -244,10 +244,10 @@ const ProductoDetalle = () => {
 
             {/* Información del producto */}
             <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+              <CardHeader className="space-y-0">
+                <div className="flex flex-col gap-3 lg:gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       <Badge variant="secondary">
                         {item.rubro === "servicios" ? "🔧 Servicio" : 
                          item.rubro === "productos" ? "📦 Producto" :
@@ -257,26 +257,55 @@ const ProductoDetalle = () => {
                         <Badge variant="destructive">Vendido</Badge>
                       )}
                       {item.precio != null && (
-                        <span className="text-3xl font-bold gold-text">
+                        <span className="hidden text-3xl font-bold gold-text lg:inline">
                           {formatIX(item.precio)}
                         </span>
                       )}
                     </div>
-                    <CardTitle className="text-2xl mb-2">{item.titulo}</CardTitle>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span>{item.ubicacion}</span>
-                      <span>•</span>
-                      <span>{item.distancia} km de distancia</span>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-11 w-11 touch-manipulation lg:h-10 lg:w-10"
+                        aria-label="Favorito"
+                        onClick={() => toggleFavMutation.mutate()}
+                      >
+                        <Heart className={`h-5 w-5 lg:h-4 lg:w-4 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-11 w-11 touch-manipulation lg:h-10 lg:w-10"
+                        aria-label="Compartir"
+                        onClick={() => {
+                          const url = typeof window !== "undefined" ? window.location.href : "";
+                          if (url && navigator.share) {
+                            navigator.share({ title: item.titulo, url }).catch(() => {});
+                          } else if (url && navigator.clipboard?.writeText) {
+                            navigator.clipboard.writeText(url);
+                            toast({ title: "Enlace copiado" });
+                          }
+                        }}
+                      >
+                        <Share2 className="h-5 w-5 lg:h-4 lg:w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="icon">
-                      <Heart className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" size="icon">
-                      <Share2 className="w-4 h-4" />
-                    </Button>
+                  {item.precio != null && (
+                    <p className="text-3xl font-bold leading-tight gold-text lg:hidden">
+                      {formatIX(item.precio)}
+                    </p>
+                  )}
+                  <CardTitle className="text-2xl leading-snug">{item.titulo}</CardTitle>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span>{item.ubicacion}</span>
+                    {item.distancia != null && Number.isFinite(Number(item.distancia)) && (
+                      <>
+                        <span aria-hidden="true">•</span>
+                        <span>{Number(item.distancia)} km de distancia</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -471,7 +500,7 @@ const ProductoDetalle = () => {
                         onClick={() => setCheckoutOpen(true)}
                       >
                         <CreditCard className="w-5 h-5 mr-2" />
-                        {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'} con IOX
+                        {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'}
                       </Button>
                     )}
                     {(() => {

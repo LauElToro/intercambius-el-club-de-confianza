@@ -25,6 +25,7 @@ import Chat from "./pages/Chat";
 import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import Referidos from "./pages/Referidos";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -72,6 +73,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/referidos" 
+                element={
+                  <ProtectedRoute>
+                    <Referidos />
                   </ProtectedRoute>
                 } 
               />

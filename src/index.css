@@ -198,6 +198,11 @@
 }
 
 @layer utilities {
+  /** Espacio bajo el contenido cuando hay barra inferior fija (h-16) + safe area — debe coincidir con MobileBottomNav */
+  .pb-mobile-nav {
+    padding-bottom: calc(4rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
+  }
+
   .safe-area-pb {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }

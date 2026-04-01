@@ -42,9 +42,8 @@ const MisCompras = () => {
     enabled: !!currentUser?.id,
   });
 
-  const iniciarChatMutation = useMutation({
-    mutationFn: ({ vendedorId, marketItemId }: { vendedorId: number; marketItemId?: number }) =>
-      chatService.iniciarConversacion(marketItemId ? { marketItemId } : { vendedorId }),
+  const abrirChatCompraMutation = useMutation({
+    mutationFn: (i: Intercambio) => chatService.abrirChatIntercambio(i),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       navigate(`/chat/${data.conversacionId}`);
@@ -105,7 +104,7 @@ const MisCompras = () => {
               .sort((a, b) => new Date(b.fecha || b.createdAt || 0).getTime() - new Date(a.fecha || a.createdAt || 0).getTime())
               .map((i) => {
                 const cantidad = Math.abs(i.creditos);
-                const marketItemId = (i as any).marketItemId;
+                const marketItemId = i.marketItemId;
                 const item = (i as any).marketItem;
                 const imgUrl = item?.imagenPrincipal || item?.imagen || (item?.imagenes?.[0] as any)?.url;
                 return (
@@ -186,8 +185,8 @@ const MisCompras = () => {
                             <Button
                               variant={marketItemId ? "outline" : "default"}
                               size="sm"
-                              onClick={() => iniciarChatMutation.mutate({ vendedorId: i.otraPersonaId, marketItemId })}
-                              disabled={iniciarChatMutation.isPending}
+                              onClick={() => abrirChatCompraMutation.mutate(i)}
+                              disabled={abrirChatCompraMutation.isPending}
                             >
                               <MessageCircle className="w-4 h-4 mr-1" />
                               Contactar

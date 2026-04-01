@@ -180,4 +180,28 @@ export const adminService = {
   async getIntercambiosForExport(): Promise<{ data: any[] }> {
     return adminRequest('/api/admin/intercambios?page=1&limit=10000');
   },
+
+  async getReferidos(page = 1, limit = 20): Promise<{
+    data: Array<{
+      referidoId: number;
+      referidoNombre: string;
+      referidoEmail: string;
+      referenteId: number | null;
+      referenteNombre: string | null;
+      referenteEmail?: string | null;
+      codigoUsado: string | null;
+      referidosDelReferente: number;
+      fechaRegistro: string;
+    }>;
+    total: number;
+    page: number;
+    totalPages: number;
+    resumen?: {
+      totalRegistrosConReferente: number;
+      usuariosQueRefirieron: number;
+      totalReferidos: number;
+    };
+  }> {
+    return adminRequest(`/api/admin/referidos?page=${page}&limit=${limit}`);
+  },
 };

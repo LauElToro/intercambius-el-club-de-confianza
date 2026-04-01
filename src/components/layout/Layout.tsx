@@ -27,7 +27,7 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
       {showHeader && <Header />}
       <main className={cn(
         showHeader && "pt-16",
-        showHeader && user?.id && "pb-20 md:pb-0"
+        showHeader && user?.id && "pb-mobile-nav md:pb-0"
       )}>
         {children}
       </main>

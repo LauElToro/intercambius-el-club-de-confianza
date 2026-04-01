@@ -15,7 +15,8 @@ import {
   Receipt,
   Heart,
   MessageCircle,
-  ShoppingCart
+  ShoppingCart,
+  Gift,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -74,7 +75,8 @@ const Header = () => {
     { to: "/chat", label: "Mensajes", icon: MessageCircle },
     { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
     { to: "/mis-compras", label: "Mis compras", icon: ShoppingCart },
-    { to: "/historial", label: "Historial", icon: Receipt }
+    { to: "/historial", label: "Historial", icon: Receipt },
+    { to: "/referidos", label: "Referidos", icon: Gift },
   ];
 
   const handleNavClick = (to: string) => {
@@ -190,6 +192,12 @@ const Header = () => {
                       <Link to="/dashboard">
                         <User className="h-4 w-4 mr-2" />
                         Cuenta - Saldo
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/referidos">
+                        <Gift className="h-4 w-4 mr-2" />
+                        Referidos
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>

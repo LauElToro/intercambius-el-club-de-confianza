@@ -74,9 +74,10 @@ import {
   TrendingUp,
   Activity,
   Search,
+  Gift,
 } from "lucide-react";
 
-type Tab = "metricas" | "usuarios" | "productos" | "intercambios" | "newsletter";
+type Tab = "metricas" | "usuarios" | "productos" | "intercambios" | "referidos" | "newsletter";
 
 const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 function formatMes(ym: string) {
@@ -93,6 +94,17 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<{ data: any[]; total: number; page: number; totalPages: number } | null>(null);
   const [productos, setProductos] = useState<{ data: any[]; total: number; page: number; totalPages: number } | null>(null);
   const [intercambios, setIntercambios] = useState<{ data: any[]; total: number; page: number; totalPages: number } | null>(null);
+  const [referidos, setReferidos] = useState<{
+    data: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+    resumen?: {
+      totalRegistrosConReferente: number;
+      usuariosQueRefirieron: number;
+      totalReferidos: number;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newsletter, setNewsletter] = useState({ subject: "", bodyHtml: "", enviarATodos: true });
@@ -165,10 +177,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadReferidos = async (page = 1) => {
+    try {
+      const data = await adminService.getReferidos(page, 15);
+      setReferidos(data);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   useEffect(() => {
     if (tab === "usuarios" && !users) loadUsers();
     if (tab === "productos" && !productos) loadProductos();
     if (tab === "intercambios" && !intercambios) loadIntercambios();
+    if (tab === "referidos" && !referidos) loadReferidos();
   }, [tab]);
 
   const handleLogout = () => {
@@ -267,6 +289,7 @@ const AdminDashboard = () => {
     { id: "usuarios", label: "Usuarios", icon: <Users className="w-4 h-4" /> },
     { id: "productos", label: "Productos", icon: <Package className="w-4 h-4" /> },
     { id: "intercambios", label: "Transacciones", icon: <ShoppingCart className="w-4 h-4" /> },
+    { id: "referidos", label: "Referidos", icon: <Gift className="w-4 h-4" /> },
     { id: "newsletter", label: "Newsletter", icon: <Mail className="w-4 h-4" /> },
   ];
 
@@ -846,6 +869,110 @@ const AdminDashboard = () => {
                         size="sm"
                         disabled={intercambios.page >= intercambios.totalPages}
                         onClick={() => loadIntercambios(intercambios.page + 1)}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {tab === "referidos" && (
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>Referidos</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Usuarios que se registraron con código o enlace de otro miembro.
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!referidos ? (
+                <Button variant="outline" onClick={() => loadReferidos()}>
+                  Cargar referidos
+                </Button>
+              ) : (
+                <>
+                  {referidos.resumen && (
+                    <div className="grid gap-4 sm:grid-cols-3 mb-6">
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <p className="text-xs font-medium text-muted-foreground">Registros con referente</p>
+                        <p className="text-2xl font-bold">{referidos.resumen.totalRegistrosConReferente}</p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <p className="text-xs font-medium text-muted-foreground">Usuarios que refirieron</p>
+                        <p className="text-2xl font-bold">{referidos.resumen.usuariosQueRefirieron}</p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <p className="text-xs font-medium text-muted-foreground">Total referidos (filas)</p>
+                        <p className="text-2xl font-bold">{referidos.resumen.totalReferidos}</p>
+                      </div>
+                    </div>
+                  )}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Referido</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Referido por</TableHead>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Refs. del referente</TableHead>
+                        <TableHead>Registro</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {referidos.data.map((row: any) => (
+                        <TableRow key={`${row.referidoId}-${row.referenteId ?? "x"}`}>
+                          <TableCell>{row.referidoId}</TableCell>
+                          <TableCell className="font-medium max-w-[140px] truncate">{row.referidoNombre}</TableCell>
+                          <TableCell className="text-sm max-w-[180px] truncate">{row.referidoEmail}</TableCell>
+                          <TableCell className="text-sm">
+                            {row.referenteId != null ? (
+                              <span>
+                                #{row.referenteId} {row.referenteNombre ?? ""}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{row.codigoUsado ?? "—"}</TableCell>
+                          <TableCell>{row.referidosDelReferente ?? "—"}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">
+                            {row.fechaRegistro
+                              ? new Date(row.fechaRegistro).toLocaleDateString("es-AR", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Página {referidos.page} de {referidos.totalPages} ({referidos.total} total)
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={referidos.page <= 1}
+                        onClick={() => loadReferidos(referidos.page - 1)}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={referidos.page >= referidos.totalPages}
+                        onClick={() => loadReferidos(referidos.page + 1)}
                       >
                         Siguiente
                       </Button>

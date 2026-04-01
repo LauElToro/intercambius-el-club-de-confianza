@@ -27,15 +27,39 @@ export interface ChatDetalle {
 }
 
 export const chatService = {
-  /** Iniciar o obtener conversación con vendedor. Pasar marketItemId o vendedorId */
-  async iniciarConversacion(opts: { marketItemId?: number; vendedorId?: number }): Promise<{ conversacionId: number }> {
+  /**
+   * Iniciar u obtener conversación.
+   * - `intercambioId`: hilo por compra/intercambio (preferido desde Mis compras / Historial).
+   * - `marketItemId`: contacto previo a la compra (una conversación por publicación entre las dos partes).
+   * - `vendedorId`: chat genérico con el usuario.
+   */
+  async iniciarConversacion(opts: {
+    intercambioId?: number;
+    marketItemId?: number;
+    vendedorId?: number;
+  }): Promise<{ conversacionId: number }> {
     try {
-      const body = opts.marketItemId ? { marketItemId: opts.marketItemId } : opts.vendedorId ? { vendedorId: opts.vendedorId } : {};
+      const body: Record<string, number> = {};
+      if (opts.intercambioId != null) {
+        body.intercambioId = opts.intercambioId;
+      } else if (opts.marketItemId != null) {
+        body.marketItemId = opts.marketItemId;
+      } else if (opts.vendedorId != null) {
+        body.vendedorId = opts.vendedorId;
+      }
       return await api.post<{ conversacionId: number }>('/api/chat/iniciar', body);
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw new ApiError('Error al iniciar conversación', 500);
     }
+  },
+
+  /** Abre el chat de una compra/intercambio: usa conversacionId si ya viene del backend, si no pide una por intercambioId. */
+  async abrirChatIntercambio(i: { id: number; conversacionId?: number | null }): Promise<{ conversacionId: number }> {
+    if (i.conversacionId != null && i.conversacionId > 0) {
+      return { conversacionId: i.conversacionId };
+    }
+    return this.iniciarConversacion({ intercambioId: i.id });
   },
 
   /** Prefijo para detectar mensaje estructurado de intercambio */

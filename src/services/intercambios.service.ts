@@ -30,6 +30,8 @@ export interface Intercambio {
   estado: string;
   marketItemId?: number;
   marketItem?: MarketItemEnIntercambio | null;
+  /** Chat asociado a esta compra/intercambio (una conversación por operación, no por publicación). */
+  conversacionId?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -11,6 +11,8 @@ export interface RegisterData {
   password: string;
   contacto: string;
   ubicacion?: string;
+  /** Código o slug del usuario que refiere (opcional). */
+  codigoReferido?: string;
 }
 
 export interface AuthResponse {

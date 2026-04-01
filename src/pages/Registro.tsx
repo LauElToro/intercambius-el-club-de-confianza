@@ -1,18 +1,19 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
-import { ArrowRight, Sparkles, Mail, Lock, Phone, User } from "lucide-react";
+import { ArrowRight, Sparkles, Mail, Lock, Phone, User, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { LocationPicker } from "@/components/location/LocationPicker";
 
 const Registro = () => {
   const { register } = useAuth();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
@@ -22,7 +23,16 @@ const Registro = () => {
     telefono: "",
     ubicacion: "",
     radioBusqueda: 20,
+    codigoReferido: "",
   });
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      const decoded = decodeURIComponent(ref.trim());
+      setFormData((prev) => ({ ...prev, codigoReferido: decoded }));
+    }
+  }, [searchParams]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [recaptchaVerified, setRecaptchaVerified] = useState(false);
@@ -56,6 +66,7 @@ const Registro = () => {
         password: formData.password,
         contacto: formData.telefono,
         ubicacion: formData.ubicacion,
+        codigoReferido: formData.codigoReferido.trim() || undefined,
       });
     } catch (err: any) {
       if (err instanceof ApiError) {
@@ -138,6 +149,26 @@ const Registro = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Código de referido (opcional) */}
+              <div className="space-y-2">
+                <Label htmlFor="codigoReferido">Código de referido (opcional)</Label>
+                <div className="relative">
+                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="codigoReferido"
+                    name="codigoReferido"
+                    autoComplete="off"
+                    placeholder="Si alguien te invitó, pegá su código o enlace"
+                    value={formData.codigoReferido}
+                    onChange={handleChange}
+                    className="pl-10 bg-surface border-border focus:border-gold"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  También podés entrar con un link que incluya <span className="font-mono">?ref=...</span>
+                </p>
               </div>
 
               {/* Email */}
