@@ -93,20 +93,21 @@ const Registro = () => {
   return (
     <Layout showHeader={false}>
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-3 mb-4">
-              <img src={logo} alt="Intercambius" className="h-12 w-12 rounded-full" />
+        <div className="w-full max-w-2xl mx-auto">
+          {/* Mismo padding horizontal que la tarjeta (p-6) para alinear título y campos */}
+          <header className="mb-8 flex w-full flex-col items-center px-6 text-center">
+            <Link to="/" className="mb-4 flex items-center justify-center gap-3">
+              <img src={logo} alt="Intercambius" className="h-12 w-12 shrink-0 rounded-full" />
               <span className="text-2xl font-semibold gold-text">Intercambius</span>
             </Link>
-            <div className="inline-flex items-center gap-2 mb-2">
-              <Sparkles className="w-6 h-6 text-gold" />
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <Sparkles className="h-6 w-6 shrink-0 text-gold" />
               <h1 className="text-3xl font-bold">Crear cuenta</h1>
             </div>
             <p className="text-muted-foreground">
               Completá tus datos para empezar a intercambiar
             </p>
-          </div>
+          </header>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
