@@ -5,6 +5,7 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfertaCreditoTerminos, hasRespondidoOfertaCredito } from "@/components/credito/OfertaCreditoTerminos";
 import { useQueryClient } from "@tanstack/react-query";
+import { CONTACT_EMAIL } from "@/lib/constants";
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,6 +31,21 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
         showHeader && user?.id && "pb-mobile-nav md:pb-0"
       )}>
         {children}
+        <footer
+          className={cn(
+            "border-t border-border/70 py-3 px-4 text-center text-xs text-muted-foreground bg-background/80",
+            user?.id && showHeader && "pb-20 md:pb-3"
+          )}
+        >
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Quejas o sugerencias - Intercambius")}&body=${encodeURIComponent("Escribinos tu consulta, queja o sugerencia.\n\n")}`}
+            className="text-gold hover:text-gold/90 hover:underline font-medium"
+          >
+            Contactanos
+          </a>
+          <span className="hidden sm:inline"> · </span>
+          <span className="block sm:inline mt-0.5 sm:mt-0">Quejas y sugerencias por correo</span>
+        </footer>
       </main>
       {showHeader && user?.id && <MobileBottomNav />}
       {user?.id && (

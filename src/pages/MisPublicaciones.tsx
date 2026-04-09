@@ -201,6 +201,11 @@ const MisPublicaciones = () => {
                     <Badge variant="secondary" className="text-xs">
                       {RUBROS[item.rubro]?.icon} {RUBROS[item.rubro]?.label ?? item.rubro}
                     </Badge>
+                    {item.rubro !== "servicios" && item.stock != null && (
+                      <Badge variant="outline" className="text-xs">
+                        Stock {item.stock}
+                      </Badge>
+                    )}
                     <span className="font-bold text-gold">{formatIX(item.precio)}</span>
                   </div>
                   <Link to={`/producto/${item.id}`}>

@@ -48,7 +48,7 @@ const CrearProducto = () => {
     medias: [] as { file: File; preview: string; type: "image" | "video" }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
-    aclaracionPago: "",
+    stock: "1",
   });
 
   useEffect(() => {
@@ -218,6 +218,21 @@ const CrearProducto = () => {
           ? `${formData.descripcion}\n\nAclaraciones formas de pago: ${formData.aclaracionPago.trim()}`
           : formData.descripcion;
 
+      const stockNum =
+        formData.rubro === "servicios"
+          ? undefined
+          : Math.max(1, parseInt(String(formData.stock).replace(/\D/g, ""), 10) || 1);
+
+      if (formData.rubro !== "servicios" && (!stockNum || stockNum < 1)) {
+        toast({
+          title: "Stock requerido",
+          description: "Indicá cuántas unidades tenés a la venta (mínimo 1).",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const itemData: CreateMarketItemData = {
         titulo: formData.titulo,
         descripcion: descripcionFinal,
@@ -231,6 +246,7 @@ const CrearProducto = () => {
         images,
         detalles: formData.detalles,
         caracteristicas: formData.caracteristicas,
+        ...(formData.rubro !== "servicios" && stockNum != null ? { stock: stockNum } : {}),
       };
 
       createMutation.mutate(itemData);
@@ -323,7 +339,14 @@ const CrearProducto = () => {
                     <Label htmlFor="rubro">Rubro *</Label>
                     <Select
                       value={formData.rubro}
-                      onValueChange={(value: any) => setFormData(prev => ({ ...prev, rubro: value, detalles: {} }))}
+                      onValueChange={(value: any) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          rubro: value,
+                          detalles: {},
+                          stock: value === "servicios" ? "1" : prev.stock || "1",
+                        }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar rubro" />
@@ -352,6 +375,27 @@ const CrearProducto = () => {
                       required
                     />
                   </div>
+                  {formData.rubro && formData.rubro !== "servicios" && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="stock">Stock (unidades) *</Label>
+                      <Input
+                        id="stock"
+                        type="text"
+                        inputMode="numeric"
+                        min={1}
+                        value={formData.stock}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setFormData((prev) => ({ ...prev, stock: digits || "" }));
+                        }}
+                        placeholder="Ej: 5"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Cuando llegue a 0, la publicación deja de mostrarse en el market (no aplica a servicios).
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2 md:col-span-2">
                     <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">

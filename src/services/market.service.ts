@@ -43,6 +43,8 @@ export interface MarketItem {
   vendedor?: VendedorInfo | null;
   /** Si false, el producto ya fue vendido y no debe mostrarse como disponible. El backend debe setearlo en false al completar checkout. */
   disponible?: boolean;
+  /** null = servicio (sin stock). Unidades disponibles para productos. */
+  stock?: number | null;
 }
 
 export interface MarketItemFilters {
@@ -83,6 +85,8 @@ export interface CreateMarketItemData {
   images?: ProductMedia[];
   detalles?: Record<string, string>;
   caracteristicas?: string[];
+  /** Obligatorio si el rubro no es servicios. */
+  stock?: number;
 }
 
 export const marketService = {

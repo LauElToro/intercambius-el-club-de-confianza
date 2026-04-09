@@ -121,7 +121,7 @@ const ProductoDetalle = () => {
   const limite = Number(usuario?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const precio = Number(item?.precio ?? 0) || 0;
   const puedeGastar = saldo + limite;
-  const enLimiteDeuda = limite > 0 && saldo <= -limite; // Ya debe 100k IOX: solo puede pagar por fuera
+  const enLimiteDeuda = limite > 0 && saldo <= -limite; // Límite de crédito alcanzado: solo pago por fuera
   const puedeComprar = !!item && !enLimiteDeuda && (saldo - precio >= -limite);
 
   if (isLoading) {
@@ -148,7 +148,9 @@ const ProductoDetalle = () => {
   }
 
   const vendedor = item.vendedor;
-  const disponible = item.disponible !== false;
+  const hayStockPublico =
+    item.rubro === "servicios" ? true : (item.stock ?? 0) > 0;
+  const disponible = item.disponible !== false && hayStockPublico;
 
   return (
     <Layout>
@@ -254,7 +256,14 @@ const ProductoDetalle = () => {
                          item.rubro === "alimentos" ? "🍎 Alimento" : "🎭 Experiencia"}
                       </Badge>
                       {!disponible && (
-                        <Badge variant="destructive">Vendido</Badge>
+                        <Badge variant="destructive">
+                          {item.rubro !== "servicios" && item.stock === 0 ? "Agotado" : "No disponible"}
+                        </Badge>
+                      )}
+                      {item.rubro !== "servicios" && item.stock != null && item.stock > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          Stock: {item.stock}
+                        </Badge>
                       )}
                       {item.precio != null && (
                         <span className="hidden text-3xl font-bold gold-text lg:inline">

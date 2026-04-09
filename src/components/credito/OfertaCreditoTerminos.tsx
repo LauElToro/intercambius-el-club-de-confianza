@@ -22,7 +22,7 @@ type Props = {
   onRechazar?: () => void;
 };
 
-/** Modal que se muestra al usuario al ingresar: oferta de 100k IOX de crédito y aceptación de términos. */
+/** Modal que se muestra al usuario al ingresar: oferta de crédito IOX y aceptación de términos. */
 export const OfertaCreditoTerminos = ({
   userId,
   open,
@@ -70,7 +70,7 @@ export const OfertaCreditoTerminos = ({
                 <p>
                   <strong className="text-foreground">Si aceptás los términos y condiciones:</strong>
                   <br />
-                  Tu saldo inicial será de <strong className="text-destructive">-{formatIX(CREDITO_OFERTA_INGRESO)}</strong> (es decir, tenés 100.000 IOX de crédito para usar). Podés comprar hasta agotar ese crédito; cuando llegues a deber 100.000 IOX solo podrás pagar por fuera de la página.
+                  Tu saldo inicial será de <strong className="text-destructive">-{formatIX(CREDITO_OFERTA_INGRESO)}</strong> (es decir, tenés {formatIX(CREDITO_OFERTA_INGRESO)} de crédito para usar). Podés comprar hasta agotar ese crédito; cuando llegues al límite ({formatIX(CREDITO_OFERTA_INGRESO)} en negativo) solo podrás pagar por fuera de la página.
                 </p>
                 <p>
                   <strong className="text-foreground">Si no aceptás:</strong>

@@ -54,6 +54,7 @@ const EditarProducto = () => {
     medias: [] as { file?: File; preview: string; type: 'image' | 'video'; url?: string }[],
     detalles: {} as Record<string, string>,
     caracteristicas: [] as string[],
+    stock: "",
   });
 
   const [nuevaCaracteristica, setNuevaCaracteristica] = useState("");
@@ -98,6 +99,8 @@ const EditarProducto = () => {
         medias,
         detalles: item.detalles || {},
         caracteristicas: item.caracteristicas || [],
+        stock:
+          item.rubro === "servicios" ? "" : String(item.stock ?? 1),
       });
     }
   }, [item, usuario?.ubicacion]);
@@ -224,6 +227,16 @@ const EditarProducto = () => {
         return;
       }
 
+      let stockParsed: number | undefined;
+      if (formData.rubro !== "servicios") {
+        const raw = parseInt(String(formData.stock).replace(/\D/g, ""), 10);
+        if (String(formData.stock).trim() === "" || Number.isNaN(raw) || raw < 0) {
+          toast({ title: "Indicá un stock válido (0 o más)", variant: "destructive" });
+          return;
+        }
+        stockParsed = raw;
+      }
+
       updateMutation.mutate({
         id: Number(id),
         data: {
@@ -239,6 +252,9 @@ const EditarProducto = () => {
           images,
           detalles: formData.detalles,
           caracteristicas: formData.caracteristicas,
+          ...(formData.rubro !== "servicios" && stockParsed !== undefined
+            ? { stock: stockParsed }
+            : {}),
         },
       });
     } catch (err: any) {
@@ -330,7 +346,14 @@ const EditarProducto = () => {
                     <Label htmlFor="rubro">Rubro *</Label>
                     <Select
                       value={formData.rubro}
-                      onValueChange={(value: any) => setFormData(prev => ({ ...prev, rubro: value, detalles: {} }))}
+                      onValueChange={(value: any) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          rubro: value,
+                          detalles: {},
+                          stock: value === "servicios" ? "" : prev.stock || "1",
+                        }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar rubro" />
@@ -358,6 +381,25 @@ const EditarProducto = () => {
                       required
                     />
                   </div>
+                  {formData.rubro && formData.rubro !== "servicios" && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="stock">Stock (unidades)</Label>
+                      <Input
+                        id="stock"
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.stock}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setFormData((prev) => ({ ...prev, stock: digits }));
+                        }}
+                        placeholder="0 = agotado (no se muestra en el market)"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        En 0 la publicación no aparece en el market hasta que cargues unidades de nuevo.
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2 md:col-span-2">
                     <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">
