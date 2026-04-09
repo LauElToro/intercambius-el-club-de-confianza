@@ -223,15 +223,30 @@ export function ContactDialog({ open, onOpenChange, defaultEmail }: Props) {
                 <p className="text-xs text-muted-foreground">Mínimo 10 caracteres.</p>
               </div>
               <div className="space-y-2">
-                <Label>Archivos adjuntos (opcional)</Label>
-                <Input
+                <Label htmlFor="contact-files-input">Archivos adjuntos (opcional)</Label>
+                <input
+                  id="contact-files-input"
                   ref={fileInputRef}
                   type="file"
                   multiple
                   accept={ACCEPT_TYPES}
-                  className="cursor-pointer"
+                  className="sr-only"
                   onChange={onFilesChange}
                 />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 border-gold/40 hover:bg-gold/10"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    Adjuntar foto o archivo
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    PDF, imágenes, TXT o Word
+                  </span>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Hasta {MAX_FILES} archivos, máx. 5 MB c/u: JPG, PNG, GIF, WebP, PDF, TXT, DOC/DOCX.
                 </p>
