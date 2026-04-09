@@ -9,19 +9,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CONTACT_EMAIL } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { Copy } from "lucide-react";
+import { ContactDialog } from "@/components/contact/ContactDialog";
 
 interface LayoutProps {
   children: ReactNode;
   showHeader?: boolean;
 }
 
-const MAILTO_CONTACT = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Quejas o sugerencias - Intercambius")}`;
-
 const Layout = ({ children, showHeader = true }: LayoutProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showOfertaCredito, setShowOfertaCredito] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
 
   const copyContactEmail = async () => {
     try {
@@ -60,12 +60,13 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
         >
           <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
             <span className="inline-flex items-center gap-1.5">
-              <a
-                href={MAILTO_CONTACT}
-                className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2"
+              <button
+                type="button"
+                onClick={() => setContactOpen(true)}
+                className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2 bg-transparent border-0 p-0 cursor-pointer"
               >
                 Contactanos
-              </a>
+              </button>
               <button
                 type="button"
                 onClick={() => void copyContactEmail()}
@@ -112,6 +113,11 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
           onRechazar={() => queryClient.invalidateQueries({ queryKey: ["currentUser"] })}
         />
       )}
+      <ContactDialog
+        open={contactOpen}
+        onOpenChange={setContactOpen}
+        defaultEmail={user?.email ?? null}
+      />
     </div>
   );
 };

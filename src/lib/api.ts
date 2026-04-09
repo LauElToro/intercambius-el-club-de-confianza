@@ -90,6 +90,35 @@ export const api = {
     }),
   
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+
+  /** POST multipart/form-data (no fijar Content-Type; el navegador define boundary). */
+  postFormData: async <T>(endpoint: string, formData: FormData): Promise<T> => {
+    const token = localStorage.getItem('intercambius_token');
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+    let data: any = {};
+    const text = await response.text();
+    if (isJson && text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new ApiError('Error al procesar la respuesta del servidor', response.status);
+      }
+    }
+    if (!response.ok) {
+      throw new ApiError(data.error || `HTTP error! status: ${response.status}`, response.status, data);
+    }
+    return data as T;
+  },
   
   upload: async (file: File, tipo?: 'fotoPerfil' | 'banner' | 'market'): Promise<{ url: string; pathname: string; mediaType?: 'image' | 'video' }> => {
     const token = localStorage.getItem('intercambius_token');
