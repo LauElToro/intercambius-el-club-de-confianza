@@ -1,4 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import Header from "./Header";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -37,14 +38,30 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
             user?.id && showHeader && "pb-20 md:pb-3"
           )}
         >
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Quejas o sugerencias - Intercambius")}&body=${encodeURIComponent("Escribinos tu consulta, queja o sugerencia.\n\n")}`}
-            className="text-gold hover:text-gold/90 hover:underline font-medium"
-          >
-            Contactanos
-          </a>
-          <span className="hidden sm:inline"> · </span>
-          <span className="block sm:inline mt-0.5 sm:mt-0">Quejas y sugerencias por correo</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
+            <a
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Quejas o sugerencias - Intercambius")}&body=${encodeURIComponent("Escribinos tu consulta, queja o sugerencia.\n\n")}`}
+              className="text-gold hover:text-gold/90 hover:underline font-medium"
+            >
+              Contactanos
+            </a>
+            <span className="hidden sm:inline">·</span>
+            <Link
+              to="/terminos-generales"
+              className="text-gold hover:text-gold/90 hover:underline font-medium"
+            >
+              Términos generales
+            </Link>
+            <span className="hidden sm:inline">·</span>
+            <Link
+              to="/terminos"
+              className="text-gold hover:text-gold/90 hover:underline font-medium"
+            >
+              Términos IOX
+            </Link>
+            <span className="hidden sm:inline">·</span>
+            <span>Quejas y sugerencias por correo</span>
+          </div>
         </footer>
       </main>
       {showHeader && user?.id && <MobileBottomNav />}

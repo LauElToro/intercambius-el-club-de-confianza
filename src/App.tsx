@@ -26,6 +26,8 @@ import RegistrarIntercambio from "./pages/RegistrarIntercambio";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import Referidos from "./pages/Referidos";
+import TerminosCondiciones from "./pages/TerminosCondiciones";
+import TerminosGenerales from "./pages/TerminosGenerales";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -165,6 +167,8 @@ const App = () => (
                 } 
               />
               <Route path="/ofertas" element={<Ofertas />} />
+              <Route path="/terminos" element={<TerminosCondiciones />} />
+              <Route path="/terminos-generales" element={<TerminosGenerales />} />
               <Route path="/admin" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

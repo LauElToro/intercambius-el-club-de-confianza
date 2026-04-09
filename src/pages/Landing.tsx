@@ -383,9 +383,17 @@ const Landing = () => {
               <img src={logo} alt="Intercambius" className="w-8 h-8 rounded-full" />
               <span className="text-sm text-muted-foreground">Intercambius © 2026</span>
             </div>
-            <p className="text-sm text-muted-foreground text-center md:text-right">
-              Créditos IOX · Red de intercambio
-            </p>
+            <div className="text-sm text-muted-foreground text-center md:text-right space-y-1">
+              <p>Créditos IOX · Red de intercambio</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center md:justify-end">
+                <Link to="/terminos-generales" className="text-gold hover:underline font-medium">
+                  Términos generales y políticas
+                </Link>
+                <Link to="/terminos" className="text-gold hover:underline font-medium">
+                  Términos IOX
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

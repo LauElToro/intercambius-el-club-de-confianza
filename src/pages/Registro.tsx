@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
 import { ArrowRight, Sparkles, Mail, Lock, Phone, User, Gift } from "lucide-react";
@@ -36,6 +37,7 @@ const Registro = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [recaptchaVerified, setRecaptchaVerified] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +51,11 @@ const Registro = () => {
 
     if (formData.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    if (!aceptaTerminos) {
+      setError("Debés aceptar los términos y condiciones para crear tu cuenta.");
       return;
     }
 
@@ -261,6 +268,44 @@ const Registro = () => {
                 required
               />
 
+              {/* Aceptación de términos */}
+              <div className="space-y-3 rounded-lg border border-border bg-surface/50 p-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="aceptaTerminos"
+                    checked={aceptaTerminos}
+                    onCheckedChange={(v) => setAceptaTerminos(v === true)}
+                    className="mt-0.5 border-gold/60 data-[state=checked]:bg-gold data-[state=checked]:border-gold data-[state=checked]:text-primary-foreground"
+                    aria-required="true"
+                  />
+                  <div className="space-y-1 text-sm leading-relaxed text-muted-foreground">
+                    <Label htmlFor="aceptaTerminos" className="cursor-pointer font-normal text-muted-foreground">
+                      Declaro haber leído y acepto los{" "}
+                      <Link
+                        to="/terminos-generales"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-gold hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        términos y condiciones generales y políticas de uso
+                      </Link>{" "}
+                      y los{" "}
+                      <Link
+                        to="/terminos"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-gold hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        términos y condiciones del sistema IOX
+                      </Link>
+                      .
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
               {/* reCAPTCHA - Placeholder por ahora */}
               <div className="space-y-2">
                 <Label>Verificación *</Label>
@@ -284,7 +329,7 @@ const Registro = () => {
               variant="gold"
               size="xl"
               className="w-full group"
-              disabled={loading}
+              disabled={loading || !aceptaTerminos || !recaptchaVerified}
             >
               {loading ? "Creando cuenta..." : (
                 <>
