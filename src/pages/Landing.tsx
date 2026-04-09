@@ -85,7 +85,7 @@ const Landing = () => {
               <li className="flex gap-2">
                 <span className="text-gold shrink-0">📌</span>
                 <span>
-                  <strong className="text-foreground">1 IOXS = 1 dólar</strong>
+                  <strong className="text-foreground">1 IOXD = 1 USD</strong>
                 </span>
               </li>
             </ul>
@@ -386,6 +386,9 @@ const Landing = () => {
             <div className="text-sm text-muted-foreground text-center md:text-right space-y-1">
               <p>Créditos IOX · Red de intercambio</p>
               <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center md:justify-end">
+                <Link to="/economia" className="text-gold hover:underline font-medium">
+                  Diseño económico
+                </Link>
                 <Link to="/terminos-generales" className="text-gold hover:underline font-medium">
                   Términos generales y políticas
                 </Link>

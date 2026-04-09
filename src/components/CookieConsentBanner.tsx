@@ -18,8 +18,8 @@ export function CookieConsentBanner() {
   if (consent) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6">
-      <Card className="mx-auto max-w-2xl border-border shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6 pointer-events-none">
+      <Card className="mx-auto max-w-2xl border-border shadow-lg pointer-events-auto">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Cookie className="h-5 w-5 text-primary" />

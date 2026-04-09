@@ -5,7 +5,12 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, Info } from "lucide-react";
 import { useState } from "react";
-import { COMISION_IOX_PORCENTAJE, CREDITO_OFERTA_INGRESO } from "@/lib/constants";
+import { Link } from "react-router-dom";
+import {
+  COMISION_IOX_PORCENTAJE,
+  CREDITO_OFERTA_INGRESO,
+  MESES_REGULARIZACION_DEUDA,
+} from "@/lib/constants";
 
 const ixOferta = CREDITO_OFERTA_INGRESO.toLocaleString("es-AR");
 
@@ -35,7 +40,12 @@ export const ComoFuncionaIX = () => {
             En cada intercambio (compra o venta) se aplica un mínimo del <strong className="text-foreground">{COMISION_IOX_PORCENTAJE}% en IOX</strong>. Quienes venden aceptan siempre este {COMISION_IOX_PORCENTAJE}% en IOX. Podés endeudarte hasta -{ixOferta} IOX; al llegar a ese límite solo podés pagar por fuera de la página hasta reducir tu deuda.
           </p>
           <p>
-            Quienes al año sigan debiendo {ixOferta} IOX pueden devolverlo trabajando en una ONG seleccionada, en un evento de intercambio del proyecto o de otra forma que se acuerde con el proyecto.
+            Si tras {MESES_REGULARIZACION_DEUDA} meses mantenés deuda elevada (ej. -{ixOferta} IOX), puede activarse regularización: publicar y vender, colaborar con una ONG, eventos del proyecto u otras formas acordadas.
+          </p>
+          <p>
+            <Link to="/economia" className="font-medium text-gold hover:underline">
+              Ver diseño económico y antifraude
+            </Link>
           </p>
         </div>
       </CollapsibleContent>

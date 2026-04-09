@@ -7,16 +7,36 @@ import { useAuth } from "@/contexts/AuthContext";
 import { OfertaCreditoTerminos, hasRespondidoOfertaCredito } from "@/components/credito/OfertaCreditoTerminos";
 import { useQueryClient } from "@tanstack/react-query";
 import { CONTACT_EMAIL } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
+import { Copy } from "lucide-react";
 
 interface LayoutProps {
   children: ReactNode;
   showHeader?: boolean;
 }
 
+const MAILTO_CONTACT = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Quejas o sugerencias - Intercambius")}`;
+
 const Layout = ({ children, showHeader = true }: LayoutProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showOfertaCredito, setShowOfertaCredito] = useState(false);
+
+  const copyContactEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(CONTACT_EMAIL);
+      toast({
+        title: "Email copiado",
+        description: "Si no tenés cliente de correo configurado, pegá la dirección en Gmail o tu app.",
+      });
+    } catch {
+      toast({
+        title: CONTACT_EMAIL,
+        description: "Copiá manualmente esta dirección.",
+      });
+    }
+  };
 
   useEffect(() => {
     if (user?.id && !hasRespondidoOfertaCredito(user.id)) {
@@ -39,12 +59,30 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
           )}
         >
           <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Quejas o sugerencias - Intercambius")}&body=${encodeURIComponent("Escribinos tu consulta, queja o sugerencia.\n\n")}`}
+            <span className="inline-flex items-center gap-1.5">
+              <a
+                href={MAILTO_CONTACT}
+                className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2"
+              >
+                Contactanos
+              </a>
+              <button
+                type="button"
+                onClick={() => void copyContactEmail()}
+                className="inline-flex items-center justify-center rounded-md p-1 text-gold hover:bg-gold/10 hover:text-gold/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+                aria-label="Copiar dirección de correo"
+                title="Copiar email"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+            </span>
+            <span className="hidden sm:inline">·</span>
+            <Link
+              to="/economia"
               className="text-gold hover:text-gold/90 hover:underline font-medium"
             >
-              Contactanos
-            </a>
+              Diseño económico
+            </Link>
             <span className="hidden sm:inline">·</span>
             <Link
               to="/terminos-generales"
