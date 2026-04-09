@@ -11,6 +11,8 @@ export interface RegisterData {
   password: string;
   contacto: string;
   ubicacion?: string;
+  /** Debe ser true (validado también en el backend). */
+  aceptaTerminos: boolean;
   /** Código o slug del usuario que refiere (opcional). */
   codigoReferido?: string;
 }

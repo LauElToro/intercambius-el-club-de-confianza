@@ -440,6 +440,59 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
+            {metrics.economia && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Activity className="w-4 h-4 text-emerald-600" />
+                    Diseño económico · ISS y parámetros
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    ISS ≈ (volumen absoluto / IOX en saldos positivos) × (% usuarios activos 30d / 100)
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">ISS</p>
+                      <p className="text-2xl font-bold text-emerald-600">
+                        {metrics.economia.indicadores.iss.toLocaleString("es-AR", {
+                          maximumFractionDigits: 4,
+                        })}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">Volumen abs. IOX</p>
+                      <p className="text-2xl font-bold">
+                        {metrics.economia.indicadores.volumenAbsolutoIox.toLocaleString("es-AR")}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">IOX+ en saldos</p>
+                      <p className="text-2xl font-bold">
+                        {metrics.economia.indicadores.ioxTotalPositivoEnSaldos.toLocaleString("es-AR")}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">Activos 30d / %</p>
+                      <p className="text-2xl font-bold">
+                        {metrics.economia.indicadores.usuariosActivos30d}{" "}
+                        <span className="text-base font-normal text-muted-foreground">
+                          ({metrics.economia.indicadores.pctUsuariosActivos.toFixed(1)}%)
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Límite crédito {metrics.economia.parametros.creditoLimiteDefault.toLocaleString("es-AR")} · mín.{" "}
+                    {metrics.economia.parametros.comisionIoxMinPct}% IOX · tope saldo +{" "}
+                    {metrics.economia.parametros.saldoPositivoMax.toLocaleString("es-AR")} · regularización{" "}
+                    {metrics.economia.parametros.mesesRegularizacionDeuda} meses
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Gráficos */}
             <div className="grid gap-6 lg:grid-cols-2">
               {metrics.usuarios.porMes && metrics.usuarios.porMes.length > 0 && (

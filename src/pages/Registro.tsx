@@ -73,6 +73,7 @@ const Registro = () => {
         password: formData.password,
         contacto: formData.telefono,
         ubicacion: formData.ubicacion,
+        aceptaTerminos: true,
         codigoReferido: formData.codigoReferido.trim() || undefined,
       });
     } catch (err: any) {

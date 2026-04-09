@@ -78,6 +78,22 @@ export interface AdminMetrics {
     porMes?: { mes: string; total: number }[];
     terminosPopulares?: { termino: string; total: number }[];
   };
+  economia?: {
+    parametros: {
+      creditoLimiteDefault: number;
+      comisionIoxMinPct: number;
+      saldoPositivoMax: number;
+      mesesRegularizacionDeuda: number;
+      colusionAlertaPctGrupo: number;
+    };
+    indicadores: {
+      volumenAbsolutoIox: number;
+      ioxTotalPositivoEnSaldos: number;
+      usuariosActivos30d: number;
+      pctUsuariosActivos: number;
+      iss: number;
+    };
+  };
 }
 
 export const adminService = {

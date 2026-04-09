@@ -22,6 +22,14 @@ export function exportMetricsToExcel(metrics: {
     ['Volumen transacciones (IOX)', metrics.token.volumenTransacciones],
     ['Token gastado compras (IOX)', metrics.token.tokenGastadoCompras],
     ['Token recibido ventas (IOX)', metrics.token.tokenRecibidoVentas],
+    ...(metrics.economia
+      ? [
+          ['ISS (índice salud sistema)', metrics.economia.indicadores.iss],
+          ['Volumen absoluto IOX (hist.)', metrics.economia.indicadores.volumenAbsolutoIox],
+          ['IOX positivo total en saldos', metrics.economia.indicadores.ioxTotalPositivoEnSaldos],
+          ['Usuarios activos 30d', metrics.economia.indicadores.usuariosActivos30d],
+        ]
+      : []),
     ['Conversaciones', metrics.contacto.conversacionesTotal],
     ['Mensajes totales', metrics.contacto.mensajesTotal],
   ];
