@@ -2,169 +2,389 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import logo from "@/assets/logo-intercambius.jpeg";
-import { ArrowRight, Users, Repeat, Shield, Heart } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const Landing = () => {
   return (
     <Layout>
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-        {/* Background gradient */}
         <div className="absolute inset-0 hero-gradient" />
-        
-        {/* Decorative circles */}
         <div className="absolute top-1/4 -left-32 w-64 h-64 bg-gold/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 text-center relative z-10">
           <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <img 
-              src={logo} 
-              alt="Intercambius" 
+            <img
+              src={logo}
+              alt="Intercambius"
               className="w-32 h-32 mx-auto mb-8 rounded-full shadow-2xl animate-float"
             />
           </div>
 
-          <h1 
-            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-fade-in"
+          <p
+            className="text-sm md:text-base text-muted-foreground mb-3 animate-fade-in"
+            style={{ animationDelay: "0.15s" }}
+          >
+            Intercambius
+          </p>
+
+          <h1
+            className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-fade-in"
             style={{ animationDelay: "0.2s" }}
           >
-            Intercambiá bienes y servicios
-            <br />
-            <span className="gold-text">cuando el dinero no alcanza</span>
+            Intercambiá lo que tenés por lo que necesitás
           </h1>
 
-          <p 
+          <p
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in"
             style={{ animationDelay: "0.3s" }}
           >
-            Sistema de crédito mutuo con créditos de intercambio. 
-            Confianza organizada entre personas.
+            Empezá ahora mismo a intercambiar valor real, sin comisiones y sin depender
+            siempre del dinero.
           </p>
 
-          <div 
+          <div
             className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in"
             style={{ animationDelay: "0.4s" }}
           >
             <Link to="/registro">
               <Button variant="gold" size="xl" className="group">
-                Sumarme al intercambio
+                <span className="mr-1" aria-hidden>
+                  👉
+                </span>
+                Crear cuenta gratis
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link to="/ofertas">
-              <Button variant="gold-outline" size="xl">
-                Ver qué se intercambia
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-24 bg-surface/50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+      {/* ¿Qué es este sitio? */}
+      <section className="py-20 bg-surface/50">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-6">
+            ¿Qué es este sitio?
+          </h2>
+          <p className="text-muted-foreground text-center md:text-lg leading-relaxed mb-8">
+            Intercambius es una red de intercambio donde podés comprar y vender productos o
+            servicios usando créditos (IOX) en lugar de depender solo del dinero. Cuando
+            vendés algo, recibís créditos. Cuando necesitás algo, usás esos créditos con
+            cualquier persona dentro de la red.
+          </p>
+          <div className="bg-card rounded-2xl p-6 md:p-8 border border-border gold-glow">
+            <p className="font-semibold text-foreground mb-3">Referencias claras</p>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="text-gold shrink-0">📌</span>
+                <span>
+                  <strong className="text-foreground">1 IOX = 1 peso</strong>
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gold shrink-0">📌</span>
+                <span>
+                  <strong className="text-foreground">1 IOXS = 1 dólar</strong>
+                </span>
+              </li>
+            </ul>
+            <p className="mt-4 text-muted-foreground text-sm md:text-base">
+              Además, podés combinar créditos + dinero si querés completar un intercambio.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ¿Por qué usar Intercambius? */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+            ¿Por qué usar Intercambius?
+          </h2>
+          <ul className="space-y-4 text-lg">
+            <li className="flex gap-3 items-start">
+              <span className="text-2xl shrink-0" aria-hidden>
+                💰
+              </span>
+              <span>Gastás menos dinero en lo que necesitás</span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-2xl shrink-0" aria-hidden>
+                🔄
+              </span>
+              <span>Convertís lo que no usás en valor real</span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-2xl shrink-0" aria-hidden>
+                🤝
+              </span>
+              <span>Accedés a nuevas oportunidades y personas</span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-2xl shrink-0" aria-hidden>
+                ⚡
+              </span>
+              <span>Más simple y flexible que el trueque tradicional</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* ¿Para qué usarlo? */}
+      <section className="py-20 bg-surface/50">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-10">
+            ¿Para qué usarlo?
+          </h2>
+          <ul className="space-y-3 text-muted-foreground md:text-lg">
+            <li className="flex gap-3">
+              <span className="text-gold shrink-0">•</span>
+              <span>Conseguir productos o servicios sin pagar todo en efectivo</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-gold shrink-0">•</span>
+              <span>Aprovechar cosas que ya tenés (objetos, tiempo o habilidades)</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-gold shrink-0">•</span>
+              <span>Generar nuevas oportunidades personales o comerciales</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-gold shrink-0">•</span>
+              <span>Resolver necesidades del día a día de forma más inteligente</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* ¿Cómo funciona? */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             ¿Cómo funciona?
           </h2>
-          <p className="text-muted-foreground text-center mb-16 max-w-xl mx-auto">
-            Simple. Humano. Sin complicaciones.
-          </p>
+          <ol className="space-y-8">
+            <li className="flex gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold font-bold">
+                1
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold mb-1">Publicás lo que ofrecés</h3>
+                <p className="text-muted-foreground">Un producto, un servicio o una habilidad.</p>
+              </div>
+            </li>
+            <li className="flex gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold font-bold">
+                2
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold mb-1">Vendés y recibís créditos</h3>
+                <p className="text-muted-foreground">
+                  Ejemplo: vendés una bici y recibís 200.000 IOX.
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold font-bold">
+                3
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold mb-1">Usás esos créditos</h3>
+                <p className="text-muted-foreground">
+                  Los gastás en lo que necesites dentro de la red.
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold font-bold">
+                4
+              </span>
+              <div>
+                <h3 className="text-xl font-semibold mb-1">Opcional: combinás con dinero</h3>
+                <p className="text-muted-foreground">
+                  También podés comprar incluso si todavía no vendiste nada.
+                </p>
+              </div>
+            </li>
+          </ol>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <FeatureCard
-              icon={<Heart className="w-8 h-8" />}
-              title="Publicá lo tuyo"
-              description="Contanos qué sabés hacer o qué tenés para ofrecer. Y también qué necesitás."
-            />
-            <FeatureCard
-              icon={<Users className="w-8 h-8" />}
-              title="Encontrá coincidencias"
-              description="Te mostramos quién ofrece lo que necesitás y quién necesita lo que ofrecés."
-            />
-            <FeatureCard
-              icon={<Repeat className="w-8 h-8" />}
-              title="Intercambiá"
-              description="Acordá el intercambio, registralo, y listo. Tu saldo se ajusta automáticamente."
-            />
+          <div className="mt-12 bg-card rounded-2xl p-6 md:p-8 border border-border">
+            <p className="font-semibold text-foreground mb-4">Ejemplo real</p>
+            <p className="text-muted-foreground mb-4">
+              Querés comprar una bici que vale 200.000. Intercambius te presta 50.000 IOX (sin
+              interés). Pagás los 150.000 restantes en pesos.
+            </p>
+            <div className="rounded-xl bg-muted/50 p-4 border border-border/60">
+              <p className="flex gap-2 items-start text-sm md:text-base">
+                <span aria-hidden>💡</span>
+                <span>
+                  Esa deuda en IOX no genera interés. Y más adelante, cuando vendas algo dentro
+                  de la red, la podés cancelar con tus propios créditos.
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Trust section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <Shield className="w-12 h-12 text-gold mb-6" />
-                <h2 className="text-3xl font-bold mb-4">
-                  El valor lo crean las personas
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Intercambius es un club de intercambio digital. Cada miembro aporta 
-                  valor real: su trabajo, sus productos, sus servicios.
+      {/* ¿Para quién es? */}
+      <section className="py-20 bg-surface/50">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+            ¿Para quién es?
+          </h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-card rounded-2xl p-8 border border-border hover:border-gold/30 transition-colors">
+              <p className="text-2xl mb-2" aria-hidden>
+                🏪
+              </p>
+              <h3 className="text-xl font-semibold mb-4">Si tenés un negocio</h3>
+              <ul className="space-y-2 text-muted-foreground mb-6">
+                <li>Movés stock o capacidad ociosa</li>
+                <li>Conseguís nuevos clientes</li>
+                <li>Pagás servicios sin usar tanto efectivo</li>
+              </ul>
+              <div className="rounded-xl bg-muted/40 p-4 border border-border/50">
+                <p className="font-medium text-foreground mb-2 flex gap-2 items-start">
+                  <span aria-hidden>💡</span>
+                  Acceso a crédito sin costo financiero
                 </p>
-                <ul className="space-y-3 text-muted-foreground">
-                  <li className="flex items-center gap-3">
-                    <span className="w-2 h-2 bg-gold rounded-full" />
-                    Créditos de intercambio
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="w-2 h-2 bg-gold rounded-full" />
-                    Dentro del club de confianza
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="w-2 h-2 bg-gold rounded-full" />
-                    Confianza organizada entre personas
-                  </li>
-                </ul>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Podés recibir créditos IOX a tasa 0%. Sin interés, porque operás en moneda
+                  complementaria. Un equipo especializado se pone en contacto con vos para
+                  evaluarlo.
+                </p>
               </div>
-              <div className="bg-card rounded-2xl p-8 border border-border gold-glow">
-                <div className="text-center">
-                  <p className="text-6xl font-bold gold-text mb-2">∞</p>
-                  <p className="text-xl font-medium mb-4">Sistema de suma cero</p>
-                  <p className="text-muted-foreground text-sm">
-                    Cuando alguien recibe, otro da. El sistema siempre está en equilibrio. 
-                    Tu crédito se genera cuando aportás valor a la comunidad.
-                  </p>
-                </div>
+            </div>
+
+            <div className="bg-card rounded-2xl p-8 border border-border hover:border-gold/30 transition-colors">
+              <p className="text-2xl mb-2" aria-hidden>
+                👤
+              </p>
+              <h3 className="text-xl font-semibold mb-4">Si sos usuario</h3>
+              <ul className="space-y-2 text-muted-foreground mb-6">
+                <li>Intercambiás cosas que no usás</li>
+                <li>Ofrecés tus habilidades</li>
+                <li>Accedés a productos y servicios gastando menos dinero</li>
+              </ul>
+              <div className="rounded-xl bg-muted/40 p-4 border border-border/50">
+                <p className="font-medium text-foreground mb-2 flex gap-2 items-start">
+                  <span aria-hidden>💡</span>
+                  Crédito inicial para empezar
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Podés acceder a hasta 50.000 IOX (equivalente a $50.000) para que empieces a
+                  operar dentro de la red desde el primer día.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 bg-surface/50">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            ¿Listo para intercambiar?
+      {/* ¿Esto es seguro? */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+            ¿Esto es seguro? ¿Por qué funciona?
           </h2>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-            Sumate a la comunidad. Intercambiá aunque no tengas pesos.
+          <ul className="space-y-5 text-muted-foreground md:text-lg">
+            <li className="flex gap-3 items-start">
+              <span className="text-xl shrink-0" aria-hidden>
+                🔒
+              </span>
+              <span>
+                <strong className="text-foreground">No es dinero, es crédito interno:</strong>{" "}
+                los IOX solo se usan dentro de la red, para intercambiar valor real entre
+                personas.
+              </span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-xl shrink-0" aria-hidden>
+                ⚖️
+              </span>
+              <span>
+                <strong className="text-foreground">Equivalencia clara:</strong> 1 IOX = 1 peso,
+                lo que hace que los precios sean fáciles de entender.
+              </span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-xl shrink-0" aria-hidden>
+                🤝
+              </span>
+              <span>
+                <strong className="text-foreground">Basado en intercambio real:</strong> cada
+                crédito nace de una operación entre usuarios, no de especulación.
+              </span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-xl shrink-0" aria-hidden>
+                📊
+              </span>
+              <span>
+                <strong className="text-foreground">Sistema equilibrado:</strong> lo que uno
+                gasta, otro lo recibe — mantiene el flujo dentro de la comunidad.
+              </span>
+            </li>
+            <li className="flex gap-3 items-start">
+              <span className="text-xl shrink-0" aria-hidden>
+                🧠
+              </span>
+              <span>
+                <strong className="text-foreground">Crédito inteligente:</strong> los préstamos
+                en IOX no tienen interés porque se cancelan generando valor dentro de la red.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* En una frase */}
+      <section className="py-16 bg-surface/50">
+        <div className="container mx-auto px-4 max-w-2xl text-center">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            En una frase
+          </h2>
+          <blockquote className="text-xl md:text-2xl font-medium text-foreground leading-relaxed max-w-xl mx-auto border-t-4 border-gold pt-6">
+            Intercambius convierte lo que tenés en lo que necesitás, sin depender completamente
+            del dinero.
+          </blockquote>
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section className="py-24">
+        <div className="container mx-auto px-4 text-center max-w-2xl">
+          <p className="text-3xl mb-2" aria-hidden>
+            🚀
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Empezá ahora</h2>
+          <p className="text-muted-foreground mb-8 md:text-lg">
+            Intercambiá valor real, accedé a crédito sin interés y aprovechá lo que ya tenés.
           </p>
           <Link to="/registro">
             <Button variant="gold" size="xl" className="group">
-              Crear mi cuenta gratis
+              <span className="mr-1" aria-hidden>
+                👉
+              </span>
+              Crear cuenta gratis y empezar a intercambiar
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer marca */}
       <footer className="py-8 border-t border-border">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src={logo} alt="Intercambius" className="w-8 h-8 rounded-full" />
-              <span className="text-sm text-muted-foreground">
-                Intercambius © 2026
-              </span>
+              <span className="text-sm text-muted-foreground">Intercambius © 2026</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Créditos de intercambio. Confianza organizada.
+            <p className="text-sm text-muted-foreground text-center md:text-right">
+              Créditos IOX · Red de intercambio
             </p>
           </div>
         </div>
@@ -172,19 +392,5 @@ const Landing = () => {
     </Layout>
   );
 };
-
-interface FeatureCardProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-const FeatureCard = ({ icon, title, description }: FeatureCardProps) => (
-  <div className="bg-card rounded-2xl p-8 border border-border hover:border-gold/30 transition-all duration-300 hover:gold-glow">
-    <div className="text-gold mb-4">{icon}</div>
-    <h3 className="text-xl font-semibold mb-2 text-card-foreground">{title}</h3>
-    <p className="text-muted-foreground">{description}</p>
-  </div>
-);
 
 export default Landing;
