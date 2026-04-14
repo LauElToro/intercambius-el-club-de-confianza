@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, User } from '@/services/auth.service';
+import { setAuthSessionInvalidHandler } from '@/lib/auth-session';
 
 interface AuthContextType {
   user: User | null;
@@ -35,6 +36,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     loadUser();
   }, []);
+
+  useEffect(() => {
+    setAuthSessionInvalidHandler(() => {
+      authService.logout();
+      setUser(null);
+      navigate('/login?sesion=expirada');
+    });
+    return () => setAuthSessionInvalidHandler(null);
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
     const response = await authService.login({ email, password });

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 
 const Login = () => {
+  const [searchParams] = useSearchParams();
+  const sesionExpirada = searchParams.get("sesion") === "expirada";
   const { login, mfaPending, completeLoginWithMfa, clearMfaPending } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
@@ -89,6 +91,11 @@ const Login = () => {
           </div>
 
           <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
+            {sesionExpirada && !showMfaStep && (
+              <div className="bg-muted/80 text-foreground p-3 rounded-lg text-sm border border-border">
+                Tu sesión expiró o el token dejó de ser válido. Volvé a iniciar sesión para continuar.
+              </div>
+            )}
             {error && (
               <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
                 {error}

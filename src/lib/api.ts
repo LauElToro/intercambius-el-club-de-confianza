@@ -1,6 +1,15 @@
+import {
+  isPublicAuthEndpoint,
+  notifyAuthSessionInvalid,
+  shouldInvalidateUserSession,
+} from '@/lib/auth-session';
+
 const API_URL = import.meta.env.VITE_API_URL || 'https://intercambios-backend.vercel.app';
 
 export class ApiError extends Error {
+  /** Si true, ya se disparó cierre de sesión / redirección; no mostrar otro toast genérico. */
+  sessionInvalidated = false;
+
   constructor(
     message: string,
     public status: number,
@@ -11,15 +20,63 @@ export class ApiError extends Error {
   }
 }
 
+type RequestOptions = RequestInit & { __authRetried?: boolean };
+
+function throwApiError(
+  endpoint: string,
+  status: number,
+  message: string,
+  data?: any
+): never {
+  const hadToken = !!localStorage.getItem('intercambius_token');
+  const msg = message || `HTTP error! status: ${status}`;
+  if (
+    hadToken &&
+    !isPublicAuthEndpoint(endpoint) &&
+    shouldInvalidateUserSession(status, msg)
+  ) {
+    notifyAuthSessionInvalid();
+    const err = new ApiError(msg, status, data);
+    err.sessionInvalidated = true;
+    throw err;
+  }
+  throw new ApiError(msg, status, data);
+}
+
+async function tryRefreshAccessToken(): Promise<boolean> {
+  const token = localStorage.getItem('intercambius_token');
+  if (!token) return false;
+  try {
+    const response = await fetch(`${API_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const text = await response.text();
+    if (!response.ok) return false;
+    const data = text ? JSON.parse(text) : {};
+    if (data && typeof data.token === 'string') {
+      localStorage.setItem('intercambius_token', data.token);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestOptions = {}
 ): Promise<T> {
+  const { __authRetried: authRetried, ...fetchInit } = options;
   const token = localStorage.getItem('intercambius_token');
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...fetchInit.headers,
   };
 
   if (token) {
@@ -27,7 +84,7 @@ async function request<T>(
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    ...fetchInit,
     headers,
   });
 
@@ -58,11 +115,21 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(
-      data.error || `HTTP error! status: ${response.status}`,
-      response.status,
-      data
-    );
+    const msg =
+      typeof data?.error === 'string' ? data.error : `HTTP error! status: ${response.status}`;
+    const hadToken = !!localStorage.getItem('intercambius_token');
+    if (
+      !authRetried &&
+      hadToken &&
+      !isPublicAuthEndpoint(endpoint) &&
+      shouldInvalidateUserSession(response.status, msg)
+    ) {
+      const refreshed = await tryRefreshAccessToken();
+      if (refreshed) {
+        return request<T>(endpoint, { ...options, __authRetried: true });
+      }
+    }
+    throwApiError(endpoint, response.status, msg, data);
   }
 
   return data;
@@ -92,7 +159,7 @@ export const api = {
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
 
   /** POST multipart/form-data (no fijar Content-Type; el navegador define boundary). */
-  postFormData: async <T>(endpoint: string, formData: FormData): Promise<T> => {
+  postFormData: async <T>(endpoint: string, formData: FormData, authRetried = false): Promise<T> => {
     const token = localStorage.getItem('intercambius_token');
     const headers: HeadersInit = {};
     if (token) {
@@ -115,12 +182,30 @@ export const api = {
       }
     }
     if (!response.ok) {
-      throw new ApiError(data.error || `HTTP error! status: ${response.status}`, response.status, data);
+      const msg =
+        typeof data?.error === 'string' ? data.error : `HTTP error! status: ${response.status}`;
+      const hadToken = !!localStorage.getItem('intercambius_token');
+      if (
+        !authRetried &&
+        hadToken &&
+        !isPublicAuthEndpoint(endpoint) &&
+        shouldInvalidateUserSession(response.status, msg)
+      ) {
+        const refreshed = await tryRefreshAccessToken();
+        if (refreshed) {
+          return api.postFormData<T>(endpoint, formData, true);
+        }
+      }
+      throwApiError(endpoint, response.status, msg, data);
     }
     return data as T;
   },
   
-  upload: async (file: File, tipo?: 'fotoPerfil' | 'banner' | 'market'): Promise<{ url: string; pathname: string; mediaType?: 'image' | 'video' }> => {
+  upload: async (
+    file: File,
+    tipo?: 'fotoPerfil' | 'banner' | 'market',
+    authRetried = false
+  ): Promise<{ url: string; pathname: string; mediaType?: 'image' | 'video' }> => {
     const token = localStorage.getItem('intercambius_token');
     if (!token) {
       throw new ApiError('No autorizado', 401);
@@ -153,7 +238,19 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new ApiError(data.error || 'Error al subir la imagen', response.status, data);
+      const msg = typeof data?.error === 'string' ? data.error : 'Error al subir la imagen';
+      const hadToken = !!localStorage.getItem('intercambius_token');
+      if (
+        !authRetried &&
+        hadToken &&
+        shouldInvalidateUserSession(response.status, msg)
+      ) {
+        const refreshed = await tryRefreshAccessToken();
+        if (refreshed) {
+          return api.upload(file, tipo, true);
+        }
+      }
+      throwApiError('/api/upload', response.status, msg, data);
     }
 
     return data;

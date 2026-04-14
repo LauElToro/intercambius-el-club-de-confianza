@@ -11,7 +11,7 @@ import Layout from "@/components/layout/Layout";
 import { ArrowLeft, Upload, Plus, X, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { marketService, CreateMarketItemData } from "@/services/market.service";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocationPicker } from "@/components/location/LocationPicker";
@@ -81,11 +81,13 @@ const CrearProducto = () => {
       });
       navigate("/market");
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setIsSubmitting(false);
+      if (error instanceof ApiError && error.sessionInvalidated) return;
+      const message = error instanceof Error ? error.message : "No se pudo crear el producto";
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear el producto",
+        description: message,
         variant: "destructive",
       });
     },
@@ -179,6 +181,16 @@ const CrearProducto = () => {
 
     setIsSubmitting(true);
     try {
+      try {
+        await userService.getCurrentUser();
+      } catch (e) {
+        if (e instanceof ApiError && e.sessionInvalidated) {
+          setIsSubmitting(false);
+          return;
+        }
+        throw e;
+      }
+
       const uploaded: { url: string; mediaType: 'image' | 'video' }[] = [];
       for (let i = 0; i < formData.medias.length; i++) {
         const res = await api.upload(formData.medias[i].file);
@@ -250,11 +262,13 @@ const CrearProducto = () => {
       };
 
       createMutation.mutate(itemData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsSubmitting(false);
+      if (error instanceof ApiError && error.sessionInvalidated) return;
+      const message = error instanceof Error ? error.message : "No se pudo crear el producto";
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear el producto",
+        description: message,
         variant: "destructive",
       });
     }
