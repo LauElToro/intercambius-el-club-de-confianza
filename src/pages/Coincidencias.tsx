@@ -61,8 +61,10 @@ const Coincidencias = () => {
 
   const misProductos = misProductosResponse?.data ?? [];
 
+  const interesesKey = (currentUser?.interesesQuiero ?? []).slice().sort().join('|');
+
   const { data: coincidencias = [], isLoading: loadingCoincidencias, error: errorCoincidencias } = useQuery({
-    queryKey: ['coincidencias', currentUser?.id],
+    queryKey: ['coincidencias', currentUser?.id, interesesKey],
     queryFn: () => {
       if (!currentUser?.id) throw new Error('Usuario no autenticado');
       return coincidenciasService.getCoincidencias(currentUser.id);
@@ -204,6 +206,16 @@ const Coincidencias = () => {
         </div>
 
         <GuiaCoincidencias />
+
+        {Array.isArray(currentUser?.interesesQuiero) && currentUser.interesesQuiero.length > 0 && (
+          <Alert className="mb-6 border-gold/40 bg-gold/5">
+            <Sparkles className="h-4 w-4 text-gold" />
+            <AlertDescription className="text-sm">
+              Según <strong className="text-foreground">Lo que querés</strong> en tu perfil (
+              {currentUser.interesesQuiero.join(', ')}), mostramos primero las publicaciones que mejor coinciden con esos intereses (mismo rango de precio).
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Búsqueda: qué te interesa */}
         <Card className="border-border mb-6">

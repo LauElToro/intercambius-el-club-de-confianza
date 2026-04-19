@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck, ChevronLeft, ChevronRight, CheckCircle2, Sparkles } from "lucide-react";
 import { userService } from "@/services/user.service";
 import { marketService } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,6 +45,7 @@ const Perfil = () => {
   const [kycBtnLoading, setKycBtnLoading] = useState(false);
   const [editando, setEditando] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({});
+  const [interesInput, setInteresInput] = useState("");
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,6 +79,7 @@ const Perfil = () => {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['user', id] });
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      queryClient.invalidateQueries({ queryKey: ['coincidencias'] });
       await refreshUser();
       toast({ title: "Perfil actualizado", description: "Los cambios se guardaron correctamente." });
       setEditando(false);
@@ -98,13 +100,38 @@ const Perfil = () => {
       redesSociales: usuario?.redesSociales ?? {},
       ofrece: usuario?.ofrece ?? '',
       necesita: usuario?.necesita ?? '',
+      interesesQuiero: [...(usuario?.interesesQuiero ?? [])],
     });
+    setInteresInput("");
     setEditando(true);
   };
 
   const cancelarEdicion = () => {
     setEditando(false);
     setFormData({});
+    setInteresInput("");
+  };
+
+  const agregarInteres = () => {
+    const raw = interesInput.trim().slice(0, 80);
+    if (raw.length < 2) return;
+    const lista = [...(formData.interesesQuiero ?? [])];
+    const duplicado = lista.some((t) => t.toLowerCase() === raw.toLowerCase());
+    if (duplicado) {
+      setInteresInput("");
+      return;
+    }
+    if (lista.length >= 25) return;
+    lista.push(raw);
+    setFormData((p) => ({ ...p, interesesQuiero: lista }));
+    setInteresInput("");
+  };
+
+  const quitarInteres = (tag: string) => {
+    setFormData((p) => ({
+      ...p,
+      interesesQuiero: (p.interesesQuiero ?? []).filter((t) => t !== tag),
+    }));
   };
 
   const handleGuardar = () => {
@@ -359,6 +386,51 @@ const Perfil = () => {
                       </p>
                     </div>
                     <div>
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-gold" />
+                        Lo que quiero (productos de mi interés)
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                        Palabras clave como zapatillas, juegos de mesa, guitarra… En coincidencias verás primero publicaciones que encajen con esto (además del precio).
+                      </p>
+                      <div className="flex flex-wrap gap-2 min-h-[2rem]">
+                        {(formData.interesesQuiero ?? []).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="gap-1 pr-1 font-normal">
+                            {tag}
+                            <button
+                              type="button"
+                              className="rounded-full p-0.5 hover:bg-muted"
+                              onClick={() => quitarInteres(tag)}
+                              aria-label={`Quitar ${tag}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                        <Input
+                          value={interesInput}
+                          onChange={(e) => setInteresInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              agregarInteres();
+                            }
+                          }}
+                          placeholder="Ej: zapatillas"
+                          maxLength={80}
+                          className="flex-1"
+                        />
+                        <Button type="button" variant="outline" size="sm" onClick={agregarInteres} className="shrink-0">
+                          Agregar
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hasta 25 palabras, mínimo 2 caracteres cada una.
+                      </p>
+                    </div>
+                    <div>
                       <label className="text-sm font-medium text-muted-foreground mb-2 block">Redes sociales</label>
                       <div className="space-y-2">
                         {REDES_KEYS.map((key) => {
@@ -434,6 +506,26 @@ const Perfil = () => {
                       <div className="mb-4 p-4 rounded-xl bg-muted/50">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Lo que busca</p>
                         <p className="text-sm text-foreground">{usuario.necesita}</p>
+                      </div>
+                    )}
+                    {(usuario?.interesesQuiero?.length ?? 0) > 0 && (
+                      <div className="mb-4 p-4 rounded-xl bg-gold/5 border border-gold/25">
+                        <p className="text-xs font-semibold text-gold uppercase tracking-wide mb-2 flex items-center gap-2">
+                          <Sparkles className="w-4 h-4" />
+                          {esMiPerfil ? 'Lo que quiero' : 'Lo que quiere'}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {usuario!.interesesQuiero!.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="font-normal bg-background/80">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {esMiPerfil
+                            ? 'Así priorizamos coincidencias con lo que te interesa.'
+                            : 'Si tenés algo parecido, podés proponer un intercambio desde el detalle de tu publicación.'}
+                        </p>
                       </div>
                     )}
                     {Object.keys(redesSociales).length > 0 && (

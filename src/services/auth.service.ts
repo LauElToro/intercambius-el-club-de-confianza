@@ -47,6 +47,8 @@ export interface User {
   redesSociales?: Record<string, string>;
   ofrece?: string;
   necesita?: string;
+  /** Palabras clave de productos que le interesan (prioridad en coincidencias). */
+  interesesQuiero?: string[];
   precioOferta?: number;
 }
 
