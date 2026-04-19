@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
@@ -90,7 +90,7 @@ const Perfil = () => {
     },
   });
 
-  const iniciarEdicion = () => {
+  const iniciarEdicion = useCallback(() => {
     setFormData({
       nombre: usuario?.nombre ?? '',
       bio: usuario?.bio ?? '',
@@ -104,6 +104,19 @@ const Perfil = () => {
     });
     setInteresInput("");
     setEditando(true);
+  }, [usuario]);
+
+  const scrollALoQueQuiero = () => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById("config-lo-que-quiero")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+    });
+  };
+
+  const abrirEdicionLoQueQuiero = () => {
+    iniciarEdicion();
+    scrollALoQueQuiero();
   };
 
   const cancelarEdicion = () => {
@@ -171,6 +184,22 @@ const Perfil = () => {
       setSearchParams({}, { replace: true });
     }
   }, [esMiPerfil, searchParams, setSearchParams, refreshUser, queryClient, id]);
+
+  /** Desde Coincidencias: `/perfil/:id?intereses=1` abre edición y baja a "Lo que quiero". */
+  useEffect(() => {
+    if (!usuario || !esMiPerfil) return;
+    if (searchParams.get("intereses") !== "1") return;
+    iniciarEdicion();
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("intereses");
+      return next;
+    }, { replace: true });
+    const t = window.setTimeout(() => {
+      document.getElementById("config-lo-que-quiero")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [usuario, esMiPerfil, searchParams, setSearchParams, iniciarEdicion]);
 
   const displayData = editando ? formData : usuario;
   const nombre = displayData?.nombre ?? usuario?.nombre ?? '';
@@ -284,6 +313,23 @@ const Perfil = () => {
           </div>
         )}
 
+        {esMiPerfil && !editando && !(usuario?.interesesQuiero?.length) && (
+          <div className="mb-4 rounded-xl border border-gold/30 bg-gold/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex gap-3 min-w-0">
+              <Sparkles className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-sm">Configurá «Lo que quiero»</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Son palabras clave (zapatillas, juegos de mesa…) para priorizar coincidencias. Está en <strong className="text-foreground">Editar perfil</strong>, debajo de «Lo que busco».
+                </p>
+              </div>
+            </div>
+            <Button type="button" variant="gold" size="sm" className="shrink-0 w-full sm:w-auto" onClick={abrirEdicionLoQueQuiero}>
+              Ir a «Lo que quiero»
+            </Button>
+          </div>
+        )}
+
         {/* Banner */}
         <div className="relative rounded-2xl overflow-hidden bg-muted h-44 sm:h-56 mb-[-3.5rem] shadow-lg">
           {banner ? (
@@ -385,7 +431,7 @@ const Perfil = () => {
                         Completá esto para que aparezcan coincidencias entre lo que ofrecés y lo que buscás.
                       </p>
                     </div>
-                    <div>
+                    <div id="config-lo-que-quiero">
                       <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-gold" />
                         Lo que quiero (productos de mi interés)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,6 +206,21 @@ const Coincidencias = () => {
         </div>
 
         <GuiaCoincidencias />
+
+        {(!Array.isArray(currentUser.interesesQuiero) || currentUser.interesesQuiero.length === 0) && (
+          <Alert className="mb-6 border-border bg-muted/30">
+            <Sparkles className="h-4 w-4 text-gold" />
+            <AlertDescription className="text-sm">
+              <strong className="text-foreground">Lo que quiero</strong> se configura en tu perfil (palabras clave como zapatillas o juegos de mesa) para priorizar coincidencias.{" "}
+              <Link
+                to={`/perfil/${currentUser.id}?intereses=1`}
+                className="text-gold font-medium underline underline-offset-2 hover:no-underline whitespace-nowrap"
+              >
+                Abrir mi perfil y configurarlo
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {Array.isArray(currentUser?.interesesQuiero) && currentUser.interesesQuiero.length > 0 && (
           <Alert className="mb-6 border-gold/40 bg-gold/5">
