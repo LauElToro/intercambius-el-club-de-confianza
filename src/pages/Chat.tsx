@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { chatService, Conversacion, Mensaje } from "@/services/chat.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiError } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
+import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, Banknote, Check, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
 
@@ -91,6 +94,7 @@ function ProductoCardChat({
 const Chat = () => {
   const { conversacionId } = useParams<{ conversacionId?: string }>();
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [mensaje, setMensaje] = useState("");
@@ -113,6 +117,16 @@ const Chat = () => {
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       queryClient.invalidateQueries({ queryKey: ['chat', conversacionId] });
       setMensaje("");
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError && e.data?.code === "KYC_REQUIRED") {
+        toast({
+          title: "Verificación requerida",
+          description: e.message || "Debés verificar tu identidad para enviar esta propuesta.",
+          variant: "destructive",
+        });
+        return;
+      }
     },
   });
 
@@ -309,7 +323,10 @@ const Chat = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{c.otroUsuario.nombre}</p>
+                        <p className="font-medium truncate flex items-center gap-1 min-w-0">
+                          <span className="truncate">{c.otroUsuario.nombre}</span>
+                          {c.otroUsuario.kycVerificado && <IdentidadVerificadaBadge iconClassName="h-3.5 w-3.5 shrink-0" />}
+                        </p>
                         {c.marketItem && (
                           <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                             <ShoppingBag className="w-3 h-3" />
@@ -349,7 +366,12 @@ const Chat = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">{chatDetalle.conversacion.otroUsuario.nombre}</CardTitle>
+                        <CardTitle className="text-base truncate flex items-center gap-1.5 min-w-0">
+                          <span className="truncate">{chatDetalle.conversacion.otroUsuario.nombre}</span>
+                          {chatDetalle.conversacion.otroUsuario.kycVerificado && (
+                            <IdentidadVerificadaBadge iconClassName="h-4 w-4 shrink-0" />
+                          )}
+                        </CardTitle>
                         {chatDetalle.conversacion.marketItem && (
                           <button
                             onClick={() => navigate(`/producto/${chatDetalle.conversacion.marketItem!.id}`)}

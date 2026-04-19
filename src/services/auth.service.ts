@@ -38,6 +38,8 @@ export interface User {
   totalResenas: number;
   ubicacion: string;
   verificado: boolean;
+  /** Identidad verificada con Didit (KYC). */
+  kycVerificado?: boolean;
   miembroDesde: string;
   bio?: string;
   fotoPerfil?: string;

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Star, ArrowLeft, Loader2, Pencil, Save, X, Instagram, Facebook, Twitter, Linkedin, Globe, Package, Calendar, BadgeCheck, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { userService } from "@/services/user.service";
 import { marketService } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,8 @@ import { User } from "@/services/auth.service";
 import api from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
+import { kycService } from "@/services/kyc.service";
 
 const REDES_KEYS = ['instagram', 'facebook', 'twitter', 'linkedin', 'web'] as const;
 const REDES_ICONS: Record<string, typeof Instagram> = {
@@ -39,6 +41,8 @@ const Perfil = () => {
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [kycBtnLoading, setKycBtnLoading] = useState(false);
   const [editando, setEditando] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({});
   const fotoInputRef = useRef<HTMLInputElement>(null);
@@ -133,6 +137,14 @@ const Perfil = () => {
     setPageProductos(1);
   }, [id]);
 
+  useEffect(() => {
+    if (esMiPerfil && searchParams.get("kyc") === "return") {
+      void refreshUser();
+      queryClient.invalidateQueries({ queryKey: ["user", id] });
+      setSearchParams({}, { replace: true });
+    }
+  }, [esMiPerfil, searchParams, setSearchParams, refreshUser, queryClient, id]);
+
   const displayData = editando ? formData : usuario;
   const nombre = displayData?.nombre ?? usuario?.nombre ?? '';
   const bio = displayData?.bio ?? usuario?.bio ?? '';
@@ -210,6 +222,40 @@ const Perfil = () => {
             </div>
           )}
         </div>
+
+        {esMiPerfil && !editando && (
+          <div className="mb-4 rounded-xl border border-border bg-card/80 backdrop-blur-sm px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Compras con IOX e intercambios requieren identidad verificada.
+            </p>
+            {usuario?.kycVerificado ? (
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium text-sm shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+                Identidad verificada
+              </div>
+            ) : (
+              <Button
+                variant="gold"
+                size="sm"
+                className="shrink-0 w-full sm:w-auto"
+                disabled={kycBtnLoading}
+                onClick={async () => {
+                  setKycBtnLoading(true);
+                  try {
+                    const { url } = await kycService.startVerificationSession();
+                    window.location.href = url;
+                  } catch (e: unknown) {
+                    setKycBtnLoading(false);
+                    const msg = e instanceof Error ? e.message : "No se pudo iniciar";
+                    toast({ title: "Error", description: msg, variant: "destructive" });
+                  }
+                }}
+              >
+                Verifica tu identidad
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Banner */}
         <div className="relative rounded-2xl overflow-hidden bg-muted h-44 sm:h-56 mb-[-3.5rem] shadow-lg">
@@ -338,7 +384,13 @@ const Perfil = () => {
                   <>
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{nombre}</h1>
-                      {usuario?.verificado && (
+                      {usuario?.kycVerificado && (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                          <IdentidadVerificadaBadge iconClassName="h-5 w-5" />
+                          Identidad verificada
+                        </span>
+                      )}
+                      {usuario?.verificado && !usuario?.kycVerificado && (
                         <Badge variant="secondary" className="gap-1 bg-gold/10 text-gold border-gold/30">
                           <BadgeCheck className="w-3.5 h-3.5" />
                           Verificado

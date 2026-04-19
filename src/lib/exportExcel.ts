@@ -53,6 +53,7 @@ export function exportUsersToExcel(data: any[]) {
     Ubicación: u.ubicacion,
     MiembroDesde: u.miembroDesde,
     Verificado: u.verificado ? 'Sí' : 'No',
+    KYCIdentidad: u.kycVerificado ? 'Sí' : 'No',
     Baneado: u.bannedAt ? 'Sí' : 'No',
     ProductosPublicados: u.productosPublicados,
     Intercambios: u.intercambios,

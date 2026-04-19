@@ -31,6 +31,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
 import { CREDIT_LIMIT_DEFAULT, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
+import { ApiError } from "@/lib/api";
+import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
+import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +43,7 @@ const ProductoDetalle = () => {
   const { toast } = useToast();
   const [selectedMedia, setSelectedMedia] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -95,6 +99,11 @@ const ProductoDetalle = () => {
       if (data.conversacionId) navigate(`/chat/${data.conversacionId}`);
     },
     onError: (error: any) => {
+      if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {
+        setCheckoutOpen(false);
+        setKycRequiredOpen(true);
+        return;
+      }
       const msg = error?.data?.error || error?.message || "No se pudo completar el pago";
       const esLimite = /límite|limite|crédito|credito|insuficiente/i.test(String(msg));
       toast({
@@ -424,9 +433,7 @@ const ProductoDetalle = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold">{vendedor.nombre}</h3>
-                      {vendedor.verificado && (
-                        <CheckCircle2 className="w-4 h-4 text-blue-500" />
-                      )}
+                      {vendedor.kycVerificado && <IdentidadVerificadaBadge iconClassName="h-5 w-5" />}
                     </div>
                     <div className="flex items-center gap-1 mb-2">
                       <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
@@ -506,7 +513,13 @@ const ProductoDetalle = () => {
                       <Button
                         className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
                         size="lg"
-                        onClick={() => setCheckoutOpen(true)}
+                        onClick={() => {
+                          if (!usuario?.kycVerificado) {
+                            setKycRequiredOpen(true);
+                            return;
+                          }
+                          setCheckoutOpen(true);
+                        }}
                       >
                         <CreditCard className="w-5 h-5 mr-2" />
                         {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'}
@@ -535,6 +548,8 @@ const ProductoDetalle = () => {
         </div>
 
         {/* Checkout Dialog */}
+        <KycRequiredDialog open={kycRequiredOpen} onOpenChange={setKycRequiredOpen} contexto="compra" />
+
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>

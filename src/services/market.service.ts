@@ -10,6 +10,7 @@ export interface VendedorInfo {
   ubicacion?: string;
   miembroDesde?: string;
   verificado?: boolean;
+  kycVerificado?: boolean;
 }
 
 export interface ProductMedia {

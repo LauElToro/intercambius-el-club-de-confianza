@@ -2,7 +2,7 @@ import api, { ApiError } from '@/lib/api';
 
 export interface Conversacion {
   id: number;
-  otroUsuario: { id: number; nombre: string };
+  otroUsuario: { id: number; nombre: string; kycVerificado?: boolean };
   marketItem?: { id: number; titulo: string; rubro: string; imagen: string };
   ultimoMensaje?: { contenido: string; createdAt: string } | null;
   updatedAt: string;
@@ -12,6 +12,7 @@ export interface Mensaje {
   id: number;
   senderId: number;
   senderNombre: string;
+  senderKycVerificado?: boolean;
   contenido: string;
   leido: boolean;
   createdAt: string;
@@ -20,7 +21,7 @@ export interface Mensaje {
 export interface ChatDetalle {
   conversacion: {
     id: number;
-    otroUsuario: { id: number; nombre: string };
+    otroUsuario: { id: number; nombre: string; kycVerificado?: boolean };
     marketItem?: { id: number; titulo: string; rubro: string; imagen: string; precio: number };
   };
   mensajes: Mensaje[];

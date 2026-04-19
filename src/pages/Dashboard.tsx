@@ -1,16 +1,18 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
-import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight, CheckCircle2, Shield, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { kycService } from "@/services/kyc.service";
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { intercambiosService } from "@/services/intercambios.service";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { marketService } from "@/services/market.service";
-import { Loader2 } from "lucide-react";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { WelcomeBanner } from "@/components/onboarding/WelcomeBanner";
+import { useToast } from "@/components/ui/use-toast";
 import { ComoFuncionaIX } from "@/components/onboarding/ComoFuncionaIX";
 import { ReferidosPanel } from "@/components/referidos/ReferidosPanel";
 
@@ -29,7 +31,10 @@ function formatFechaRelativa(dateStr: string): string {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, loading: authLoading, refreshUser } = useAuth();
+  const { toast } = useToast();
+  const [kycBtnLoading, setKycBtnLoading] = useState(false);
 
   const { data: userData, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
@@ -51,6 +56,14 @@ const Dashboard = () => {
     enabled: !!currentUser?.id,
   });
   const totalMisProductos = misProductosResponse?.total ?? 0;
+
+  useEffect(() => {
+    if (searchParams.get("kyc") === "return") {
+      void refreshUser().finally(() => {
+        setSearchParams({}, { replace: true });
+      });
+    }
+  }, [searchParams, setSearchParams, refreshUser]);
 
   if (authLoading || userLoading) {
     return (
@@ -90,6 +103,47 @@ const Dashboard = () => {
         <WelcomeBanner
           isNewUser={totalMisProductos === 0 && intercambios.length === 0}
         />
+
+        <div className="mb-8 rounded-2xl border border-border bg-card p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex gap-3">
+            <div className="rounded-xl bg-gold/10 p-3 h-fit">
+              <Shield className="w-6 h-6 text-gold" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg">Identidad verificada</h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                Para comprar con IOX o proponer intercambios necesitamos confirmar quién sos. Podés hacerlo cuando quieras desde acá.
+              </p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 flex flex-col sm:items-end gap-2">
+            {currentUser.kycVerificado ? (
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle2 className="w-6 h-6" />
+                <span>Identidad verificada</span>
+              </div>
+            ) : (
+              <Button
+                variant="gold"
+                className="w-full sm:w-auto"
+                disabled={kycBtnLoading}
+                onClick={async () => {
+                  setKycBtnLoading(true);
+                  try {
+                    const { url } = await kycService.startVerificationSession();
+                    window.location.href = url;
+                  } catch (e: unknown) {
+                    setKycBtnLoading(false);
+                    const msg = e instanceof Error ? e.message : "No se pudo iniciar";
+                    toast({ title: "Error", description: msg, variant: "destructive" });
+                  }
+                }}
+              >
+                Verifica tu identidad
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* Balance Card */}
         <div className="bg-card rounded-2xl p-6 md:p-8 border border-border gold-glow mb-8">

@@ -17,6 +17,8 @@ import { busquedasService } from "@/services/busquedas.service";
 import { marketService, MarketItem } from "@/services/market.service";
 import { chatService } from "@/services/chat.service";
 import { useToast } from "@/components/ui/use-toast";
+import { ApiError } from "@/lib/api";
+import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { GuiaCoincidencias } from "@/components/onboarding/GuiaCoincidencias";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 
@@ -41,6 +43,7 @@ const Coincidencias = () => {
   const [productoInteresadoId, setProductoInteresadoId] = useState<number | null>(null);
   const [buscarEnMarketplace, setBuscarEnMarketplace] = useState(false);
   const [paginaInteres, setPaginaInteres] = useState(1);
+  const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
 
   const { data: userData } = useQuery({
     queryKey: ['currentUser'],
@@ -112,6 +115,10 @@ const Coincidencias = () => {
       navigate(`/chat/${data.conversacionId}`);
     },
     onError: (error: unknown) => {
+      if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {
+        setKycRequiredOpen(true);
+        return;
+      }
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "No se pudo iniciar el intercambio",
@@ -182,6 +189,7 @@ const Coincidencias = () => {
 
   return (
     <Layout>
+      <KycRequiredDialog open={kycRequiredOpen} onOpenChange={setKycRequiredOpen} contexto="intercambio" />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
@@ -452,6 +460,10 @@ const Coincidencias = () => {
                           e.stopPropagation();
                           if (!miProductoSeleccionado) {
                             toast({ title: "Seleccioná tu producto", description: "Elegí qué ofrecés a cambio en el panel de la izquierda.", variant: "destructive" });
+                            return;
+                          }
+                          if (!currentUser?.kycVerificado) {
+                            setKycRequiredOpen(true);
                             return;
                           }
                           iniciarIntercambioMutation.mutate({
