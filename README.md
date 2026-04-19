@@ -111,7 +111,7 @@ src/
 ### Scripts
 
 ```bash
-npm run dev      # Desarrollo (puerto 8080)
+npm run dev      # Desarrollo (puerto 5173)
 npm run build    # Build para producción
 npm run preview  # Preview del build
 npm run lint     # ESLint
@@ -306,7 +306,7 @@ PORT=3001
 NODE_ENV=development
 JWT_SECRET=tu-secret-jwt-cambiar-en-produccion
 BLOB_READ_WRITE_TOKEN=tu-vercel-blob-token
-FRONTEND_URL=http://localhost:8080
+FRONTEND_URL=https://intercambius.com.ar
 ```
 
 ### 3. Base de datos
@@ -328,7 +328,7 @@ cd backend && npm run dev
 npm run dev
 ```
 
-- Frontend: http://localhost:8080
+- Frontend: http://localhost:5173
 - Backend: http://localhost:3001
 
 ---
