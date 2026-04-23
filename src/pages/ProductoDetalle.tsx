@@ -561,7 +561,7 @@ const ProductoDetalle = () => {
                 <span className="font-bold">{formatIX(precio)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Se aplica un {COMISION_IOX_PORCENTAJE}% en IOX (comisión de la plataforma) en cada operación. Quienes venden aceptan siempre este {COMISION_IOX_PORCENTAJE}% en IOX.
+                Si tenés IOX disponible, una parte del pago ({COMISION_IOX_PORCENTAJE}%) puede realizarse en IOX; si no tenés IOX, el pago puede ser 100% en dinero tradicional. Sin comisiones fijas.
               </p>
               <div className="bg-muted rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">

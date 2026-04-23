@@ -34,10 +34,10 @@ export const ComoFuncionaIX = () => {
       <CollapsibleContent>
         <div className="mt-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground space-y-2">
           <p>
-            <strong className="text-foreground">IOX</strong> (créditos de intercambio): cuando dás algo, recibís IOX; cuando recibís algo, gastás IOX. Al ingresar al portal se te ofrece {ixOferta} IOX de crédito: si aceptás los términos, tu saldo inicial es -{ixOferta} IOX; si no, quedás en 0 pero al comprar siempre pagás al menos un <strong className="text-foreground">{COMISION_IOX_PORCENTAJE}% en IOX</strong>.
+            <strong className="text-foreground">IOX</strong> (créditos de intercambio): cuando dás algo, recibís IOX; cuando recibís algo, gastás IOX. Al ingresar al portal se te ofrece hasta {ixOferta} IOX de crédito: si aceptás los términos, podés activar esa línea al publicar; si no aceptás, quedás en 0 y podés operar con dinero tradicional. No estás obligado a usar IOX.
           </p>
           <p>
-            En cada intercambio (compra o venta) se aplica un mínimo del <strong className="text-foreground">{COMISION_IOX_PORCENTAJE}% en IOX</strong>. Quienes venden aceptan siempre este {COMISION_IOX_PORCENTAJE}% en IOX. Podés endeudarte hasta -{ixOferta} IOX; al llegar a ese límite solo podés pagar por fuera de la página hasta reducir tu deuda.
+            En cada intercambio, si el comprador tiene IOX disponible, una parte del pago (<strong className="text-foreground">{COMISION_IOX_PORCENTAJE}%</strong>) puede realizarse en IOX; si el comprador no tiene IOX, el pago puede ser 100% en dinero tradicional. Si activás crédito, podés endeudarte hasta -{ixOferta} IOX según tu publicación y el tope; al llegar al límite solo podés pagar por fuera de la página hasta reducir tu deuda.
           </p>
           <p>
             Si tras {MESES_REGULARIZACION_DEUDA} meses mantenés deuda elevada (ej. -{ixOferta} IOX), puede activarse regularización: publicar y vender, colaborar con una ONG, eventos del proyecto u otras formas acordadas.

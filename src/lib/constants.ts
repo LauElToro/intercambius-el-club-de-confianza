@@ -7,7 +7,7 @@ export const CREDITO_OFERTA_INGRESO = 50_000;
 /** Contacto para quejas y sugerencias (mailto en el sitio). */
 export const CONTACT_EMAIL = "Intercambius.info@gmail.com";
 
-/** Comisión mínima en IOX sobre cada intercambio (compra o venta), en porcentaje. Por defecto 5%. Los vendedores siempre aceptan 5% en IOX. */
+/** Parte del pago en IOX cuando el comprador tiene saldo IOX disponible (referencia 5%). Si no hay IOX del comprador, puede ser 100% dinero tradicional. */
 export const COMISION_IOX_PORCENTAJE = 5;
 
 /** Referencia de diseño: máximo de IOX acumulable en saldo positivo (ejemplo; políticas operativas pueden ajustar). */
