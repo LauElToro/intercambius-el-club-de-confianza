@@ -169,10 +169,32 @@ const Chat = () => {
   const [propuestaPesosOpen, setPropuestaPesosOpen] = useState(false);
   const [propuestaUSDOpen, setPropuestaUSDOpen] = useState(false);
   const [aprobarIntercambioOpen, setAprobarIntercambioOpen] = useState(false);
-  const [codigoEnviado, setCodigoEnviado] = useState<string | null>(null);
+  const [codigoEmailInfo, setCodigoEmailInfo] = useState<{ para: string } | null>(null);
   const [montoIX, setMontoIX] = useState("");
   const [montoPesos, setMontoPesos] = useState("");
   const [montoUSD, setMontoUSD] = useState("");
+
+  const codigoIntercambioMutation = useMutation({
+    mutationFn: () => chatService.enviarCodigoIntercambio(Number(conversacionId!)),
+    onSuccess: (data) => {
+      setCodigoEmailInfo({ para: data.emailEnviadoA });
+      setAprobarIntercambioOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      queryClient.invalidateQueries({ queryKey: ['chat', conversacionId] });
+      toast({ title: "Código enviado", description: data.mensaje });
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError) {
+        toast({
+          title: "No se pudo enviar",
+          description: e.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: "Error", description: "Intentá de nuevo", variant: "destructive" });
+    },
+  });
 
   const msgs = chatDetalle?.mensajes ?? [];
   // Detectar propuesta de intercambio: formato JSON con cards (un solo mensaje)
@@ -257,17 +279,6 @@ const Chat = () => {
       enviarMutation.mutate(texto);
       navigate("/registrar-intercambio", { state: { tipoPago: "usd", monto: propuestaDelOtro.monto } });
     }
-  };
-
-  const handleAprobarIntercambio = () => {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const texto = `Código de verificación Intercambius: ${code}. La otra parte debe ingresar este código en "Registrar intercambio" para confirmar el intercambio.`;
-    enviarMutation.mutate(texto, {
-      onSuccess: () => {
-        setCodigoEnviado(code);
-        setAprobarIntercambioOpen(false);
-      },
-    });
   };
 
   return (
@@ -486,23 +497,25 @@ const Chat = () => {
                     {soyReceptor && (
                       <div className="px-4 py-2 border-b border-border bg-gold/10 flex items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Te ofrecieron un intercambio. Cuando estén de acuerdo, generá un código para que la otra parte confirme.
+                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> a quien hizo la propuesta (no por el chat).
                         </span>
                         <Button
                           variant="gold"
                           size="sm"
                           onClick={() => setAprobarIntercambioOpen(true)}
-                          disabled={enviarMutation.isPending}
+                          disabled={enviarMutation.isPending || codigoIntercambioMutation.isPending}
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" />
                           Aprobar intercambio
                         </Button>
                       </div>
                     )}
-                    {codigoEnviado && (
+                    {codigoEmailInfo && (
                       <div className="px-4 py-2 border-b border-border bg-green-500/10 flex items-center justify-between gap-2">
-                        <span className="text-sm">Código enviado: <strong>{codigoEnviado}</strong>. La otra parte debe ingresarlo en Registrar intercambio.</span>
-                        <Button variant="ghost" size="sm" onClick={() => setCodigoEnviado(null)}>Cerrar</Button>
+                        <span className="text-sm">
+                          Código enviado por <strong>email</strong> a {codigoEmailInfo.para}. No se muestra en el chat; la otra parte debe revisar su casilla e ingresarlo en Registrar intercambio.
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => setCodigoEmailInfo(null)}>Cerrar</Button>
                       </div>
                     )}
                     <div className="p-4 border-t flex flex-col gap-2">
@@ -647,12 +660,19 @@ const Chat = () => {
                           <DialogTitle>Aprobar intercambio</DialogTitle>
                         </DialogHeader>
                         <p className="text-sm text-muted-foreground">
-                          Se enviará un código de verificación en el chat. La otra parte debe ingresar ese código en &quot;Registrar intercambio&quot; para confirmar y registrar el intercambio.
+                          Se generará un código de 6 dígitos y se <strong>enviará por email</strong> a quien hizo la propuesta de intercambio. Esa persona debe ingresarlo en &quot;Registrar intercambio&quot;. El código <strong>no</strong> se publica en el chat.
+                        </p>
+                        <p className="text-sm rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-foreground">
+                          Solo entregá este tipo de código cuando te encuentres con la otra parte y/o recibas el producto.
                         </p>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setAprobarIntercambioOpen(false)}>Cancelar</Button>
-                          <Button variant="gold" onClick={handleAprobarIntercambio} disabled={enviarMutation.isPending}>
-                            {enviarMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generar y enviar código"}
+                          <Button
+                            variant="gold"
+                            onClick={() => codigoIntercambioMutation.mutate()}
+                            disabled={codigoIntercambioMutation.isPending}
+                          >
+                            {codigoIntercambioMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar código por email"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>

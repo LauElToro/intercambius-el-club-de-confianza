@@ -110,4 +110,24 @@ export const chatService = {
       throw new ApiError('Error al enviar mensaje', 500);
     }
   },
+
+  /**
+   * Quien recibió la propuesta de intercambio: envía un código de 6 dígitos por email
+   * a quien hizo la propuesta (no se muestra el código en el chat).
+   */
+  async enviarCodigoIntercambio(conversacionId: number): Promise<{
+    ok: boolean;
+    emailEnviadoA: string;
+    mensaje: string;
+  }> {
+    try {
+      return await api.post<{ ok: boolean; emailEnviadoA: string; mensaje: string }>(
+        `/api/chat/${conversacionId}/codigo-intercambio`,
+        {}
+      );
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError('Error al enviar el código', 500);
+    }
+  },
 };

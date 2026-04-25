@@ -184,14 +184,17 @@ const RegistrarIntercambio = () => {
                 <Input
                   id="codigoVerificacion"
                   name="codigoVerificacion"
-                  placeholder="Si la otra parte te pasó un código de 6 dígitos, ingresalo acá"
+                  placeholder="Código de 6 dígitos que te llegó por email"
                   value={formData.codigoVerificacion}
                   onChange={handleChange}
                   maxLength={6}
                   className="bg-surface border-border focus:border-gold"
                 />
                 <p className="text-xs text-muted-foreground">
-                  La otra parte puede generar un código con &quot;Aprobar intercambio&quot; en el chat para confirmar.
+                  Quien recibió la propuesta de intercambio envía el código con &quot;Aprobar intercambio&quot; en el chat: te lo mandamos por <strong>email</strong> (no por el chat).
+                </p>
+                <p className="text-xs rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-foreground">
+                  Solo entregá este código cuando te encuentres con la otra parte y/o recibas el producto.
                 </p>
               </div>
             </div>
