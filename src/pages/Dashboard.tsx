@@ -5,7 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight, CheckCircle2, Shie
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { kycService } from "@/services/kyc.service";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { intercambiosService } from "@/services/intercambios.service";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
@@ -32,6 +32,7 @@ function formatFechaRelativa(dateStr: string): string {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { user, loading: authLoading, refreshUser } = useAuth();
   const { toast } = useToast();
   const [kycBtnLoading, setKycBtnLoading] = useState(false);
@@ -57,13 +58,35 @@ const Dashboard = () => {
   });
   const totalMisProductos = misProductosResponse?.total ?? 0;
 
+  const kycReturn = searchParams.get("kyc");
   useEffect(() => {
-    if (searchParams.get("kyc") === "return") {
-      void refreshUser().finally(() => {
-        setSearchParams({}, { replace: true });
-      });
-    }
-  }, [searchParams, setSearchParams, refreshUser]);
+    if (kycReturn !== "return") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await kycService.syncFromDidit();
+        if (!cancelled && r.kycVerificado) {
+          toast({ title: "Identidad verificada", description: "Ya podés comprar con IOX y usar intercambios." });
+        } else if (!cancelled && r.pending) {
+          toast({
+            title: "Verificación en proceso",
+            description: "Didit aún no marca el resultado como aprobado. Reintentá en unos minutos o desde tu perfil.",
+          });
+        }
+      } catch {
+        // El webhook puede haber actualizado igual; seguimos refrescando usuario.
+      } finally {
+        if (!cancelled) {
+          await refreshUser();
+          await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+          setSearchParams({}, { replace: true });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kycReturn, setSearchParams, refreshUser, queryClient, toast]);
 
   if (authLoading || userLoading) {
     return (

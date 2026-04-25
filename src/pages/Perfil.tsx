@@ -177,13 +177,36 @@ const Perfil = () => {
     setPageProductos(1);
   }, [id]);
 
+  const kycReturn = searchParams.get("kyc");
   useEffect(() => {
-    if (esMiPerfil && searchParams.get("kyc") === "return") {
-      void refreshUser();
-      queryClient.invalidateQueries({ queryKey: ["user", id] });
-      setSearchParams({}, { replace: true });
-    }
-  }, [esMiPerfil, searchParams, setSearchParams, refreshUser, queryClient, id]);
+    if (!esMiPerfil || kycReturn !== "return") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await kycService.syncFromDidit();
+        if (!cancelled && r.kycVerificado) {
+          toast({ title: "Identidad verificada", description: "Ya podés comprar con IOX y usar intercambios." });
+        } else if (!cancelled && r.pending) {
+          toast({
+            title: "Verificación en proceso",
+            description: "Didit aún no marca el resultado como aprobado. Podés reintentar en unos minutos.",
+          });
+        }
+      } catch {
+        // seguir con refresh
+      } finally {
+        if (!cancelled) {
+          await refreshUser();
+          queryClient.invalidateQueries({ queryKey: ["user", id] });
+          queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+          setSearchParams({}, { replace: true });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [esMiPerfil, kycReturn, setSearchParams, refreshUser, queryClient, id, toast]);
 
   /** Desde Coincidencias: `/perfil/:id?intereses=1` abre edición y baja a "Lo que quiero". */
   useEffect(() => {
