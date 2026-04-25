@@ -265,19 +265,48 @@ const Chat = () => {
   };
 
   const handleAceptarMonto = () => {
-    if (!propuestaDelOtro) return;
+    if (!propuestaDelOtro || !conversacionId) return;
     if (propuestaDelOtro.tipo === "ix") {
       const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} IOX. ¡Cerramos el intercambio!`;
-      enviarMutation.mutate(texto);
-      navigate("/registrar-intercambio", { state: { creditos: propuestaDelOtro.monto } });
+      enviarMutation.mutate(texto, {
+        onSuccess: () => {
+          navigate("/registrar-intercambio", {
+            state: {
+              creditos: propuestaDelOtro.monto,
+              conversacionId: Number(conversacionId),
+              requiereCodigo: true,
+            },
+          });
+        },
+      });
     } else if (propuestaDelOtro.tipo === "pesos") {
       const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} pesos (por fuera). ¡Ambos aprobamos el acuerdo!`;
-      enviarMutation.mutate(texto);
-      navigate("/registrar-intercambio", { state: { tipoPago: "pesos", monto: propuestaDelOtro.monto } });
+      enviarMutation.mutate(texto, {
+        onSuccess: () => {
+          navigate("/registrar-intercambio", {
+            state: {
+              tipoPago: "pesos" as const,
+              monto: propuestaDelOtro.monto,
+              conversacionId: Number(conversacionId),
+              requiereCodigo: true,
+            },
+          });
+        },
+      });
     } else if (propuestaDelOtro.tipo === "usd") {
       const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} USD (por fuera). ¡Ambos aprobamos el acuerdo!`;
-      enviarMutation.mutate(texto);
-      navigate("/registrar-intercambio", { state: { tipoPago: "usd", monto: propuestaDelOtro.monto } });
+      enviarMutation.mutate(texto, {
+        onSuccess: () => {
+          navigate("/registrar-intercambio", {
+            state: {
+              tipoPago: "usd" as const,
+              monto: propuestaDelOtro.monto,
+              conversacionId: Number(conversacionId),
+              requiereCodigo: true,
+            },
+          });
+        },
+      });
     }
   };
 

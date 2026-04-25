@@ -130,4 +130,25 @@ export const chatService = {
       throw new ApiError('Error al enviar el código', 500);
     }
   },
+
+  /** Validar código y registrar el intercambio acordado en el chat (IOX o acuerdo por fuera). */
+  async registroIntercambioConCodigo(
+    conversacionId: number,
+    body: { codigo: string; descripcion: string; fecha?: string }
+  ): Promise<{
+    intercambioId: number;
+    tipo: 'iox' | 'pesos' | 'usd';
+    monto: number;
+    creditosAplicados: number;
+  }> {
+    try {
+      return await api.post(
+        `/api/chat/${conversacionId}/registro-intercambio`,
+        body
+      );
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError('Error al registrar el intercambio', 500);
+    }
+  },
 };

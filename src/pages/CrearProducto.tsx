@@ -20,6 +20,7 @@ import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { isImageNsfw } from "@/lib/nsfwCheck";
 import { userService } from "@/services/user.service";
+import { MAX_BLOB_UPLOAD_BYTES } from "@/lib/constants";
 
 const CrearProducto = () => {
   const navigate = useNavigate();
@@ -106,6 +107,14 @@ const CrearProducto = () => {
       const toAdd: { file: File; preview: string; type: "image" | "video" }[] = [];
 
       for (const file of files) {
+        if (file.size > MAX_BLOB_UPLOAD_BYTES) {
+          toast({
+            title: "Archivo demasiado grande",
+            description: `Cada imagen o video puede pesar como máximo ${MAX_BLOB_UPLOAD_BYTES / (1024 * 1024)} MB (límite del servidor).`,
+            variant: "destructive",
+          });
+          continue;
+        }
         const type = file.type.startsWith("video/") ? ("video" as const) : ("image" as const);
         const hasVideo = [...formData.medias, ...toAdd].some((m) => m.type === "video");
         const imgCount = [...formData.medias, ...toAdd].filter((m) => m.type === "image").length;
@@ -193,7 +202,7 @@ const CrearProducto = () => {
 
       const uploaded: { url: string; mediaType: 'image' | 'video' }[] = [];
       for (let i = 0; i < formData.medias.length; i++) {
-        const res = await api.upload(formData.medias[i].file);
+        const res = await api.upload(formData.medias[i].file, "market");
         uploaded.push({
           url: res.url,
           mediaType: (res.mediaType as 'image' | 'video') || formData.medias[i].type,

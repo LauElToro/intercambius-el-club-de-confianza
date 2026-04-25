@@ -19,6 +19,7 @@ import { FICHAS_TECNICAS } from "@/lib/fichas-tecnicas";
 import { isImageNsfw } from "@/lib/nsfwCheck";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { userService } from "@/services/user.service";
+import { MAX_BLOB_UPLOAD_BYTES } from "@/lib/constants";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const EditarProducto = () => {
@@ -135,6 +136,14 @@ const EditarProducto = () => {
       const toAdd: { file?: File; preview: string; type: "image" | "video"; url?: string }[] = [];
 
       for (const file of files) {
+        if (file.size > MAX_BLOB_UPLOAD_BYTES) {
+          toast({
+            title: "Archivo demasiado grande",
+            description: `Cada imagen o video puede pesar como máximo ${MAX_BLOB_UPLOAD_BYTES / (1024 * 1024)} MB (límite del servidor).`,
+            variant: "destructive",
+          });
+          continue;
+        }
         const type = file.type.startsWith("video/") ? ("video" as const) : ("image" as const);
         const hasVideo = [...formData.medias, ...toAdd].some((m) => m.type === "video");
         const imgCount = [...formData.medias, ...toAdd].filter((m) => m.type === "image").length;
@@ -205,7 +214,7 @@ const EditarProducto = () => {
         if (m.url) {
           uploaded.push({ url: m.url, mediaType: m.type });
         } else if (m.file) {
-          const res = await api.upload(m.file);
+          const res = await api.upload(m.file, "market");
           uploaded.push({ url: res.url, mediaType: (res.mediaType as 'image' | 'video') || m.type });
         }
       }

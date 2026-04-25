@@ -36,6 +36,15 @@ export interface Intercambio {
   updatedAt?: string;
 }
 
+export type CrearIntercambioManualBody = {
+  otraPersonaId?: number;
+  otraPersonaNombre?: string;
+  otraEmail?: string;
+  descripcion: string;
+  creditos: number;
+  fecha?: string;
+};
+
 export const intercambiosService = {
   async getByUserId(userId: number): Promise<Intercambio[]> {
     try {
@@ -45,6 +54,17 @@ export const intercambiosService = {
         throw error;
       }
       throw new ApiError('Error al obtener intercambios', 500);
+    }
+  },
+
+  async crearManual(body: CrearIntercambioManualBody): Promise<Intercambio> {
+    try {
+      return await api.post<Intercambio>('/api/intercambios', body);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError('Error al registrar el intercambio', 500);
     }
   },
 };

@@ -1,3 +1,9 @@
+/**
+ * Tamaño máximo por archivo al subir a Vercel Blob a través de la API (serverless).
+ * El request body en Vercel no puede superar ~4,5 MB; dejamos margen.
+ */
+export const MAX_BLOB_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 /** Límite de crédito negativo por defecto (en IOX). Quien llega al límite solo puede pagar por fuera de la página. */
 export const CREDIT_LIMIT_DEFAULT = 50_000;
 
