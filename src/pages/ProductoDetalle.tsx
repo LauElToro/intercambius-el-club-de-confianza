@@ -32,6 +32,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
 import { CREDIT_LIMIT_DEFAULT, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
 import { ApiError } from "@/lib/api";
+import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 
@@ -68,9 +69,8 @@ const ProductoDetalle = () => {
 
   const iniciarChatMutation = useMutation({
     mutationFn: () => chatService.iniciarConversacion({ marketItemId: Number(id!) }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['chat'] });
-      navigate(`/chat/${data.conversacionId}`);
+    onSuccess: async (data) => {
+      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "No se pudo iniciar la conversación", variant: "destructive" });
@@ -96,7 +96,9 @@ const ProductoDetalle = () => {
       }
       toast({ title: "¡Compra exitosa!", description: "Ya podés coordinar la entrega con el vendedor por chat." });
       setCheckoutOpen(false);
-      if (data.conversacionId) navigate(`/chat/${data.conversacionId}`);
+      if (data.conversacionId) {
+        await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
+      }
     },
     onError: (error: any) => {
       if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {

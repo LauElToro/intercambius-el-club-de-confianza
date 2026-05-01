@@ -105,10 +105,27 @@ const Chat = () => {
     queryFn: () => chatService.getConversaciones(),
   });
 
-  const { data: chatDetalle, isLoading: loadingChat } = useQuery({
+  const conversacionIdNum = Number(conversacionId);
+  const conversacionIdOk =
+    Boolean(conversacionId && String(conversacionId).trim() !== "") &&
+    Number.isFinite(conversacionIdNum) &&
+    conversacionIdNum > 0;
+
+  const {
+    data: chatDetalle,
+    isLoading: loadingChat,
+    isError: errorCargaChat,
+    error: errorChatDetalle,
+    refetch: refetchChatDetalle,
+  } = useQuery({
     queryKey: ['chat', conversacionId],
-    queryFn: () => chatService.getMensajes(Number(conversacionId!)),
-    enabled: !!conversacionId,
+    queryFn: () => chatService.getMensajes(conversacionIdNum),
+    enabled: !!conversacionId && conversacionIdOk,
+    retry: (failureCount, err) => {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return false;
+      return failureCount < 5;
+    },
+    retryDelay: (i) => Math.min(600 * 2 ** i, 4000),
   });
 
   const enviarMutation = useMutation({
@@ -390,7 +407,14 @@ const Chat = () => {
           <Card className="flex-1 flex flex-col min-w-0">
             {conversacionId ? (
               <>
-                {loadingChat ? (
+                {!conversacionIdOk ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground p-6">
+                    <p className="text-center">El enlace del chat no es válido.</p>
+                    <Button type="button" variant="outline" onClick={() => navigate("/chat")}>
+                      Ir a mensajes
+                    </Button>
+                  </div>
+                ) : loadingChat && !chatDetalle ? (
                   <div className="flex-1 flex items-center justify-center">
                     <Loader2 className="w-8 h-8 animate-spin text-gold" />
                   </div>
@@ -707,9 +731,29 @@ const Chat = () => {
                       </DialogContent>
                     </Dialog>
                   </>
+                ) : errorCargaChat ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground p-6">
+                    <p className="text-center font-medium text-foreground">
+                      No se pudo cargar esta conversación
+                    </p>
+                    {errorChatDetalle instanceof Error && (
+                      <p className="text-sm text-center max-w-md">{errorChatDetalle.message}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Button type="button" variant="outline" onClick={() => refetchChatDetalle()}>
+                        Reintentar
+                      </Button>
+                      <Button type="button" variant="gold" onClick={() => navigate("/chat")}>
+                        Volver a mensajes
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                    No se encontró la conversación.
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground p-6">
+                    <p className="text-center">No se encontró la conversación.</p>
+                    <Button type="button" variant="outline" onClick={() => navigate("/chat")}>
+                      Ir a mensajes
+                    </Button>
                   </div>
                 )}
               </>

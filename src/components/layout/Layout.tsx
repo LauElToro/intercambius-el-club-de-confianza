@@ -6,7 +6,7 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfertaCreditoTerminos, hasRespondidoOfertaCredito } from "@/components/credito/OfertaCreditoTerminos";
 import { useQueryClient } from "@tanstack/react-query";
-import { CONTACT_EMAIL } from "@/lib/constants";
+import { COMPLAINTS_EMAIL, CONTACT_EMAIL } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { Copy } from "lucide-react";
 import { ContactDialog } from "@/components/contact/ContactDialog";
@@ -99,7 +99,12 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
               Términos IOX
             </Link>
             <span className="hidden sm:inline">·</span>
-            <span>Quejas y sugerencias por correo</span>
+            <a
+              href={`mailto:${COMPLAINTS_EMAIL}`}
+              className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2"
+            >
+              Quejas y sugerencias por correo
+            </a>
           </div>
         </footer>
       </main>

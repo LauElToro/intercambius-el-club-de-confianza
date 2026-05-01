@@ -21,6 +21,7 @@ import { ApiError } from "@/lib/api";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { GuiaCoincidencias } from "@/components/onboarding/GuiaCoincidencias";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
+import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 
 const ITEMS_POR_PAGINA = 6;
 
@@ -111,10 +112,9 @@ const Coincidencias = () => {
         },
       });
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['chat'] });
+    onSuccess: async (data) => {
       toast({ title: "¡Mensaje enviado!", description: "Ya podés negociar el intercambio por chat." });
-      navigate(`/chat/${data.conversacionId}`);
+      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },
     onError: (error: unknown) => {
       if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {
