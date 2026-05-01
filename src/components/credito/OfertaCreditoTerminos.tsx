@@ -259,8 +259,8 @@ export const OfertaCreditoTerminos = ({
               Beneficio para los primeros usuarios y pasos sugeridos.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[min(58vh,480px)] px-6">
-            <div className="pr-4 pb-2 text-sm text-muted-foreground text-left space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6">
+            <div className="pr-2 pb-4 text-sm text-muted-foreground text-left space-y-4">
               <p>
                 <strong className="text-foreground">Felicidades:</strong> estás entre los primeros 5 mil usuarios. Si seguís estos pasos, el uso de este sitio para vos va a ser gratis de por vida.
               </p>
@@ -290,7 +290,7 @@ export const OfertaCreditoTerminos = ({
                 .
               </p>
             </div>
-          </ScrollArea>
+          </div>
           <DialogFooter className="px-6 py-4 border-t border-border shrink-0 bg-background">
             <Button variant="gold" className="w-full sm:w-auto" onClick={cerrarPioneros}>
               Continuar

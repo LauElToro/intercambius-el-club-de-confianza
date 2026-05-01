@@ -40,7 +40,7 @@ const CrearProducto = () => {
     titulo: "",
     descripcion: "",
     precio: "" as string,
-    tiposPago: ["ix", "pesos", "usd"] as ("ix" | "convenir" | "pesos" | "usd" | "ix_pesos")[],
+    tiposPago: ["ix", "pesos"] as ("ix" | "convenir" | "pesos" | "usd" | "ix_pesos")[],
     aclaracionPago: "",
     rubro: "" as "" | "servicios" | "productos" | "alimentos" | "experiencias",
     ubicacion: "",
@@ -186,7 +186,7 @@ const CrearProducto = () => {
       return;
     }
 
-    const tiposPagoFinal = formData.tiposPago.length > 0 ? formData.tiposPago : ["ix", "pesos", "usd"];
+    const tiposPagoFinal = formData.tiposPago.length > 0 ? formData.tiposPago : ["ix", "pesos"];
 
     setIsSubmitting(true);
     try {
@@ -422,7 +422,7 @@ const CrearProducto = () => {
                   <div className="space-y-2 md:col-span-2">
                     <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Por defecto aceptás IOX, pesos y USD. Desmarcá lo que no quieras aceptar. Es opcional.
+                      Por defecto aceptás IOX y pesos. Podés marcar USD, IOX y pesos combinado o a convenir; desmarcá lo que no quieras. Es opcional.
                     </p>
                     <div className="flex flex-wrap gap-4">
                       {[

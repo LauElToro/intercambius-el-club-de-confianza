@@ -62,9 +62,10 @@ export function ReferidosPanel({ compact = false }: ReferidosPanelProps) {
     },
   });
 
-  const linkVisible = data
-    ? construirUrlReferido(data.slugPersonalizado || data.codigo)
-    : "";
+  /** Mismo valor que va en `?ref=` del link: slug personalizado si existe, si no el código legacy (ref-N). */
+  const codigoParaCompartir = data ? data.slugPersonalizado || data.codigo : "";
+
+  const linkVisible = data ? construirUrlReferido(codigoParaCompartir) : "";
 
   const copiar = async (texto: string, etiqueta: string) => {
     try {
@@ -130,12 +131,12 @@ export function ReferidosPanel({ compact = false }: ReferidosPanelProps) {
           <div className="space-y-2">
             <Label>Tu código</Label>
             <div className="flex gap-2">
-              <Input readOnly value={data.codigo} className="font-mono" />
+              <Input readOnly value={codigoParaCompartir} className="font-mono" />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={() => copiar(data.codigo, "Código copiado")}
+                onClick={() => copiar(codigoParaCompartir, "Código copiado")}
                 aria-label="Copiar código"
               >
                 <Copy className="h-4 w-4" />

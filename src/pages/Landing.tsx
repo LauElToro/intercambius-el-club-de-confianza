@@ -45,7 +45,7 @@ const Landing = () => {
           </p>
 
           <div
-            className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in"
+            className="flex flex-col items-center gap-4 animate-fade-in"
             style={{ animationDelay: "0.4s" }}
           >
             <Link to="/registro">
@@ -57,6 +57,12 @@ const Landing = () => {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
+            <p className="text-sm text-muted-foreground">
+              ¿Ya tenés cuenta?{" "}
+              <Link to="/login" className="text-gold font-medium hover:underline underline-offset-2">
+                Iniciar sesión
+              </Link>
+            </p>
           </div>
         </div>
       </section>
@@ -363,15 +369,23 @@ const Landing = () => {
           <p className="text-muted-foreground mb-8 md:text-lg">
             Intercambiá valor real, accedé a crédito sin interés y aprovechá lo que ya tenés.
           </p>
-          <Link to="/registro">
-            <Button variant="gold" size="xl" className="group">
-              <span className="mr-1" aria-hidden>
-                👉
-              </span>
-              Crear cuenta gratis y empezar a intercambiar
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
+          <div className="flex flex-col items-center gap-4">
+            <Link to="/registro">
+              <Button variant="gold" size="xl" className="group">
+                <span className="mr-1" aria-hidden>
+                  👉
+                </span>
+                Crear cuenta gratis y empezar a intercambiar
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              ¿Ya tenés cuenta?{" "}
+              <Link to="/login" className="text-gold font-medium hover:underline underline-offset-2">
+                Iniciar sesión
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
 
