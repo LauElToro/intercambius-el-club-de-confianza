@@ -11,6 +11,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { userService } from "@/services/user.service";
 import { chatService } from "@/services/chat.service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 
 function formatFecha(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-AR', {
@@ -44,9 +45,8 @@ const MisCompras = () => {
 
   const abrirChatCompraMutation = useMutation({
     mutationFn: (i: Intercambio) => chatService.abrirChatIntercambio(i),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['chat'] });
-      navigate(`/chat/${data.conversacionId}`);
+    onSuccess: async (data) => {
+      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },
   });
 
