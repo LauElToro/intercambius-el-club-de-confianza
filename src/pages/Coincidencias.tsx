@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Sparkles, MapPin, Heart, AlertCircle, Loader2, Search, Repeat, Package, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, MapPin, Heart, AlertCircle, Loader2, Repeat, Package, ExternalLink, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
@@ -23,6 +22,27 @@ import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 
 const ITEMS_POR_PAGINA = 6;
+/** Objetivo de ítems en «Los que me interesan»; si hay menos, se suman parecidos por palabras clave. */
+const MIN_PRODUCTOS_INTERES = 10;
+
+function textoItemMarket(item: MarketItem): string {
+  return `${item.titulo ?? ""} ${item.descripcion ?? ""}`.toLowerCase();
+}
+
+/** Puntuación para sugerencias cuando faltan coincidencias directas por búsqueda. */
+function scoreSimilaridadInteres(item: MarketItem, keywords: string[]): number {
+  const hay = textoItemMarket(item);
+  let s = 0;
+  for (const raw of keywords) {
+    const t = raw.trim().toLowerCase();
+    if (t.length < 2) continue;
+    if (hay.includes(t)) s += 3;
+    for (const word of t.split(/\s+/)) {
+      if (word.length >= 3 && hay.includes(word)) s += 1;
+    }
+  }
+  return s;
+}
 
 const RUBROS = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -34,23 +54,44 @@ const RUBROS = {
 const Coincidencias = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formatIX } = useCurrencyVariant();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { puedeRegistrarBusquedas } = useCookieConsent();
   const [favoritos, setFavoritos] = useState<number[]>([]);
-  const [search, setSearch] = useState("");
   const [miProductoId, setMiProductoId] = useState<number | null>(null);
   const [productoInteresadoId, setProductoInteresadoId] = useState<number | null>(null);
   const [paginaInteres, setPaginaInteres] = useState(1);
   const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
 
-  const { data: userData } = useQuery({
+  const { data: userData, isPending: loadingPerfilUsuario } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => userService.getCurrentUser(),
     enabled: !!user,
   });
 
-  const currentUser = userData || user;
+  const currentUser = userData ?? user ?? null;
+
+  const terminosInteres = useMemo(() => {
+    const raw = currentUser?.interesesQuiero ?? [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const t of raw) {
+      const s = String(t).trim();
+      if (s.length === 0) continue;
+      const key = s.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(s);
+    }
+    return out;
+  }, [currentUser?.interesesQuiero]);
+
+  useEffect(() => {
+    if (!user || loadingPerfilUsuario || !currentUser?.id) return;
+    if (terminosInteres.length > 0) return;
+    navigate(`/perfil/${currentUser.id}?intereses=1`, { replace: true });
+  }, [user, loadingPerfilUsuario, currentUser?.id, terminosInteres.length, navigate]);
 
   const { data: misProductosResponse } = useQuery({
     queryKey: ['marketItems', 'mis-productos', currentUser?.id],
@@ -60,13 +101,123 @@ const Coincidencias = () => {
 
   const misProductos = misProductosResponse?.data ?? [];
 
-  const { data: marketResult, isLoading: loadingMarket, error: errorMarket } = useQuery({
-    queryKey: ['marketItems', 'busqueda', search.trim(), currentUser?.id],
-    queryFn: () => marketService.getItems({ search: search.trim(), page: 1, limit: 50, soloDisponibles: true }),
-    enabled: !!currentUser?.id,
+  const consultasPorInteres = useQueries({
+    queries: terminosInteres.map((term) => ({
+      queryKey: ['marketItems', 'coincidencias-interes', term, currentUser?.id],
+      queryFn: () =>
+        marketService.getItems({
+          search: term,
+          page: 1,
+          limit: 50,
+          soloDisponibles: true,
+        }),
+      enabled: !!currentUser?.id && terminosInteres.length > 0,
+    })),
   });
 
-  const itemsBuscados = marketResult?.data ?? [];
+  const loadingConsultasInteres = consultasPorInteres.some((q) => q.isPending);
+  const errorConsultaInteres = consultasPorInteres.find((q) => q.error)?.error ?? null;
+
+  /** Resultados de búsqueda por cada palabra de interés, ordenados: primero lo más alineado al perfil. */
+  const itemsPorBusquedaInteres = useMemo(() => {
+    const itemById = new Map<number, MarketItem>();
+    const termHits = new Map<number, number>();
+    const firstTermIdx = new Map<number, number>();
+
+    consultasPorInteres.forEach((q, termIdx) => {
+      const rows = q.data?.data ?? [];
+      const yaContadoEnEsteTermino = new Set<number>();
+      for (const item of rows) {
+        if (!item?.id) continue;
+        if (item.vendedorId === currentUser?.id) continue;
+        if (item.disponible === false) continue;
+        if (!itemById.has(item.id)) itemById.set(item.id, item);
+        if (!yaContadoEnEsteTermino.has(item.id)) {
+          yaContadoEnEsteTermino.add(item.id);
+          termHits.set(item.id, (termHits.get(item.id) ?? 0) + 1);
+          if (!firstTermIdx.has(item.id)) firstTermIdx.set(item.id, termIdx);
+        }
+      }
+    });
+
+    const list = Array.from(itemById.values());
+    list.sort((a, b) => {
+      const hitsB = termHits.get(b.id) ?? 0;
+      const hitsA = termHits.get(a.id) ?? 0;
+      if (hitsB !== hitsA) return hitsB - hitsA;
+      const idxA = firstTermIdx.get(a.id) ?? 999;
+      const idxB = firstTermIdx.get(b.id) ?? 999;
+      if (idxA !== idxB) return idxA - idxB;
+      const scoreB = scoreSimilaridadInteres(b, terminosInteres);
+      const scoreA = scoreSimilaridadInteres(a, terminosInteres);
+      return scoreB - scoreA;
+    });
+    return list;
+  }, [consultasPorInteres, currentUser?.id, terminosInteres]);
+
+  const consultasInteresListas =
+    terminosInteres.length === 0 ||
+    consultasPorInteres.every((q) => !q.isPending);
+
+  const necesitaSimilares =
+    terminosInteres.length > 0 &&
+    consultasInteresListas &&
+    itemsPorBusquedaInteres.length < MIN_PRODUCTOS_INTERES;
+
+  const { data: marketAmplio, isLoading: loadingAmplio } = useQuery({
+    queryKey: ['marketItems', 'coincidencias-amplio', currentUser?.id],
+    queryFn: () => marketService.getItems({ page: 1, limit: 120, soloDisponibles: true }),
+    enabled: !!currentUser?.id && necesitaSimilares,
+  });
+
+  const { listaCoincidencias, idsSimilares } = useMemo(() => {
+    const primaryIds = new Set(itemsPorBusquedaInteres.map((i) => i.id));
+    const similaresIds = new Set<number>();
+
+    if (
+      itemsPorBusquedaInteres.length >= MIN_PRODUCTOS_INTERES ||
+      !marketAmplio?.data?.length ||
+      terminosInteres.length === 0
+    ) {
+      return { listaCoincidencias: itemsPorBusquedaInteres, idsSimilares: similaresIds };
+    }
+
+    const faltan = MIN_PRODUCTOS_INTERES - itemsPorBusquedaInteres.length;
+    const scored = marketAmplio.data
+      .filter(
+        (item) =>
+          item?.id &&
+          item.vendedorId !== currentUser?.id &&
+          item.disponible !== false &&
+          !primaryIds.has(item.id)
+      )
+      .map((item) => ({
+        item,
+        score: scoreSimilaridadInteres(item, terminosInteres),
+      }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    const extra: MarketItem[] = [];
+    const seen = new Set<number>();
+    for (const { item } of scored) {
+      if (extra.length >= faltan) break;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      extra.push(item);
+      similaresIds.add(item.id);
+    }
+
+    return {
+      listaCoincidencias: [...itemsPorBusquedaInteres, ...extra],
+      idsSimilares: similaresIds,
+    };
+  }, [
+    itemsPorBusquedaInteres,
+    marketAmplio?.data,
+    terminosInteres,
+    currentUser?.id,
+  ]);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -123,35 +274,30 @@ const Coincidencias = () => {
   };
 
   const recordRef = useRef<NodeJS.Timeout | null>(null);
+  const interesesRegistroKey = terminosInteres.join("|");
   useEffect(() => {
-    if (!puedeRegistrarBusquedas || !currentUser?.id) return;
+    if (!puedeRegistrarBusquedas || !currentUser?.id || terminosInteres.length === 0) return;
     recordRef.current && clearTimeout(recordRef.current);
     recordRef.current = setTimeout(() => {
-      busquedasService.registrar({ termino: search, seccion: 'coincidencias' });
+      busquedasService.registrar({ termino: interesesRegistroKey, seccion: 'coincidencias' });
     }, 800);
     return () => { recordRef.current && clearTimeout(recordRef.current); };
-  }, [search, puedeRegistrarBusquedas, currentUser?.id]);
+  }, [interesesRegistroKey, puedeRegistrarBusquedas, currentUser?.id, terminosInteres.length]);
 
-  // Reset página al cambiar búsqueda o filtros
   useEffect(() => {
     setPaginaInteres(1);
-  }, [search]);
-
-  const coincidenciasFiltradas = useMemo(() => {
-    const list = Array.isArray(itemsBuscados) ? itemsBuscados : [];
-    const sinPropios = list.filter((item: MarketItem) => item.vendedorId !== currentUser?.id);
-    return sinPropios.filter((item: MarketItem) => item.disponible !== false);
-  }, [itemsBuscados, currentUser?.id]);
+  }, [interesesRegistroKey]);
 
   const miProductoSeleccionado = misProductos.find(p => p.id === miProductoId);
-  const isLoading = loadingMarket;
+  const isLoading =
+    loadingConsultasInteres || (necesitaSimilares && loadingAmplio);
 
-  const totalPaginas = Math.ceil(coincidenciasFiltradas.length / ITEMS_POR_PAGINA) || 1;
+  const totalPaginas = Math.ceil(listaCoincidencias.length / ITEMS_POR_PAGINA) || 1;
   const paginaInteresClamped = Math.min(Math.max(1, paginaInteres), totalPaginas);
   const inicio = (paginaInteresClamped - 1) * ITEMS_POR_PAGINA;
-  const coincidenciasPagina = coincidenciasFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
+  const coincidenciasPagina = listaCoincidencias.slice(inicio, inicio + ITEMS_POR_PAGINA);
 
-  if (!currentUser) {
+  if (!user) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8 text-center">
@@ -162,7 +308,27 @@ const Coincidencias = () => {
     );
   }
 
-  const { formatIX } = useCurrencyVariant();
+  if (loadingPerfilUsuario || !currentUser) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-gold mb-4" />
+          <p className="text-muted-foreground">Cargando tu perfil...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (terminosInteres.length === 0) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-gold mb-4" />
+          <p className="text-muted-foreground">Te llevamos a configurar lo que te interesa...</p>
+        </div>
+      </Layout>
+    );
+  }
   const saldo = Number(currentUser?.saldo ?? 0) || 0;
   const limite = Number(currentUser?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const enLimiteDeuda = limite > 0 && saldo <= -limite; // Ya debe 100k: solo pagar por fuera
@@ -186,62 +352,29 @@ const Coincidencias = () => {
 
         <GuiaCoincidencias />
 
-        {(!Array.isArray(currentUser.interesesQuiero) || currentUser.interesesQuiero.length === 0) && (
-          <Alert className="mb-6 border-border bg-muted/30">
-            <Sparkles className="h-4 w-4 text-gold" />
-            <AlertDescription className="text-sm">
-              <strong className="text-foreground">Lo que quiero</strong> se configura en tu perfil (palabras clave como zapatillas o juegos de mesa) para priorizar coincidencias.{" "}
-              <Link
-                to={`/perfil/${currentUser.id}?intereses=1`}
-                className="text-gold font-medium underline underline-offset-2 hover:no-underline whitespace-nowrap"
-              >
-                Abrir mi perfil y configurarlo
-              </Link>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {Array.isArray(currentUser?.interesesQuiero) && currentUser.interesesQuiero.length > 0 && (
-          <Alert className="mb-6 border-gold/40 bg-gold/5">
-            <Sparkles className="h-4 w-4 text-gold" />
-            <AlertDescription className="text-sm">
-              Tenés <strong className="text-foreground">Lo que querés</strong> en tu perfil (
-              {currentUser.interesesQuiero.join(', ')}). Usá el buscador de arriba para encontrar publicaciones relacionadas en el marketplace.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Búsqueda: qué te interesa */}
         <Card className="border-border mb-6">
           <CardContent className="pt-6">
-              <div>
-                <label className="text-sm font-medium mb-2 block">¿Qué te interesa?</label>
-                <form
-                  className="flex gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    document.getElementById("coincidencias-resultados")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                >
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="coincidencias-buscar"
-                      placeholder="Ej: bicicleta, clases de yoga..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 pr-2"
-                      aria-label="Buscar en el marketplace"
-                    />
-                  </div>
-                  <Button type="submit" variant="secondary" size="icon" title="Buscar" className="shrink-0">
-                    <Search className="w-4 h-4" />
-                  </Button>
-                </form>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  La tabla muestra publicaciones de todo el marketplace (podés filtrar con el buscador).
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <label className="text-sm font-medium mb-2 block">Lo que te interesa</label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Coincidimos publicaciones con las palabras que cargaste en tu perfil. Para cambiarlas, editá tu perfil.
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  {terminosInteres.map((t) => (
+                    <Badge key={t} variant="secondary" className="font-normal">
+                      {t}
+                    </Badge>
+                  ))}
+                </div>
               </div>
+              <Button variant="outline" size="sm" className="shrink-0 gap-2" asChild>
+                <Link to={`/perfil/${currentUser.id}?intereses=1`}>
+                  <Pencil className="w-4 h-4" />
+                  Editar intereses
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -353,22 +486,26 @@ const Coincidencias = () => {
           Los que me interesan
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Seleccioná el que querés y hacé clic en "Quiero intercambiar"
+          Solo aparecen publicaciones alineadas a tu lista de intereses
+          {itemsPorBusquedaInteres.length < MIN_PRODUCTOS_INTERES && idsSimilares.size > 0
+            ? "; las marcadas como «Parecido» complementan hasta diez sugerencias."
+            : "."}{" "}
+          Seleccioná una y tocá &quot;Quiero intercambiar&quot;.
         </p>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gold" />
             <span className="ml-2 text-muted-foreground">Cargando publicaciones...</span>
           </div>
-        ) : errorMarket ? (
+        ) : errorConsultaInteres ? (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-destructive mb-2">Error al cargar el marketplace</p>
+            <p className="text-destructive mb-2">Error al cargar coincidencias</p>
             <p className="text-sm text-muted-foreground">
-              {errorMarket instanceof Error ? errorMarket.message : "Intentá de nuevo más tarde"}
+              {errorConsultaInteres instanceof Error ? errorConsultaInteres.message : "Intentá de nuevo más tarde"}
             </p>
           </div>
-        ) : coincidenciasFiltradas.length > 0 ? (
+        ) : listaCoincidencias.length > 0 ? (
           <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {coincidenciasPagina
@@ -413,6 +550,11 @@ const Coincidencias = () => {
                         {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
                         {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
                       </Badge>
+                      {idsSimilares.has(item.id) && (
+                        <Badge className="absolute bottom-2 right-2 bg-muted text-foreground border border-border text-[10px] px-1.5 py-0">
+                          Parecido
+                        </Badge>
+                      )}
                       {isSelected && (
                         <div className="absolute bottom-2 left-2 bg-gold text-primary-foreground rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
                           <Repeat className="w-3 h-3" />
@@ -499,7 +641,7 @@ const Coincidencias = () => {
               <span className="text-sm text-muted-foreground">
                 Página {paginaInteresClamped} de {totalPaginas}
                 <span className="ml-1">
-                  ({coincidenciasFiltradas.length} productos)
+                  ({listaCoincidencias.length} productos)
                 </span>
               </span>
               <Button
@@ -519,22 +661,26 @@ const Coincidencias = () => {
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2 font-medium">
-              {search.trim()
-                ? "No hay resultados para tu búsqueda"
-                : "No hay publicaciones para mostrar"}
+              No hay publicaciones que coincidan con tus intereses
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              {search.trim()
-                ? "Probá con otros términos o revisá que haya publicaciones en el Market."
-                : misProductos.length === 0
-                  ? "Creá primero un producto o servicio en Mis publicaciones para poder proponer intercambios."
-                  : "No hay otras publicaciones disponibles por ahora. Probá buscar algo específico o entrá al Market para ver más."}
+              {misProductos.length === 0
+                ? "Podés sumar palabras clave distintas en tu perfil o crear un producto en Mis publicaciones para proponer intercambios."
+                : "Probá ampliar o cambiar las palabras en tu perfil, o explorá el Market para ver todo lo publicado."}
             </p>
-            {misProductos.length === 0 && (
-              <Button variant="gold" onClick={() => navigate("/crear-producto")}>
-                Crear mi primer producto
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Button variant="outline" asChild>
+                <Link to={`/perfil/${currentUser.id}?intereses=1`}>Ajustar intereses</Link>
               </Button>
-            )}
+              <Button variant="gold" asChild>
+                <Link to="/market">Ir al Market</Link>
+              </Button>
+              {misProductos.length === 0 && (
+                <Button variant="secondary" onClick={() => navigate("/crear-producto")}>
+                  Crear mi primer producto
+                </Button>
+              )}
+            </div>
           </div>
         )}
           </div>
