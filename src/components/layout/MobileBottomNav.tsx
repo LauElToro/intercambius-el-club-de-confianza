@@ -1,23 +1,30 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ShoppingBag, Users, MessageCircle, Heart, User } from "lucide-react";
+import { useMemo } from "react";
+import { ShoppingBag, Users, MessageCircle, Heart, User, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { notificacionesService } from "@/services/notificaciones.service";
-
-const NAV_ITEMS = [
-  { to: "/market", label: "Market", icon: ShoppingBag },
-  { to: "/coincidencias", label: "Coincidencias", icon: Users },
-  { to: "/chat", label: "Mensajes", icon: MessageCircle },
-  { to: "/favoritos", label: "Favoritos", icon: Heart },
-  { to: "/dashboard", label: "Cuenta", icon: User },
-] as const;
+import { isNavItemActive } from "@/lib/nav-link-active";
 
 /** Barra de navegación inferior fija para mobile - acceso rápido a las 5 secciones principales */
 export const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+
+  const navItems = useMemo(() => {
+    const uid = user?.id;
+    const tablaTo = uid ? `/perfil/${uid}?intereses=1` : "/dashboard";
+    return [
+      { to: "/market", label: "Market", icon: ShoppingBag },
+      { to: tablaTo, label: "Tabla", icon: Table2 },
+      { to: "/coincidencias", label: "Coincidencias", icon: Users },
+      { to: "/chat", label: "Mensajes", icon: MessageCircle },
+      { to: "/favoritos", label: "Favoritos", icon: Heart },
+      { to: "/dashboard", label: "Cuenta", icon: User },
+    ] as const;
+  }, [user?.id]);
 
   const { data } = useQuery({
     queryKey: ["notificaciones", user?.id],
@@ -33,12 +40,10 @@ export const MobileBottomNav = () => {
       className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-lg border-t border-border safe-area-pb"
       aria-label="Navegación principal"
     >
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-        {NAV_ITEMS.map((item) => {
+      <div className="flex items-stretch justify-around h-16 max-w-xl mx-auto px-1 gap-0.5">
+        {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            location.pathname === item.to ||
-            (item.to !== "/" && location.pathname.startsWith(item.to));
+          const isActive = isNavItemActive(item.to, location.pathname, location.search);
           const isChat = item.to === "/chat";
 
           return (

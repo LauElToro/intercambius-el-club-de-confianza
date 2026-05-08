@@ -87,12 +87,6 @@ const Coincidencias = () => {
     return out;
   }, [currentUser?.interesesQuiero]);
 
-  useEffect(() => {
-    if (!user || loadingPerfilUsuario || !currentUser?.id) return;
-    if (terminosInteres.length > 0) return;
-    navigate(`/perfil/${currentUser.id}?intereses=1`, { replace: true });
-  }, [user, loadingPerfilUsuario, currentUser?.id, terminosInteres.length, navigate]);
-
   const { data: misProductosResponse } = useQuery({
     queryKey: ['marketItems', 'mis-productos', currentUser?.id],
     queryFn: () => marketService.getItems({ vendedorId: currentUser!.id!, page: 1, limit: 100 }),
@@ -170,14 +164,35 @@ const Coincidencias = () => {
     enabled: !!currentUser?.id && necesitaSimilares,
   });
 
+  /** Sin palabras en la Tabla: mostrar market general para poder elegir con qué intercambiar. */
+  const {
+    data: marketSinIntereses,
+    isLoading: loadingSinIntereses,
+    error: errorSinIntereses,
+  } = useQuery({
+    queryKey: ['marketItems', 'coincidencias-sin-tabla', currentUser?.id],
+    queryFn: () => marketService.getItems({ page: 1, limit: 80, soloDisponibles: true }),
+    enabled: !!currentUser?.id && terminosInteres.length === 0,
+  });
+
   const { listaCoincidencias, idsSimilares } = useMemo(() => {
+    if (terminosInteres.length === 0) {
+      const rows = marketSinIntereses?.data ?? [];
+      const list = rows.filter(
+        (item) =>
+          item?.id &&
+          item.vendedorId !== currentUser?.id &&
+          item.disponible !== false
+      );
+      return { listaCoincidencias: list, idsSimilares: new Set<number>() };
+    }
+
     const primaryIds = new Set(itemsPorBusquedaInteres.map((i) => i.id));
     const similaresIds = new Set<number>();
 
     if (
       itemsPorBusquedaInteres.length >= MIN_PRODUCTOS_INTERES ||
-      !marketAmplio?.data?.length ||
-      terminosInteres.length === 0
+      !marketAmplio?.data?.length
     ) {
       return { listaCoincidencias: itemsPorBusquedaInteres, idsSimilares: similaresIds };
     }
@@ -213,6 +228,8 @@ const Coincidencias = () => {
       idsSimilares: similaresIds,
     };
   }, [
+    terminosInteres.length,
+    marketSinIntereses?.data,
     itemsPorBusquedaInteres,
     marketAmplio?.data,
     terminosInteres,
@@ -289,8 +306,11 @@ const Coincidencias = () => {
   }, [interesesRegistroKey]);
 
   const miProductoSeleccionado = misProductos.find(p => p.id === miProductoId);
-  const isLoading =
-    loadingConsultasInteres || (necesitaSimilares && loadingAmplio);
+  const sinTablaIntereses = terminosInteres.length === 0;
+  const isLoading = sinTablaIntereses
+    ? loadingSinIntereses
+    : loadingConsultasInteres || (necesitaSimilares && loadingAmplio);
+  const errorListado = sinTablaIntereses ? errorSinIntereses : errorConsultaInteres;
 
   const totalPaginas = Math.ceil(listaCoincidencias.length / ITEMS_POR_PAGINA) || 1;
   const paginaInteresClamped = Math.min(Math.max(1, paginaInteres), totalPaginas);
@@ -319,16 +339,6 @@ const Coincidencias = () => {
     );
   }
 
-  if (terminosInteres.length === 0) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-gold mb-4" />
-          <p className="text-muted-foreground">Te llevamos a configurar lo que te interesa...</p>
-        </div>
-      </Layout>
-    );
-  }
   const saldo = Number(currentUser?.saldo ?? 0) || 0;
   const limite = Number(currentUser?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const enLimiteDeuda = limite > 0 && saldo <= -limite; // Ya debe 100k: solo pagar por fuera
@@ -356,22 +366,30 @@ const Coincidencias = () => {
           <CardContent className="pt-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
-                <label className="text-sm font-medium mb-2 block">Lo que te interesa</label>
+                <label className="text-sm font-medium mb-2 block">Tu Tabla (lo que te interesa)</label>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Coincidimos publicaciones con las palabras que cargaste en tu perfil. Para cambiarlas, editá tu perfil.
+                  {sinTablaIntereses
+                    ? "Las palabras clave se cargan desde el menú Tabla (tu perfil). Mientras tanto podés elegir cualquier publicación del Market abajo para proponer un intercambio."
+                    : "Personalizamos la columna de la derecha con estas palabras. Para editarlas usá Tabla en el menú o el botón de acá."}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {terminosInteres.map((t) => (
-                    <Badge key={t} variant="secondary" className="font-normal">
-                      {t}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {sinTablaIntereses ? (
+                    <Badge variant="outline" className="font-normal text-muted-foreground">
+                      Sin palabras cargadas
                     </Badge>
-                  ))}
+                  ) : (
+                    terminosInteres.map((t) => (
+                      <Badge key={t} variant="secondary" className="font-normal">
+                        {t}
+                      </Badge>
+                    ))
+                  )}
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="shrink-0 gap-2" asChild>
+              <Button variant={sinTablaIntereses ? "gold" : "outline"} size="sm" className="shrink-0 gap-2" asChild>
                 <Link to={`/perfil/${currentUser.id}?intereses=1`}>
                   <Pencil className="w-4 h-4" />
-                  Editar intereses
+                  {sinTablaIntereses ? "Ir a la Tabla" : "Editar Tabla"}
                 </Link>
               </Button>
             </div>
@@ -486,23 +504,35 @@ const Coincidencias = () => {
           Los que me interesan
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Solo aparecen publicaciones alineadas a tu lista de intereses
-          {itemsPorBusquedaInteres.length < MIN_PRODUCTOS_INTERES && idsSimilares.size > 0
-            ? "; las marcadas como «Parecido» complementan hasta diez sugerencias."
-            : "."}{" "}
-          Seleccioná una y tocá &quot;Quiero intercambiar&quot;.
+          {sinTablaIntereses ? (
+            <>
+              Elegí una publicación del Market y proponé el intercambio con tu producto de la izquierda. Cuando cargues tu{" "}
+              <Link to={`/perfil/${currentUser.id}?intereses=1`} className="text-gold font-medium underline underline-offset-2">
+                Tabla
+              </Link>
+              , aquí priorizaremos lo que te interesa y sugerencias parecidas.
+            </>
+          ) : (
+            <>
+              Primero lo alineado a tu Tabla
+              {itemsPorBusquedaInteres.length < MIN_PRODUCTOS_INTERES && idsSimilares.size > 0
+                ? "; las marcadas «Parecido» completan hasta diez sugerencias."
+                : "."}{" "}
+              Seleccioná una y tocá &quot;Quiero intercambiar&quot;.
+            </>
+          )}
         </p>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gold" />
             <span className="ml-2 text-muted-foreground">Cargando publicaciones...</span>
           </div>
-        ) : errorConsultaInteres ? (
+        ) : errorListado ? (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-destructive mb-2">Error al cargar coincidencias</p>
+            <p className="text-destructive mb-2">Error al cargar publicaciones</p>
             <p className="text-sm text-muted-foreground">
-              {errorConsultaInteres instanceof Error ? errorConsultaInteres.message : "Intentá de nuevo más tarde"}
+              {errorListado instanceof Error ? errorListado.message : "Intentá de nuevo más tarde"}
             </p>
           </div>
         ) : listaCoincidencias.length > 0 ? (
@@ -661,18 +691,31 @@ const Coincidencias = () => {
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2 font-medium">
-              No hay publicaciones que coincidan con tus intereses
+              {sinTablaIntereses
+                ? "No hay publicaciones de otros usuarios para mostrar"
+                : "No hay publicaciones que coincidan con tu Tabla"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              {misProductos.length === 0
-                ? "Podés sumar palabras clave distintas en tu perfil o crear un producto en Mis publicaciones para proponer intercambios."
-                : "Probá ampliar o cambiar las palabras en tu perfil, o explorá el Market para ver todo lo publicado."}
+              {sinTablaIntereses
+                ? misProductos.length === 0
+                  ? "Creá un producto en Mis publicaciones para proponer intercambios cuando haya ofertas en el Market."
+                  : "Entrá al Market o esperá a que haya más publicaciones disponibles."
+                : misProductos.length === 0
+                  ? "Podés sumar palabras en tu Tabla o crear un producto en Mis publicaciones para proponer intercambios."
+                  : "Ampliá las palabras en tu Tabla o explorá el Market para ver más publicaciones."}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
-              <Button variant="outline" asChild>
-                <Link to={`/perfil/${currentUser.id}?intereses=1`}>Ajustar intereses</Link>
-              </Button>
-              <Button variant="gold" asChild>
+              {!sinTablaIntereses && (
+                <Button variant="outline" asChild>
+                  <Link to={`/perfil/${currentUser.id}?intereses=1`}>Ajustar Tabla</Link>
+                </Button>
+              )}
+              {sinTablaIntereses && (
+                <Button variant="gold" asChild>
+                  <Link to={`/perfil/${currentUser.id}?intereses=1`}>Cargar mi Tabla</Link>
+                </Button>
+              )}
+              <Button variant={sinTablaIntereses ? "outline" : "gold"} asChild>
                 <Link to="/market">Ir al Market</Link>
               </Button>
               {misProductos.length === 0 && (

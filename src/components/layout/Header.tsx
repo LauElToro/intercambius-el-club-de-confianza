@@ -17,9 +17,10 @@ import {
   MessageCircle,
   ShoppingCart,
   Gift,
+  Table2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -40,6 +41,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { HeaderSaldo } from "@/components/layout/HeaderSaldo";
 import { IX_PESOS_PER_USD } from "@/lib/currency";
+import { isNavItemActive } from "@/lib/nav-link-active";
 import logo from "@/assets/logo-intercambius.jpeg";
 
 const Header = () => {
@@ -68,16 +70,22 @@ const Header = () => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const navItems = [
-    { to: "/market", label: "Market", icon: ShoppingBag },
-    { to: "/coincidencias", label: "Coincidencias", icon: Users },
-    { to: "/favoritos", label: "Favoritos", icon: Heart },
-    { to: "/chat", label: "Mensajes", icon: MessageCircle },
-    { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
-    { to: "/mis-compras", label: "Mis compras", icon: ShoppingCart },
-    { to: "/historial", label: "Historial", icon: Receipt },
-    { to: "/referidos", label: "Referidos", icon: Gift },
-  ];
+  const navItems = useMemo(() => {
+    const uid = usuario?.id ?? user?.id;
+    return [
+      { to: "/market", label: "Market", icon: ShoppingBag },
+      ...(uid
+        ? [{ to: `/perfil/${uid}?intereses=1`, label: "Tabla", icon: Table2 } as const]
+        : []),
+      { to: "/coincidencias", label: "Coincidencias", icon: Users },
+      { to: "/favoritos", label: "Favoritos", icon: Heart },
+      { to: "/chat", label: "Mensajes", icon: MessageCircle },
+      { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
+      { to: "/mis-compras", label: "Mis compras", icon: ShoppingCart },
+      { to: "/historial", label: "Historial", icon: Receipt },
+      { to: "/referidos", label: "Referidos", icon: Gift },
+    ];
+  }, [usuario?.id, user?.id]);
 
   const handleNavClick = (to: string) => {
     navigate(to);
@@ -148,6 +156,20 @@ const Header = () => {
             <ShoppingBag className="h-4 w-4" />
             Market
           </Link>
+          {usuario?.id && (
+            <Link
+              to={`/perfil/${usuario.id}?intereses=1`}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-4",
+                isNavItemActive(`/perfil/${usuario.id}?intereses=1`, location.pathname, location.search)
+                  ? "text-foreground bg-muted"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              )}
+            >
+              <Table2 className="h-4 w-4" />
+              Tabla
+            </Link>
+          )}
         </nav>
 
         {/* Right side: saldo en desktop/tablet; en mobile está en el menú lateral y en Cuenta */}
@@ -224,9 +246,11 @@ const Header = () => {
                     <DropdownMenuSeparator />
                     {navItemsForProfileMenu.map((item) => {
                       const Icon = item.icon;
-                      const isActive =
-                        location.pathname === item.to ||
-                        (item.to !== "/" && location.pathname.startsWith(item.to));
+                      const isActive = isNavItemActive(
+                        item.to,
+                        location.pathname,
+                        location.search,
+                      );
                       return (
                         <DropdownMenuItem key={item.to} asChild>
                           <Link
@@ -348,9 +372,11 @@ const Header = () => {
                         <div className="space-y-1">
                           {navItemsForProfileMenu.map((item) => {
                             const Icon = item.icon;
-                            const isActive =
-                              location.pathname === item.to ||
-                              (item.to !== "/" && location.pathname.startsWith(item.to));
+                            const isActive = isNavItemActive(
+                              item.to,
+                              location.pathname,
+                              location.search,
+                            );
 
                             return (
                               <button
