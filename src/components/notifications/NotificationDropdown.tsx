@@ -1,16 +1,28 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Bell, MessageCircle, ShoppingCart, TrendingUp, Search } from "lucide-react";
+import { Bell, MessageCircle, ShoppingCart, TrendingUp, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { notificacionesService, Notificacion } from "@/services/notificaciones.service";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const ICONS: Record<string, typeof MessageCircle> = {
   mensaje: MessageCircle,
@@ -24,7 +36,9 @@ const ICONS: Record<string, typeof MessageCircle> = {
 export const NotificationDropdown = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { user } = useAuth();
+  const [deleteTarget, setDeleteTarget] = useState<Notificacion | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["notificaciones", user?.id],
@@ -41,6 +55,21 @@ export const NotificationDropdown = () => {
   const marcarTodasMutation = useMutation({
     mutationFn: () => notificacionesService.marcarTodasLeidas(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notificaciones"] }),
+  });
+
+  const eliminarMutation = useMutation({
+    mutationFn: (id: number) => notificacionesService.eliminar(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notificaciones"] });
+      setDeleteTarget(null);
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "No se pudo eliminar",
+        description: "Probá de nuevo en unos segundos.",
+      });
+    },
   });
 
   const noLeidas = data?.noLeidas ?? 0;
@@ -61,6 +90,7 @@ export const NotificationDropdown = () => {
   };
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
@@ -72,7 +102,7 @@ export const NotificationDropdown = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto">
+      <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto p-0">
         <div className="flex items-center justify-between px-2 py-2 border-b">
           <span className="font-semibold text-sm">Notificaciones</span>
           {noLeidas > 0 && (
@@ -97,42 +127,90 @@ export const NotificationDropdown = () => {
         ) : (
           notificaciones.map((n) => {
             const Icon = ICONS[n.tipo] ?? Bell;
+            const deleting =
+              eliminarMutation.isPending && eliminarMutation.variables === n.id;
             return (
-              <DropdownMenuItem
+              <DropdownMenuGroup
                 key={n.id}
-                onClick={() => handleClick(n)}
                 className={cn(
-                  "flex gap-3 py-3 cursor-pointer",
+                  "flex w-full border-b border-border/60 last:border-b-0",
                   !n.leido && "bg-gold/5"
                 )}
               >
-                <Icon className="h-5 w-5 flex-shrink-0 text-gold" />
-                <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    "text-sm font-medium",
-                    !n.leido && "font-semibold"
-                  )}>
-                    {n.titulo}
-                  </p>
-                  {n.mensaje && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {n.mensaje}
+                <DropdownMenuItem
+                  className="min-h-[72px] flex-1 cursor-pointer gap-3 rounded-none py-3 pl-3 pr-1 focus:bg-accent"
+                  onSelect={() => handleClick(n)}
+                >
+                  <Icon className="h-5 w-5 shrink-0 text-gold" />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        !n.leido && "font-semibold"
+                      )}
+                    >
+                      {n.titulo}
                     </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(n.createdAt).toLocaleDateString("es-AR", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </DropdownMenuItem>
+                    {n.mensaje && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {n.mensaje}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(n.createdAt).toLocaleDateString("es-AR", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="shrink-0 rounded-none px-2 py-3 text-muted-foreground hover:text-destructive focus:text-destructive"
+                  disabled={deleting}
+                  onSelect={() => setDeleteTarget(n)}
+                  aria-label="Eliminar notificación"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             );
           })
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <AlertDialog
+      open={deleteTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setDeleteTarget(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Eliminar esta notificación?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se va a borrar de tu lista y no vas a poder recuperarla. ¿Seguimos?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={eliminarMutation.isPending}>
+            Cancelar
+          </AlertDialogCancel>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={eliminarMutation.isPending || deleteTarget === null}
+            onClick={() => {
+              if (deleteTarget) eliminarMutation.mutate(deleteTarget.id);
+            }}
+          >
+            {eliminarMutation.isPending ? "Eliminando…" : "Sí, eliminar"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };

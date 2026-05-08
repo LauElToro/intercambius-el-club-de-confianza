@@ -37,4 +37,8 @@ export const notificacionesService = {
   async marcarTodasLeidas(): Promise<void> {
     await api.patch('/api/notificaciones/leer-todas');
   },
+
+  async eliminar(id: number): Promise<void> {
+    await api.delete(`/api/notificaciones/${id}`);
+  },
 };

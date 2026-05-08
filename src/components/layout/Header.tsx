@@ -17,7 +17,6 @@ import {
   MessageCircle,
   ShoppingCart,
   Gift,
-  Table2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -85,15 +84,14 @@ const Header = () => {
     setMobileMenuOpen(false);
   };
 
-  /** En menú perfil / sheet: “Tabla” = coincidencias (misma ruta). */
   const navItemsForProfileMenu = navItems.filter(
     (item) => item.to !== "/market" && item.to !== "/referidos",
   );
 
   if (!mounted) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm">
-        <div className="mx-auto w-full max-w-[100vw] min-w-0 px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+      <header className="fixed top-0 inset-x-0 z-50 isolate w-full max-w-full overflow-x-clip bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex h-16 w-full min-w-0 max-w-full items-center justify-between gap-2 px-3 sm:px-4">
           <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 md:flex-none md:max-w-fit md:shrink-0 md:gap-3">
             <img src={logo} alt="Intercambius" className="h-8 w-8 md:h-10 md:w-10 shrink-0 rounded-full" />
             <span className="truncate text-base md:text-xl font-semibold gold-text">Intercambius</span>
@@ -105,8 +103,8 @@ const Header = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 max-w-[100vw] bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm overflow-x-hidden">
-      <div className="mx-auto w-full max-w-[100vw] min-w-0 px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+    <header className="fixed top-0 inset-x-0 z-50 isolate w-full max-w-full overflow-x-clip bg-background/95 backdrop-blur-lg border-b border-border/50 shadow-sm supports-[backdrop-filter]:bg-background/80">
+      <div className="mx-auto flex h-16 w-full min-w-0 max-w-full items-center justify-between gap-2 px-3 sm:px-4">
         {/* Logo: siempre lleva a la landing; en mobile se encoge para dejar lugar a iconos */}
         <Link
           to="/"
@@ -123,12 +121,12 @@ const Header = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden shrink-0 md:flex md:items-center md:gap-0.5 lg:gap-1">
           {user && (
             <Link
               to="/dashboard"
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-4",
                 location.pathname === "/dashboard"
                   ? "text-foreground bg-muted"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -141,7 +139,7 @@ const Header = () => {
           <Link
             to="/market"
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              "flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-4",
               location.pathname.startsWith("/market")
                 ? "text-foreground bg-muted"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -153,13 +151,13 @@ const Header = () => {
         </nav>
 
         {/* Right side: saldo en desktop/tablet; en mobile está en el menú lateral y en Cuenta */}
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-2 md:gap-3">
+        <div className="flex min-w-0 shrink items-center justify-end gap-1 sm:gap-2 md:gap-2 lg:gap-3">
           {usuario && (
-            <div className="hidden md:block">
+            <div className="hidden min-w-0 md:block md:max-w-[min(100%,14rem)] lg:max-w-none">
               <HeaderSaldo saldo={usuario.saldo ?? 0} />
             </div>
           )}
-          <div className="hidden md:block">
+          <div className="hidden shrink-0 md:block">
             <CurrencySwitch />
           </div>
           {/* Notificaciones (solo si está logueado) */}
@@ -192,7 +190,7 @@ const Header = () => {
               return (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="default" className="hidden sm:flex gap-2">
+                    <Button variant="ghost" size="default" className="hidden max-w-full shrink-0 gap-2 sm:flex">
                       <Avatar className="h-8 w-8">
                         {(usuario as any)?.fotoPerfil && (
                           <AvatarImage src={(usuario as any).fotoPerfil} alt={usuario?.nombre} />
@@ -225,9 +223,7 @@ const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {navItemsForProfileMenu.map((item) => {
-                      const isCoincidencias = item.to === "/coincidencias";
-                      const Icon = isCoincidencias ? Table2 : item.icon;
-                      const label = isCoincidencias ? "Tabla" : item.label;
+                      const Icon = item.icon;
                       const isActive =
                         location.pathname === item.to ||
                         (item.to !== "/" && location.pathname.startsWith(item.to));
@@ -238,7 +234,7 @@ const Header = () => {
                             className={cn(isActive && "bg-muted")}
                           >
                             <Icon className="h-4 w-4 mr-2" />
-                            {label}
+                            {item.label}
                           </Link>
                         </DropdownMenuItem>
                       );
@@ -351,9 +347,7 @@ const Header = () => {
                         </p>
                         <div className="space-y-1">
                           {navItemsForProfileMenu.map((item) => {
-                            const isCoincidencias = item.to === "/coincidencias";
-                            const Icon = isCoincidencias ? Table2 : item.icon;
-                            const label = isCoincidencias ? "Tabla" : item.label;
+                            const Icon = item.icon;
                             const isActive =
                               location.pathname === item.to ||
                               (item.to !== "/" && location.pathname.startsWith(item.to));
@@ -370,7 +364,7 @@ const Header = () => {
                                 )}
                               >
                                 <Icon className="h-5 w-5 shrink-0" />
-                                <span className="font-medium">{label}</span>
+                                <span className="font-medium">{item.label}</span>
                               </button>
                             );
                           })}

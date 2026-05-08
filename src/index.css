@@ -142,10 +142,12 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   body {
-    @apply bg-background text-foreground antialiased overflow-x-hidden;
+    @apply bg-background text-foreground antialiased overflow-x-hidden max-w-full;
     font-family: 'Inter', system-ui, sans-serif;
   }
 }

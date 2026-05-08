@@ -18,21 +18,21 @@ export const HeaderSaldo = ({ saldo }: HeaderSaldoProps) => {
   const usd = saldoNum / IX_PESOS_PER_USD;
 
   const line = (
-    <span className="flex items-center gap-2 text-sm font-medium">
-      <span className="text-gold whitespace-nowrap">{formatIX(saldoNum)}</span>
-      <span className="text-muted-foreground hidden sm:inline" aria-hidden>
+    <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium lg:gap-2 lg:text-sm">
+      <span className="shrink-0 whitespace-nowrap text-gold">{formatIX(saldoNum)}</span>
+      <span className="hidden text-muted-foreground sm:inline" aria-hidden>
         ·
       </span>
-      <span className="text-muted-foreground hidden sm:inline whitespace-nowrap">
+      <span className="hidden min-w-0 truncate text-muted-foreground sm:inline">
         ${saldoNum.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
-        <span className="text-xs ml-0.5">ARS</span>
+        <span className="ml-0.5 text-xs">ARS</span>
       </span>
-      <span className="text-muted-foreground hidden md:inline" aria-hidden>
+      <span className="hidden text-muted-foreground lg:inline" aria-hidden>
         ·
       </span>
-      <span className="text-muted-foreground hidden md:inline whitespace-nowrap">
+      <span className="hidden shrink-0 whitespace-nowrap text-muted-foreground lg:inline">
         {usd.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        <span className="text-xs ml-0.5">USD</span>
+        <span className="ml-0.5 text-xs">USD</span>
       </span>
     </span>
   );
@@ -41,7 +41,7 @@ export const HeaderSaldo = ({ saldo }: HeaderSaldoProps) => {
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="rounded-lg border border-border bg-muted/30 px-3 py-1.5 cursor-default">
+          <div className="relative z-10 cursor-default overflow-hidden rounded-lg border border-border bg-background px-2 py-1.5 shadow-sm lg:px-3">
             {line}
           </div>
         </TooltipTrigger>

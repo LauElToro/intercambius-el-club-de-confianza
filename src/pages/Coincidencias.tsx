@@ -12,7 +12,6 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { userService } from "@/services/user.service";
-import { coincidenciasService } from "@/services/coincidencias.service";
 import { busquedasService } from "@/services/busquedas.service";
 import { marketService, MarketItem } from "@/services/market.service";
 import { chatService } from "@/services/chat.service";
@@ -42,7 +41,6 @@ const Coincidencias = () => {
   const [search, setSearch] = useState("");
   const [miProductoId, setMiProductoId] = useState<number | null>(null);
   const [productoInteresadoId, setProductoInteresadoId] = useState<number | null>(null);
-  const [buscarEnMarketplace, setBuscarEnMarketplace] = useState(false);
   const [paginaInteres, setPaginaInteres] = useState(1);
   const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
 
@@ -62,21 +60,10 @@ const Coincidencias = () => {
 
   const misProductos = misProductosResponse?.data ?? [];
 
-  const interesesKey = (currentUser?.interesesQuiero ?? []).slice().sort().join('|');
-
-  const { data: coincidencias = [], isLoading: loadingCoincidencias, error: errorCoincidencias } = useQuery({
-    queryKey: ['coincidencias', currentUser?.id, interesesKey],
-    queryFn: () => {
-      if (!currentUser?.id) throw new Error('Usuario no autenticado');
-      return coincidenciasService.getCoincidencias(currentUser.id);
-    },
-    enabled: !!currentUser?.id && !buscarEnMarketplace,
-  });
-
-  const { data: marketResult, isLoading: loadingMarket } = useQuery({
+  const { data: marketResult, isLoading: loadingMarket, error: errorMarket } = useQuery({
     queryKey: ['marketItems', 'busqueda', search.trim(), currentUser?.id],
     queryFn: () => marketService.getItems({ search: search.trim(), page: 1, limit: 50, soloDisponibles: true }),
-    enabled: !!currentUser?.id && buscarEnMarketplace,
+    enabled: !!currentUser?.id,
   });
 
   const itemsBuscados = marketResult?.data ?? [];
@@ -148,24 +135,16 @@ const Coincidencias = () => {
   // Reset página al cambiar búsqueda o filtros
   useEffect(() => {
     setPaginaInteres(1);
-  }, [search, buscarEnMarketplace]);
+  }, [search]);
 
-  const listaBase = buscarEnMarketplace ? itemsBuscados : coincidencias;
   const coincidenciasFiltradas = useMemo(() => {
-    const list = Array.isArray(listaBase) ? listaBase : [];
+    const list = Array.isArray(itemsBuscados) ? itemsBuscados : [];
     const sinPropios = list.filter((item: MarketItem) => item.vendedorId !== currentUser?.id);
-    const disponibles = sinPropios.filter((item: MarketItem) => item.disponible !== false);
-    if (!search.trim() || buscarEnMarketplace) return disponibles;
-    const q = search.toLowerCase().trim();
-    return disponibles.filter(
-      (item: MarketItem) =>
-        (item.titulo || '').toLowerCase().includes(q) ||
-        (item.descripcion || '').toLowerCase().includes(q)
-    );
-  }, [listaBase, search, buscarEnMarketplace, currentUser?.id]);
+    return sinPropios.filter((item: MarketItem) => item.disponible !== false);
+  }, [itemsBuscados, currentUser?.id]);
 
   const miProductoSeleccionado = misProductos.find(p => p.id === miProductoId);
-  const isLoading = buscarEnMarketplace ? loadingMarket : loadingCoincidencias;
+  const isLoading = loadingMarket;
 
   const totalPaginas = Math.ceil(coincidenciasFiltradas.length / ITEMS_POR_PAGINA) || 1;
   const paginaInteresClamped = Math.min(Math.max(1, paginaInteres), totalPaginas);
@@ -226,8 +205,8 @@ const Coincidencias = () => {
           <Alert className="mb-6 border-gold/40 bg-gold/5">
             <Sparkles className="h-4 w-4 text-gold" />
             <AlertDescription className="text-sm">
-              Según <strong className="text-foreground">Lo que querés</strong> en tu perfil (
-              {currentUser.interesesQuiero.join(', ')}), mostramos primero las publicaciones que mejor coinciden con esos intereses (mismo rango de precio).
+              Tenés <strong className="text-foreground">Lo que querés</strong> en tu perfil (
+              {currentUser.interesesQuiero.join(', ')}). Usá el buscador de arriba para encontrar publicaciones relacionadas en el marketplace.
             </AlertDescription>
           </Alert>
         )}
@@ -235,8 +214,7 @@ const Coincidencias = () => {
         {/* Búsqueda: qué te interesa */}
         <Card className="border-border mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+              <div>
                 <label className="text-sm font-medium mb-2 block">¿Qué te interesa?</label>
                 <form
                   className="flex gap-2"
@@ -253,24 +231,17 @@ const Coincidencias = () => {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="pl-9 pr-2"
-                      aria-label="Buscar en coincidencias"
+                      aria-label="Buscar en el marketplace"
                     />
                   </div>
                   <Button type="submit" variant="secondary" size="icon" title="Buscar" className="shrink-0">
                     <Search className="w-4 h-4" />
                   </Button>
                 </form>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  La tabla muestra publicaciones de todo el marketplace (podés filtrar con el buscador).
+                </p>
               </div>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer self-end sm:self-center">
-                <input
-                  type="checkbox"
-                  checked={buscarEnMarketplace}
-                  onChange={(e) => setBuscarEnMarketplace(e.target.checked)}
-                  className="rounded border-input"
-                />
-                Buscar en todo el marketplace
-              </label>
-            </div>
           </CardContent>
         </Card>
 
@@ -387,14 +358,14 @@ const Coincidencias = () => {
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gold" />
-            <span className="ml-2 text-muted-foreground">Buscando coincidencias...</span>
+            <span className="ml-2 text-muted-foreground">Cargando publicaciones...</span>
           </div>
-        ) : (errorCoincidencias && !buscarEnMarketplace) ? (
+        ) : errorMarket ? (
           <div className="bg-card rounded-xl border border-border p-8 text-center">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-destructive mb-2">Error al cargar coincidencias</p>
+            <p className="text-destructive mb-2">Error al cargar el marketplace</p>
             <p className="text-sm text-muted-foreground">
-              {errorCoincidencias instanceof Error ? errorCoincidencias.message : "Intenta de nuevo más tarde"}
+              {errorMarket instanceof Error ? errorMarket.message : "Intentá de nuevo más tarde"}
             </p>
           </div>
         ) : coincidenciasFiltradas.length > 0 ? (
@@ -550,16 +521,14 @@ const Coincidencias = () => {
             <p className="text-muted-foreground mb-2 font-medium">
               {search.trim()
                 ? "No hay resultados para tu búsqueda"
-                : "No hay coincidencias para mostrar"}
+                : "No hay publicaciones para mostrar"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
               {search.trim()
-                ? "Probá con otros términos o activá \"Buscar en todo el marketplace\" en el panel de la izquierda."
+                ? "Probá con otros términos o revisá que haya publicaciones en el Market."
                 : misProductos.length === 0
-                  ? "Creá primero un producto o servicio en Mis publicaciones. Así podremos mostrarte coincidencias con valor similar."
-                  : buscarEnMarketplace
-                    ? "Probá otra búsqueda o desactivá \"Buscar en todo el marketplace\" para ver recomendaciones por precio."
-                    : "Buscamos productos con valor similar a los tuyos. Marcá \"Buscar en todo el marketplace\" para explorar más opciones."}
+                  ? "Creá primero un producto o servicio en Mis publicaciones para poder proponer intercambios."
+                  : "No hay otras publicaciones disponibles por ahora. Probá buscar algo específico o entrá al Market para ver más."}
             </p>
             {misProductos.length === 0 && (
               <Button variant="gold" onClick={() => navigate("/crear-producto")}>
