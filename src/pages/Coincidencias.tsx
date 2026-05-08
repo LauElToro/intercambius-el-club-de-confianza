@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,29 +20,19 @@ import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { GuiaCoincidencias } from "@/components/onboarding/GuiaCoincidencias";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
+import {
+  MATCH_THRESHOLD_PRIMARY,
+  MATCH_THRESHOLD_RELATED,
+  itemMaxTablaScore,
+  itemTablaHitCount,
+  scoreInterestPhraseAgainstItem,
+} from "@/lib/fuzzy-interest-match";
 
 const ITEMS_POR_PAGINA = 6;
-/** Objetivo de ítems en «Los que me interesan»; si hay menos, se suman parecidos por palabras clave. */
+/** Objetivo de ítems en «Los que me interesan»; si hay menos, se suman parecidos por umbral menor. */
 const MIN_PRODUCTOS_INTERES = 10;
-
-function textoItemMarket(item: MarketItem): string {
-  return `${item.titulo ?? ""} ${item.descripcion ?? ""}`.toLowerCase();
-}
-
-/** Puntuación para sugerencias cuando faltan coincidencias directas por búsqueda. */
-function scoreSimilaridadInteres(item: MarketItem, keywords: string[]): number {
-  const hay = textoItemMarket(item);
-  let s = 0;
-  for (const raw of keywords) {
-    const t = raw.trim().toLowerCase();
-    if (t.length < 2) continue;
-    if (hay.includes(t)) s += 3;
-    for (const word of t.split(/\s+/)) {
-      if (word.length >= 3 && hay.includes(word)) s += 1;
-    }
-  }
-  return s;
-}
+/** Pool del market para evaluar coincidencia ~70 % en cliente (typos / plurales / palabras sueltas). */
+const MARKET_POOL_LIMIT = 280;
 
 const RUBROS = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -95,73 +85,19 @@ const Coincidencias = () => {
 
   const misProductos = misProductosResponse?.data ?? [];
 
-  const consultasPorInteres = useQueries({
-    queries: terminosInteres.map((term) => ({
-      queryKey: ['marketItems', 'coincidencias-interes', term, currentUser?.id],
-      queryFn: () =>
-        marketService.getItems({
-          search: term,
-          page: 1,
-          limit: 50,
-          soloDisponibles: true,
-        }),
-      enabled: !!currentUser?.id && terminosInteres.length > 0,
-    })),
-  });
-
-  const loadingConsultasInteres = consultasPorInteres.some((q) => q.isPending);
-  const errorConsultaInteres = consultasPorInteres.find((q) => q.error)?.error ?? null;
-
-  /** Resultados de búsqueda por cada palabra de interés, ordenados: primero lo más alineado al perfil. */
-  const itemsPorBusquedaInteres = useMemo(() => {
-    const itemById = new Map<number, MarketItem>();
-    const termHits = new Map<number, number>();
-    const firstTermIdx = new Map<number, number>();
-
-    consultasPorInteres.forEach((q, termIdx) => {
-      const rows = q.data?.data ?? [];
-      const yaContadoEnEsteTermino = new Set<number>();
-      for (const item of rows) {
-        if (!item?.id) continue;
-        if (item.vendedorId === currentUser?.id) continue;
-        if (item.disponible === false) continue;
-        if (!itemById.has(item.id)) itemById.set(item.id, item);
-        if (!yaContadoEnEsteTermino.has(item.id)) {
-          yaContadoEnEsteTermino.add(item.id);
-          termHits.set(item.id, (termHits.get(item.id) ?? 0) + 1);
-          if (!firstTermIdx.has(item.id)) firstTermIdx.set(item.id, termIdx);
-        }
-      }
-    });
-
-    const list = Array.from(itemById.values());
-    list.sort((a, b) => {
-      const hitsB = termHits.get(b.id) ?? 0;
-      const hitsA = termHits.get(a.id) ?? 0;
-      if (hitsB !== hitsA) return hitsB - hitsA;
-      const idxA = firstTermIdx.get(a.id) ?? 999;
-      const idxB = firstTermIdx.get(b.id) ?? 999;
-      if (idxA !== idxB) return idxA - idxB;
-      const scoreB = scoreSimilaridadInteres(b, terminosInteres);
-      const scoreA = scoreSimilaridadInteres(a, terminosInteres);
-      return scoreB - scoreA;
-    });
-    return list;
-  }, [consultasPorInteres, currentUser?.id, terminosInteres]);
-
-  const consultasInteresListas =
-    terminosInteres.length === 0 ||
-    consultasPorInteres.every((q) => !q.isPending);
-
-  const necesitaSimilares =
-    terminosInteres.length > 0 &&
-    consultasInteresListas &&
-    itemsPorBusquedaInteres.length < MIN_PRODUCTOS_INTERES;
-
-  const { data: marketAmplio, isLoading: loadingAmplio } = useQuery({
-    queryKey: ['marketItems', 'coincidencias-amplio', currentUser?.id],
-    queryFn: () => marketService.getItems({ page: 1, limit: 120, soloDisponibles: true }),
-    enabled: !!currentUser?.id && necesitaSimilares,
+  const {
+    data: marketPoolTabla,
+    isPending: loadingPoolTabla,
+    error: errorPoolTabla,
+  } = useQuery({
+    queryKey: ['marketItems', 'coincidencias-pool-fuzzy', currentUser?.id],
+    queryFn: () =>
+      marketService.getItems({
+        page: 1,
+        limit: MARKET_POOL_LIMIT,
+        soloDisponibles: true,
+      }),
+    enabled: !!currentUser?.id && terminosInteres.length > 0,
   });
 
   /** Sin palabras en la Tabla: mostrar market general para poder elegir con qué intercambiar. */
@@ -175,7 +111,7 @@ const Coincidencias = () => {
     enabled: !!currentUser?.id && terminosInteres.length === 0,
   });
 
-  const { listaCoincidencias, idsSimilares } = useMemo(() => {
+  const { listaCoincidencias, idsSimilares, countPrimariosMatch } = useMemo(() => {
     if (terminosInteres.length === 0) {
       const rows = marketSinIntereses?.data ?? [];
       const list = rows.filter(
@@ -184,55 +120,86 @@ const Coincidencias = () => {
           item.vendedorId !== currentUser?.id &&
           item.disponible !== false
       );
-      return { listaCoincidencias: list, idsSimilares: new Set<number>() };
+      return {
+        listaCoincidencias: list,
+        idsSimilares: new Set<number>(),
+        countPrimariosMatch: list.length,
+      };
     }
 
-    const primaryIds = new Set(itemsPorBusquedaInteres.map((i) => i.id));
+    const rows = marketPoolTabla?.data ?? [];
+    const candidatos = rows.filter(
+      (item) =>
+        item?.id &&
+        item.vendedorId !== currentUser?.id &&
+        item.disponible !== false
+    );
+
+    const scored = candidatos.map((item) => {
+      const titulo = item.titulo ?? "";
+      const desc = item.descripcion ?? "";
+      const maxScore = itemMaxTablaScore(terminosInteres, titulo, desc);
+      const hitsPrimary = itemTablaHitCount(
+        terminosInteres,
+        titulo,
+        desc,
+        MATCH_THRESHOLD_PRIMARY
+      );
+      let firstTermIdx = 999;
+      for (let i = 0; i < terminosInteres.length; i++) {
+        if (
+          scoreInterestPhraseAgainstItem(terminosInteres[i], titulo, desc) >=
+          MATCH_THRESHOLD_PRIMARY
+        ) {
+          firstTermIdx = i;
+          break;
+        }
+      }
+      return { item, maxScore, hitsPrimary, firstTermIdx };
+    });
+
+    const primarios = scored
+      .filter((x) => x.maxScore >= MATCH_THRESHOLD_PRIMARY)
+      .sort((a, b) => {
+        if (b.hitsPrimary !== a.hitsPrimary) return b.hitsPrimary - a.hitsPrimary;
+        if (b.maxScore !== a.maxScore) return b.maxScore - a.maxScore;
+        if (a.firstTermIdx !== b.firstTermIdx) return a.firstTermIdx - b.firstTermIdx;
+        return 0;
+      })
+      .map((x) => x.item);
+
+    const primaryIds = new Set(primarios.map((i) => i.id));
     const similaresIds = new Set<number>();
 
-    if (
-      itemsPorBusquedaInteres.length >= MIN_PRODUCTOS_INTERES ||
-      !marketAmplio?.data?.length
-    ) {
-      return { listaCoincidencias: itemsPorBusquedaInteres, idsSimilares: similaresIds };
-    }
+    let list = [...primarios];
+    if (list.length < MIN_PRODUCTOS_INTERES) {
+      const faltan = MIN_PRODUCTOS_INTERES - list.length;
+      const relacionados = scored
+        .filter(
+          (x) =>
+            !primaryIds.has(x.item.id) &&
+            x.maxScore >= MATCH_THRESHOLD_RELATED &&
+            x.maxScore < MATCH_THRESHOLD_PRIMARY
+        )
+        .sort((a, b) => b.maxScore - a.maxScore);
 
-    const faltan = MIN_PRODUCTOS_INTERES - itemsPorBusquedaInteres.length;
-    const scored = marketAmplio.data
-      .filter(
-        (item) =>
-          item?.id &&
-          item.vendedorId !== currentUser?.id &&
-          item.disponible !== false &&
-          !primaryIds.has(item.id)
-      )
-      .map((item) => ({
-        item,
-        score: scoreSimilaridadInteres(item, terminosInteres),
-      }))
-      .filter((x) => x.score > 0)
-      .sort((a, b) => b.score - a.score);
-
-    const extra: MarketItem[] = [];
-    const seen = new Set<number>();
-    for (const { item } of scored) {
-      if (extra.length >= faltan) break;
-      if (seen.has(item.id)) continue;
-      seen.add(item.id);
-      extra.push(item);
-      similaresIds.add(item.id);
+      for (const x of relacionados) {
+        if (similaresIds.size >= faltan) break;
+        similaresIds.add(x.item.id);
+        list.push(x.item);
+      }
     }
 
     return {
-      listaCoincidencias: [...itemsPorBusquedaInteres, ...extra],
+      listaCoincidencias: list,
       idsSimilares: similaresIds,
+      countPrimariosMatch: primarios.length,
     };
   }, [
+    terminosInteres,
     terminosInteres.length,
     marketSinIntereses?.data,
-    itemsPorBusquedaInteres,
-    marketAmplio?.data,
-    terminosInteres,
+    marketPoolTabla?.data,
     currentUser?.id,
   ]);
 
@@ -307,10 +274,8 @@ const Coincidencias = () => {
 
   const miProductoSeleccionado = misProductos.find(p => p.id === miProductoId);
   const sinTablaIntereses = terminosInteres.length === 0;
-  const isLoading = sinTablaIntereses
-    ? loadingSinIntereses
-    : loadingConsultasInteres || (necesitaSimilares && loadingAmplio);
-  const errorListado = sinTablaIntereses ? errorSinIntereses : errorConsultaInteres;
+  const isLoading = sinTablaIntereses ? loadingSinIntereses : loadingPoolTabla;
+  const errorListado = sinTablaIntereses ? errorSinIntereses : errorPoolTabla;
 
   const totalPaginas = Math.ceil(listaCoincidencias.length / ITEMS_POR_PAGINA) || 1;
   const paginaInteresClamped = Math.min(Math.max(1, paginaInteres), totalPaginas);
@@ -514,9 +479,9 @@ const Coincidencias = () => {
             </>
           ) : (
             <>
-              Primero lo alineado a tu Tabla
-              {itemsPorBusquedaInteres.length < MIN_PRODUCTOS_INTERES && idsSimilares.size > 0
-                ? "; las marcadas «Parecido» completan hasta diez sugerencias."
+              Coincidencia aproximada ~70 % entre tu Tabla y el título o la descripción (incluye typos y palabras sueltas). Primero lo más alineado
+              {countPrimariosMatch < MIN_PRODUCTOS_INTERES && idsSimilares.size > 0
+                ? "; las marcadas «Parecido» usan un umbral algo más amplio hasta diez sugerencias."
                 : "."}{" "}
               Seleccioná una y tocá &quot;Quiero intercambiar&quot;.
             </>
