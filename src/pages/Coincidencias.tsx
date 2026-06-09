@@ -100,30 +100,15 @@ const Coincidencias = () => {
     enabled: !!currentUser?.id && terminosInteres.length > 0,
   });
 
-  /** Sin palabras en la Tabla: mostrar market general para poder elegir con qué intercambiar. */
-  const {
-    data: marketSinIntereses,
-    isLoading: loadingSinIntereses,
-    error: errorSinIntereses,
-  } = useQuery({
-    queryKey: ['marketItems', 'coincidencias-sin-tabla', currentUser?.id],
-    queryFn: () => marketService.getItems({ page: 1, limit: 80, soloDisponibles: true }),
-    enabled: !!currentUser?.id && terminosInteres.length === 0,
-  });
+  /** Sin palabras en la Tabla: no listamos productos hasta que el usuario defina qué busca. */
+  const sinTablaIntereses = terminosInteres.length === 0;
 
   const { listaCoincidencias, idsSimilares, countPrimariosMatch } = useMemo(() => {
-    if (terminosInteres.length === 0) {
-      const rows = marketSinIntereses?.data ?? [];
-      const list = rows.filter(
-        (item) =>
-          item?.id &&
-          item.vendedorId !== currentUser?.id &&
-          item.disponible !== false
-      );
+    if (sinTablaIntereses) {
       return {
-        listaCoincidencias: list,
+        listaCoincidencias: [] as MarketItem[],
         idsSimilares: new Set<number>(),
-        countPrimariosMatch: list.length,
+        countPrimariosMatch: 0,
       };
     }
 
@@ -196,9 +181,8 @@ const Coincidencias = () => {
       countPrimariosMatch: primarios.length,
     };
   }, [
+    sinTablaIntereses,
     terminosInteres,
-    terminosInteres.length,
-    marketSinIntereses?.data,
     marketPoolTabla?.data,
     currentUser?.id,
   ]);
@@ -273,9 +257,8 @@ const Coincidencias = () => {
   }, [interesesRegistroKey]);
 
   const miProductoSeleccionado = misProductos.find(p => p.id === miProductoId);
-  const sinTablaIntereses = terminosInteres.length === 0;
-  const isLoading = sinTablaIntereses ? loadingSinIntereses : loadingPoolTabla;
-  const errorListado = sinTablaIntereses ? errorSinIntereses : errorPoolTabla;
+  const isLoading = !sinTablaIntereses && loadingPoolTabla;
+  const errorListado = sinTablaIntereses ? null : errorPoolTabla;
 
   const totalPaginas = Math.ceil(listaCoincidencias.length / ITEMS_POR_PAGINA) || 1;
   const paginaInteresClamped = Math.min(Math.max(1, paginaInteres), totalPaginas);
@@ -334,8 +317,8 @@ const Coincidencias = () => {
                 <label className="text-sm font-medium mb-2 block">Tu Tabla (lo que te interesa)</label>
                 <p className="text-xs text-muted-foreground mb-3">
                   {sinTablaIntereses
-                    ? "Las palabras clave se cargan desde el menú Tabla (tu perfil). Mientras tanto podés elegir cualquier publicación del Market abajo para proponer un intercambio."
-                    : "Personalizamos la columna de la derecha con estas palabras. Para editarlas usá Tabla en el menú o el botón de acá."}
+                    ? "Antes de ver coincidencias, cargá palabras clave con lo que te interesa (zapatillas, guitarra, juegos de mesa…). Usamos ~70 % de similitud con el título o la descripción de cada publicación."
+                    : "Personalizamos la columna de la derecha con estas palabras (~70 % de coincidencia). Para editarlas usá el botón de acá."}
                 </p>
                 <div className="flex flex-wrap gap-2 items-center">
                   {sinTablaIntereses ? (
@@ -389,7 +372,7 @@ const Coincidencias = () => {
                     }`}
                     onClick={() => setMiProductoId(miProductoId === p.id ? null : p.id)}
                   >
-                    <div className="relative group">
+                    <div className="relative group shrink-0">
                       <img
                         src={p.images?.[0]?.url || p.imagen || "https://via.placeholder.com/300x200"}
                         alt={p.titulo}
@@ -405,9 +388,11 @@ const Coincidencias = () => {
                         </div>
                       )}
                     </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-base line-clamp-2 mb-1">{p.titulo}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{p.descripcion}</p>
+                    <CardContent className="coincidencia-card__body">
+                      <div className="coincidencia-card__title-row">
+                        <h3 className="font-semibold text-base line-clamp-2 flex-1">{p.titulo}</h3>
+                      </div>
+                      <p className="coincidencia-card__description">{p.descripcion || "\u00A0"}</p>
                       <button
                         type="button"
                         className="text-xs text-gold hover:underline flex items-center gap-1 mb-2"
@@ -416,7 +401,7 @@ const Coincidencias = () => {
                         <ExternalLink className="w-3 h-3" />
                         Ver detalle
                       </button>
-                      <div className="flex items-center justify-between">
+                      <div className="mt-auto flex items-center justify-between">
                         <span className="text-lg font-bold gold-text">{formatIX(p.precio)}</span>
                         <span className={`text-sm font-medium ${miProductoId === p.id ? "text-gold" : "text-muted-foreground"}`}>
                           {miProductoId === p.id ? "✓ Elegido" : "Elegir"}
@@ -471,11 +456,11 @@ const Coincidencias = () => {
         <p className="text-sm text-muted-foreground mb-4">
           {sinTablaIntereses ? (
             <>
-              Elegí una publicación del Market y proponé el intercambio con tu producto de la izquierda. Cuando cargues tu{" "}
+              Cargá tu{" "}
               <Link to={`/perfil/${currentUser.id}?intereses=1`} className="text-gold font-medium underline underline-offset-2">
                 Tabla
-              </Link>
-              , aquí priorizaremos lo que te interesa y sugerencias parecidas.
+              </Link>{" "}
+              para ver publicaciones que coincidan con lo que buscás. Sin palabras cargadas no mostramos sugerencias.
             </>
           ) : (
             <>
@@ -515,7 +500,7 @@ const Coincidencias = () => {
                     }`}
                     onClick={() => setProductoInteresadoId(isSelected ? null : item.id)}
                   >
-                    <div className="relative group">
+                    <div className="relative group shrink-0">
                       <img
                         src={item.images?.[0]?.url || item.imagen || 'https://via.placeholder.com/300x200'}
                         alt={item.titulo || 'Producto'}
@@ -557,8 +542,8 @@ const Coincidencias = () => {
                         </div>
                       )}
                     </div>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2 gap-2">
+                    <CardContent className="coincidencia-card__body">
+                      <div className="coincidencia-card__title-row">
                         <h3 className="font-semibold text-base line-clamp-2 flex-1 hover:text-gold transition-colors">
                           {item.titulo}
                         </h3>
@@ -566,10 +551,10 @@ const Coincidencias = () => {
                           {formatIX(item.precio)}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                        {item.descripcion}
+                      <p className="coincidencia-card__description">
+                        {item.descripcion || "\u00A0"}
                       </p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-3 gap-2">
+                      <div className="coincidencia-card__meta">
                         <button
                           type="button"
                           className="text-gold hover:underline flex items-center gap-1 min-w-0"
@@ -580,16 +565,16 @@ const Coincidencias = () => {
                         </button>
                         <div className="flex items-center gap-1 min-w-0">
                           <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate max-w-[100px]">{item.ubicacion}</span>
+                          <span className="truncate max-w-[100px]">{item.ubicacion || "\u00A0"}</span>
                         </div>
-                        {item.distancia && (
-                          <span className="flex-shrink-0">{item.distancia} km</span>
-                        )}
+                        <span className="flex-shrink-0 min-w-[3rem] text-right">
+                          {item.distancia ? `${item.distancia} km` : "\u00A0"}
+                        </span>
                       </div>
                       <Button
                         variant="default"
                         size="sm"
-                        className="w-full bg-gold hover:bg-gold/90 text-primary-foreground font-semibold py-2"
+                        className="coincidencia-card__action bg-gold hover:bg-gold/90 text-primary-foreground font-semibold py-2"
                         disabled={!miProductoSeleccionado || iniciarIntercambioMutation.isPending}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -657,32 +642,31 @@ const Coincidencias = () => {
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2 font-medium">
               {sinTablaIntereses
-                ? "No hay publicaciones de otros usuarios para mostrar"
+                ? "Cargá tu Tabla para ver coincidencias"
                 : "No hay publicaciones que coincidan con tu Tabla"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
               {sinTablaIntereses
-                ? misProductos.length === 0
-                  ? "Creá un producto en Mis publicaciones para proponer intercambios cuando haya ofertas en el Market."
-                  : "Entrá al Market o esperá a que haya más publicaciones disponibles."
+                ? "Sumá palabras clave con lo que te interesa. Recién ahí buscamos publicaciones con al menos ~70 % de coincidencia en título o descripción."
                 : misProductos.length === 0
                   ? "Podés sumar palabras en tu Tabla o crear un producto en Mis publicaciones para proponer intercambios."
                   : "Ampliá las palabras en tu Tabla o explorá el Market para ver más publicaciones."}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
-              {!sinTablaIntereses && (
+              {sinTablaIntereses ? (
+                <Button variant="gold" asChild>
+                  <Link to={`/perfil/${currentUser.id}?intereses=1`}>Cargar mi Tabla</Link>
+                </Button>
+              ) : (
                 <Button variant="outline" asChild>
                   <Link to={`/perfil/${currentUser.id}?intereses=1`}>Ajustar Tabla</Link>
                 </Button>
               )}
-              {sinTablaIntereses && (
+              {!sinTablaIntereses && (
                 <Button variant="gold" asChild>
-                  <Link to={`/perfil/${currentUser.id}?intereses=1`}>Cargar mi Tabla</Link>
+                  <Link to="/market">Ir al Market</Link>
                 </Button>
               )}
-              <Button variant={sinTablaIntereses ? "outline" : "gold"} asChild>
-                <Link to="/market">Ir al Market</Link>
-              </Button>
               {misProductos.length === 0 && (
                 <Button variant="secondary" onClick={() => navigate("/crear-producto")}>
                   Crear mi primer producto

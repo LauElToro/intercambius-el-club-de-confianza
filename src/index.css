@@ -166,9 +166,24 @@
     box-shadow: var(--shadow-gold);
   }
 
-  /* Cards de coincidencias: hover y selected dorado */
+  /* Cards de coincidencias: hover y selected dorado; altura uniforme en grilla */
   .coincidencia-card {
-    @apply relative transition-all duration-300 overflow-hidden rounded-xl;
+    @apply relative flex h-full flex-col transition-all duration-300 overflow-hidden rounded-xl;
+  }
+  .coincidencia-card__body {
+    @apply flex flex-1 flex-col p-4;
+  }
+  .coincidencia-card__title-row {
+    @apply mb-2 flex min-h-[3rem] items-start justify-between gap-2;
+  }
+  .coincidencia-card__description {
+    @apply mb-2 line-clamp-2 min-h-[2.5rem] text-sm text-muted-foreground;
+  }
+  .coincidencia-card__meta {
+    @apply mb-3 flex min-h-5 items-center justify-between gap-2 text-xs text-muted-foreground;
+  }
+  .coincidencia-card__action {
+    @apply mt-auto w-full;
   }
   .coincidencia-card::after {
     content: '';
