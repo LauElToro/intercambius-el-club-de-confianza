@@ -22,7 +22,6 @@ import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 import {
   MATCH_THRESHOLD_PRIMARY,
-  MATCH_THRESHOLD_RELATED,
   itemMaxTablaScore,
   itemTablaHitCount,
   scoreInterestPhraseAgainstItem,
@@ -31,8 +30,6 @@ import { buildTerminosInteres } from "@/lib/intereses-terminos";
 import { LoQueBuscoEditor } from "@/components/coincidencias/LoQueBuscoEditor";
 
 const ITEMS_POR_PAGINA = 6;
-/** Objetivo de ítems en «Los que me interesan»; si hay menos, se suman parecidos por umbral menor. */
-const MIN_PRODUCTOS_INTERES = 10;
 /** Pool del market para evaluar coincidencia ~70 % en cliente (typos / plurales / palabras sueltas). */
 const MARKET_POOL_LIMIT = 280;
 
@@ -98,12 +95,10 @@ const Coincidencias = () => {
   /** Sin palabras en la Tabla: no listamos productos hasta que el usuario defina qué busca. */
   const sinTablaIntereses = terminosInteres.length === 0;
 
-  const { listaCoincidencias, idsSimilares, countPrimariosMatch } = useMemo(() => {
+  const { listaCoincidencias } = useMemo(() => {
     if (sinTablaIntereses) {
       return {
         listaCoincidencias: [] as MarketItem[],
-        idsSimilares: new Set<number>(),
-        countPrimariosMatch: 0,
       };
     }
 
@@ -148,32 +143,8 @@ const Coincidencias = () => {
       })
       .map((x) => x.item);
 
-    const primaryIds = new Set(primarios.map((i) => i.id));
-    const similaresIds = new Set<number>();
-
-    let list = [...primarios];
-    if (list.length < MIN_PRODUCTOS_INTERES) {
-      const faltan = MIN_PRODUCTOS_INTERES - list.length;
-      const relacionados = scored
-        .filter(
-          (x) =>
-            !primaryIds.has(x.item.id) &&
-            x.maxScore >= MATCH_THRESHOLD_RELATED &&
-            x.maxScore < MATCH_THRESHOLD_PRIMARY
-        )
-        .sort((a, b) => b.maxScore - a.maxScore);
-
-      for (const x of relacionados) {
-        if (similaresIds.size >= faltan) break;
-        similaresIds.add(x.item.id);
-        list.push(x.item);
-      }
-    }
-
     return {
-      listaCoincidencias: list,
-      idsSimilares: similaresIds,
-      countPrimariosMatch: primarios.length,
+      listaCoincidencias: primarios,
     };
   }, [
     sinTablaIntereses,
@@ -435,11 +406,7 @@ const Coincidencias = () => {
             "Cargá palabras arriba para ver publicaciones que coincidan con lo que buscás."
           ) : (
             <>
-              Coincidencia aproximada ~70 % entre tu Tabla y el título o la descripción (incluye typos y palabras sueltas). Primero lo más alineado
-              {countPrimariosMatch < MIN_PRODUCTOS_INTERES && idsSimilares.size > 0
-                ? "; las marcadas «Parecido» usan un umbral algo más amplio hasta diez sugerencias."
-                : "."}{" "}
-              Seleccioná una y tocá &quot;Quiero intercambiar&quot;.
+              Coincidencia ~70 % entre lo que buscás y el título o la descripción (incluye typos y plurales). Seleccioná una y tocá &quot;Quiero intercambiar&quot;.
             </>
           )}
         </p>
@@ -501,11 +468,6 @@ const Coincidencias = () => {
                         {RUBROS[item.rubro as keyof typeof RUBROS]?.icon}{" "}
                         {RUBROS[item.rubro as keyof typeof RUBROS]?.label}
                       </Badge>
-                      {idsSimilares.has(item.id) && (
-                        <Badge className="absolute bottom-2 right-2 bg-muted text-foreground border border-border text-[10px] px-1.5 py-0">
-                          Parecido
-                        </Badge>
-                      )}
                       {isSelected && (
                         <div className="absolute bottom-2 left-2 bg-gold text-primary-foreground rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
                           <Repeat className="w-3 h-3" />

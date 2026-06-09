@@ -1,13 +1,10 @@
 /**
  * Coincidencia entre lo que el usuario escribe en la Tabla y título/descripción del market.
- * Umbral principal ~70 % (typos, plurales, palabras sueltas). Umbral menor para sugerencias «parecidas».
+ * Umbral principal ~70 % (typos, plurales, palabras sueltas).
  */
 
 /** Coincidencia fuerte: artículo cuenta como match razonable con la publicación. */
 export const MATCH_THRESHOLD_PRIMARY = 0.7;
-
-/** Relleno de sugerencias cuando faltan resultados al umbral principal. */
-export const MATCH_THRESHOLD_RELATED = 0.55;
 
 const STOPWORDS_ES = new Set([
   "de",
@@ -132,7 +129,13 @@ export function wordSimilarityNormalized(a: string, b: string): number {
   if (long.includes(short) && short.length >= 4) return 0.9;
   const lev = normalizedLevenshteinSimilarity(a, b);
   const jw = jaroWinklerSimilarity(a, b);
-  return Math.max(lev, jw);
+  // Typos / plurales: Levenshtein alto o prefijo compartido (evita Jaro espurio tipo pantalon↔presentada).
+  if (lev >= 0.5) return Math.max(lev, jw);
+  const prefLen = Math.min(4, short.length);
+  if (lev >= 0.42 && prefLen >= 3 && long.startsWith(short.slice(0, prefLen))) {
+    return Math.max(lev, jw);
+  }
+  return lev;
 }
 
 function bestWordMatch(token: string, hayWords: string[]): number {
