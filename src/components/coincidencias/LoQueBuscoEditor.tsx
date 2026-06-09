@@ -7,24 +7,38 @@ import { Loader2, X } from "lucide-react";
 import { userService } from "@/services/user.service";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  isTermFromInteresesQuiero,
+  removeTermFromNecesita,
+  terminoYaCargado,
+} from "@/lib/intereses-terminos";
 
 const MAX_INTERESES = 25;
 const MIN_CHARS = 2;
 
 type LoQueBuscoEditorProps = {
+  /** Términos activos (interesesQuiero + lo que busco del perfil). */
+  terminosActivos: string[];
   interesesQuiero: string[];
+  necesita?: string;
 };
 
-export function LoQueBuscoEditor({ interesesQuiero }: LoQueBuscoEditorProps) {
+export function LoQueBuscoEditor({
+  terminosActivos,
+  interesesQuiero,
+  necesita,
+}: LoQueBuscoEditorProps) {
   const [input, setInput] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
 
   const guardarMutation = useMutation({
-    mutationFn: (lista: string[]) => userService.updateUser({ interesesQuiero: lista }),
+    mutationFn: (data: { interesesQuiero?: string[]; necesita?: string }) =>
+      userService.updateUser(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      await queryClient.invalidateQueries({ queryKey: ["user"] });
       await refreshUser();
     },
     onError: (err: unknown) => {
@@ -36,19 +50,14 @@ export function LoQueBuscoEditor({ interesesQuiero }: LoQueBuscoEditorProps) {
     },
   });
 
-  const persistir = (lista: string[]) => {
-    guardarMutation.mutate(lista);
-  };
-
   const agregar = () => {
     const raw = input.trim().slice(0, 80);
     if (raw.length < MIN_CHARS) return;
-    const duplicado = interesesQuiero.some((t) => t.toLowerCase() === raw.toLowerCase());
-    if (duplicado) {
+    if (terminoYaCargado(terminosActivos, raw)) {
       setInput("");
       return;
     }
-    if (interesesQuiero.length >= MAX_INTERESES) {
+    if (terminosActivos.length >= MAX_INTERESES) {
       toast({
         title: "Límite alcanzado",
         description: `Podés cargar hasta ${MAX_INTERESES} palabras.`,
@@ -56,25 +65,35 @@ export function LoQueBuscoEditor({ interesesQuiero }: LoQueBuscoEditorProps) {
       });
       return;
     }
-    persistir([...interesesQuiero, raw]);
+    guardarMutation.mutate({ interesesQuiero: [...interesesQuiero, raw] });
     setInput("");
   };
 
   const quitar = (tag: string) => {
-    persistir(interesesQuiero.filter((t) => t !== tag));
+    if (isTermFromInteresesQuiero(interesesQuiero, tag)) {
+      guardarMutation.mutate({
+        interesesQuiero: interesesQuiero.filter((t) => t.toLowerCase() !== tag.toLowerCase()),
+      });
+      return;
+    }
+    guardarMutation.mutate({
+      necesita: removeTermFromNecesita(necesita, tag),
+    });
   };
+
+  const sinPalabras = terminosActivos.length === 0;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2 min-h-[2rem] items-center">
-        {guardarMutation.isPending && interesesQuiero.length === 0 ? (
+        {guardarMutation.isPending && sinPalabras ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        ) : interesesQuiero.length === 0 ? (
+        ) : sinPalabras ? (
           <Badge variant="outline" className="font-normal text-muted-foreground">
             Sin palabras cargadas
           </Badge>
         ) : (
-          interesesQuiero.map((tag) => (
+          terminosActivos.map((tag) => (
             <Badge key={tag} variant="secondary" className="gap-1 pr-1 font-normal">
               {tag}
               <button
@@ -107,7 +126,7 @@ export function LoQueBuscoEditor({ interesesQuiero }: LoQueBuscoEditorProps) {
         />
         <Button
           type="button"
-          variant={interesesQuiero.length === 0 ? "gold" : "outline"}
+          variant={sinPalabras ? "gold" : "outline"}
           size="sm"
           onClick={agregar}
           disabled={guardarMutation.isPending || input.trim().length < MIN_CHARS}

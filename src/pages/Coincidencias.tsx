@@ -27,7 +27,7 @@ import {
   itemTablaHitCount,
   scoreInterestPhraseAgainstItem,
 } from "@/lib/fuzzy-interest-match";
-import { buildTerminosInteres, parseNecesitaTerms } from "@/lib/intereses-terminos";
+import { buildTerminosInteres } from "@/lib/intereses-terminos";
 import { LoQueBuscoEditor } from "@/components/coincidencias/LoQueBuscoEditor";
 
 const ITEMS_POR_PAGINA = 6;
@@ -71,14 +71,6 @@ const Coincidencias = () => {
     () => buildTerminosInteres(interesesQuiero, currentUser?.necesita),
     [interesesQuiero, currentUser?.necesita],
   );
-
-  const terminosDesdePerfil = useMemo(
-    () => parseNecesitaTerms(currentUser?.necesita),
-    [currentUser?.necesita],
-  );
-
-  const haySoloNecesitaEnPerfil =
-    terminosDesdePerfil.length > 0 && interesesQuiero.length === 0;
 
   const { data: misProductosResponse } = useQuery({
     queryKey: ['marketItems', 'mis-productos', currentUser?.id],
@@ -321,12 +313,11 @@ const Coincidencias = () => {
                 ? "Agregá palabras con lo que te interesa. Sin eso no mostramos coincidencias."
                 : "Buscamos publicaciones con ~70 % de similitud entre estas palabras y el título o la descripción."}
             </p>
-            {haySoloNecesitaEnPerfil && (
-              <p className="text-xs text-gold mb-3">
-                También usamos «{terminosDesdePerfil.join(", ")}» de tu perfil. Agregá palabras acá para afinar sin salir de esta página.
-              </p>
-            )}
-            <LoQueBuscoEditor interesesQuiero={interesesQuiero} />
+            <LoQueBuscoEditor
+              terminosActivos={terminosInteres}
+              interesesQuiero={interesesQuiero}
+              necesita={currentUser?.necesita}
+            />
           </CardContent>
         </Card>
 

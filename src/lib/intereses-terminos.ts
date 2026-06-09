@@ -27,3 +27,20 @@ export function buildTerminosInteres(
   for (const t of parseNecesitaTerms(necesita)) add(t);
   return out;
 }
+
+export function terminoYaCargado(terminos: string[], candidato: string): boolean {
+  const key = candidato.trim().toLowerCase();
+  return terminos.some((t) => t.toLowerCase() === key);
+}
+
+export function removeTermFromNecesita(necesita: string | undefined, term: string): string {
+  const key = term.toLowerCase();
+  return parseNecesitaTerms(necesita)
+    .filter((t) => t.toLowerCase() !== key)
+    .join(", ");
+}
+
+export function isTermFromInteresesQuiero(interesesQuiero: string[], term: string): boolean {
+  const key = term.toLowerCase();
+  return interesesQuiero.some((t) => t.toLowerCase() === key);
+}
