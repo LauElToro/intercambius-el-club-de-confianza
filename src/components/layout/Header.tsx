@@ -158,16 +158,16 @@ const Header = () => {
           </Link>
           {usuario?.id && (
             <Link
-              to={`/perfil/${usuario.id}?intereses=1`}
+              to="/coincidencias"
               className={cn(
                 "flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-4",
-                isNavItemActive(`/perfil/${usuario.id}?intereses=1`, location.pathname, location.search)
+                location.pathname.startsWith("/coincidencias")
                   ? "text-foreground bg-muted"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              <Table2 className="h-4 w-4" />
-              Tabla
+              <Users className="h-4 w-4" />
+              Coincidencias
             </Link>
           )}
         </nav>
