@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sparkles, MapPin, Heart, AlertCircle, Loader2, Repeat, Package, ExternalLink, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { Sparkles, Heart, AlertCircle, Loader2, Repeat, Package, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
@@ -27,6 +27,8 @@ import {
   itemTablaHitCount,
   scoreInterestPhraseAgainstItem,
 } from "@/lib/fuzzy-interest-match";
+import { buildTerminosInteres, parseNecesitaTerms } from "@/lib/intereses-terminos";
+import { LoQueBuscoEditor } from "@/components/coincidencias/LoQueBuscoEditor";
 
 const ITEMS_POR_PAGINA = 6;
 /** Objetivo de ítems en «Los que me interesan»; si hay menos, se suman parecidos por umbral menor. */
@@ -58,24 +60,25 @@ const Coincidencias = () => {
     queryKey: ['currentUser'],
     queryFn: () => userService.getCurrentUser(),
     enabled: !!user,
+    refetchOnMount: 'always',
   });
 
   const currentUser = userData ?? user ?? null;
 
-  const terminosInteres = useMemo(() => {
-    const raw = currentUser?.interesesQuiero ?? [];
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (const t of raw) {
-      const s = String(t).trim();
-      if (s.length === 0) continue;
-      const key = s.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(s);
-    }
-    return out;
-  }, [currentUser?.interesesQuiero]);
+  const interesesQuiero = currentUser?.interesesQuiero ?? [];
+
+  const terminosInteres = useMemo(
+    () => buildTerminosInteres(interesesQuiero, currentUser?.necesita),
+    [interesesQuiero, currentUser?.necesita],
+  );
+
+  const terminosDesdePerfil = useMemo(
+    () => parseNecesitaTerms(currentUser?.necesita),
+    [currentUser?.necesita],
+  );
+
+  const haySoloNecesitaEnPerfil =
+    terminosDesdePerfil.length > 0 && interesesQuiero.length === 0;
 
   const { data: misProductosResponse } = useQuery({
     queryKey: ['marketItems', 'mis-productos', currentUser?.id],
@@ -312,35 +315,18 @@ const Coincidencias = () => {
 
         <Card className="border-border mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 flex-1">
-                <label className="text-sm font-medium mb-2 block">Tu Tabla (lo que te interesa)</label>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {sinTablaIntereses
-                    ? "Antes de ver coincidencias, cargá palabras clave con lo que te interesa (zapatillas, guitarra, juegos de mesa…). Usamos ~70 % de similitud con el título o la descripción de cada publicación."
-                    : "Personalizamos la columna de la derecha con estas palabras (~70 % de coincidencia). Para editarlas usá el botón de acá."}
-                </p>
-                <div className="flex flex-wrap gap-2 items-center">
-                  {sinTablaIntereses ? (
-                    <Badge variant="outline" className="font-normal text-muted-foreground">
-                      Sin palabras cargadas
-                    </Badge>
-                  ) : (
-                    terminosInteres.map((t) => (
-                      <Badge key={t} variant="secondary" className="font-normal">
-                        {t}
-                      </Badge>
-                    ))
-                  )}
-                </div>
-              </div>
-              <Button variant={sinTablaIntereses ? "gold" : "outline"} size="sm" className="shrink-0 gap-2" asChild>
-                <Link to={`/perfil/${currentUser.id}?intereses=1`}>
-                  <Pencil className="w-4 h-4" />
-                  {sinTablaIntereses ? "Ir a la Tabla" : "Editar Tabla"}
-                </Link>
-              </Button>
-            </div>
+            <label className="text-sm font-medium mb-1 block">Lo que busco</label>
+            <p className="text-xs text-muted-foreground mb-3">
+              {sinTablaIntereses
+                ? "Agregá palabras con lo que te interesa. Sin eso no mostramos coincidencias."
+                : "Buscamos publicaciones con ~70 % de similitud entre estas palabras y el título o la descripción."}
+            </p>
+            {haySoloNecesitaEnPerfil && (
+              <p className="text-xs text-gold mb-3">
+                También usamos «{terminosDesdePerfil.join(", ")}» de tu perfil. Agregá palabras acá para afinar sin salir de esta página.
+              </p>
+            )}
+            <LoQueBuscoEditor interesesQuiero={interesesQuiero} />
           </CardContent>
         </Card>
 
@@ -455,13 +441,7 @@ const Coincidencias = () => {
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
           {sinTablaIntereses ? (
-            <>
-              Cargá tu{" "}
-              <Link to={`/perfil/${currentUser.id}?intereses=1`} className="text-gold font-medium underline underline-offset-2">
-                Tabla
-              </Link>{" "}
-              para ver publicaciones que coincidan con lo que buscás. Sin palabras cargadas no mostramos sugerencias.
-            </>
+            "Cargá palabras arriba para ver publicaciones que coincidan con lo que buscás."
           ) : (
             <>
               Coincidencia aproximada ~70 % entre tu Tabla y el título o la descripción (incluye typos y palabras sueltas). Primero lo más alineado
@@ -563,13 +543,6 @@ const Coincidencias = () => {
                           <ExternalLink className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate">Ver detalle</span>
                         </button>
-                        <div className="flex items-center gap-1 min-w-0">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate max-w-[100px]">{item.ubicacion || "\u00A0"}</span>
-                        </div>
-                        <span className="flex-shrink-0 min-w-[3rem] text-right">
-                          {item.distancia ? `${item.distancia} km` : "\u00A0"}
-                        </span>
                       </div>
                       <Button
                         variant="default"
@@ -642,28 +615,19 @@ const Coincidencias = () => {
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2 font-medium">
               {sinTablaIntereses
-                ? "Cargá tu Tabla para ver coincidencias"
-                : "No hay publicaciones que coincidan con tu Tabla"}
+                ? "Cargá lo que buscás para ver coincidencias"
+                : "No hay publicaciones que coincidan con lo que buscás"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
               {sinTablaIntereses
-                ? "Sumá palabras clave con lo que te interesa. Recién ahí buscamos publicaciones con al menos ~70 % de coincidencia en título o descripción."
+                ? "Sumá palabras arriba (ej. pantalón, zapatillas). Buscamos ~70 % de similitud en título o descripción."
                 : misProductos.length === 0
-                  ? "Podés sumar palabras en tu Tabla o crear un producto en Mis publicaciones para proponer intercambios."
-                  : "Ampliá las palabras en tu Tabla o explorá el Market para ver más publicaciones."}
+                  ? "Ampliá las palabras de arriba o creá un producto en Mis publicaciones para proponer intercambios."
+                  : "Ampliá las palabras de arriba o explorá el Market para ver más publicaciones."}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
-              {sinTablaIntereses ? (
-                <Button variant="gold" asChild>
-                  <Link to={`/perfil/${currentUser.id}?intereses=1`}>Cargar mi Tabla</Link>
-                </Button>
-              ) : (
-                <Button variant="outline" asChild>
-                  <Link to={`/perfil/${currentUser.id}?intereses=1`}>Ajustar Tabla</Link>
-                </Button>
-              )}
               {!sinTablaIntereses && (
-                <Button variant="gold" asChild>
+                <Button variant="outline" asChild>
                   <Link to="/market">Ir al Market</Link>
                 </Button>
               )}

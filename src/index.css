@@ -180,7 +180,7 @@
     @apply mb-2 line-clamp-2 min-h-[2.5rem] text-sm text-muted-foreground;
   }
   .coincidencia-card__meta {
-    @apply mb-3 flex min-h-5 items-center justify-between gap-2 text-xs text-muted-foreground;
+    @apply mb-3 flex min-h-5 items-center text-xs text-muted-foreground;
   }
   .coincidencia-card__action {
     @apply mt-auto w-full;
