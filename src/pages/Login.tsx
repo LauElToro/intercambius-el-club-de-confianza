@@ -16,7 +16,7 @@ import { AuthDivider } from "@/components/auth/AuthDivider";
 const Login = () => {
   const [searchParams] = useSearchParams();
   const sesionExpirada = searchParams.get("sesion") === "expirada";
-  const { login, loginWithGoogle, mfaPending, completeLoginWithMfa, resendMfaCode, clearMfaPending } = useAuth();
+  const { login, mfaPending, completeLoginWithMfa, resendMfaCode, clearMfaPending } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -25,7 +25,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [resendMessage, setResendMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const mfaInputRef = useRef<HTMLInputElement>(null);
   const { canResend, cooldownLabel } = useMfaResendCooldown(mfaPending?.resendAvailableAt);
@@ -95,26 +94,6 @@ const Login = () => {
       ...prev,
       [e.target.name]: e.target.value
     }));
-  };
-
-  const handleGoogleLogin = async (credential: string) => {
-    setError("");
-    setGoogleLoading(true);
-    try {
-      await loginWithGoogle(credential);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        if (err.status === 404 && err.data?.code === 'GOOGLE_ACCOUNT_NOT_FOUND') {
-          setError("No hay cuenta con ese Google. Creá una en registro o usá email y contraseña.");
-        } else {
-          setError(err.message);
-        }
-      } else {
-        setError((err as Error).message || "Error al iniciar sesión con Google");
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
   };
 
   const showMfaStep = mfaPending != null;
@@ -216,13 +195,10 @@ const Login = () => {
             ) : (
               <>
                 <GoogleSignInButton
-                  onCredential={handleGoogleLogin}
+                  mode="login"
                   onError={() => setError("No se pudo iniciar sesión con Google")}
-                  disabled={loading || googleLoading}
+                  disabled={loading}
                 />
-                {googleLoading && (
-                  <p className="text-center text-sm text-muted-foreground">Conectando con Google...</p>
-                )}
                 <AuthDivider surface="card" />
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import GoogleAuthCallback from "./pages/GoogleAuthCallback";
 import OlvideContrasena from "./pages/OlvideContrasena";
 import RestablecerContrasena from "./pages/RestablecerContrasena";
 import Dashboard from "./pages/Dashboard";
@@ -35,10 +36,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
 import { CookieConsentProvider } from "./contexts/CookieConsentContext";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
-import { GoogleOAuthProvider } from "@react-oauth/google";
-import { GOOGLE_CLIENT_ID } from "@/lib/google-oauth-config";
 
-// Cache: staleTime 2 min, gcTime 30 min para reducir consultas y mejorar carga
 const CACHE_STALE_MS = 2 * 60 * 1000;
 const CACHE_GC_MS = 30 * 60 * 1000;
 
@@ -55,7 +53,6 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || 'placeholder-not-configured'}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
@@ -68,6 +65,7 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
+              <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
               <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
               <Route path="/restablecer-contrasena/:token" element={<RestablecerContrasena />} />
               <Route path="/market" element={<Market />} />
@@ -186,7 +184,6 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
-    </GoogleOAuthProvider>
   </ThemeProvider>
 );
 

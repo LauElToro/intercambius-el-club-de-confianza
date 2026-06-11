@@ -165,6 +165,20 @@ export const authService = {
     }
   },
 
+  async googleAuthCode(params: {
+    code: string;
+    redirectUri: string;
+  }): Promise<{ credential: string }> {
+    try {
+      return await api.post<{ credential: string }>('/api/auth/google/code', params);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError('Error al validar código de Google', 500);
+    }
+  },
+
   logout(): void {
     localStorage.removeItem('intercambius_token');
     localStorage.removeItem('intercambius_user');

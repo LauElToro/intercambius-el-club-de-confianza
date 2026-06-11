@@ -18,7 +18,7 @@ import { AuthDividerVertical } from "@/components/auth/AuthDividerVertical";
 import { isGoogleSignInEnabled } from "@/lib/google-oauth-config";
 
 const Registro = () => {
-  const { register, registerWithGoogle } = useAuth();
+  const { register } = useAuth();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     nombre: "",
@@ -41,7 +41,6 @@ const Registro = () => {
   }, [searchParams]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
@@ -101,24 +100,10 @@ const Registro = () => {
     }));
   };
 
-  const handleGoogleRegister = async (credential: string) => {
-    setError("");
-    setGoogleLoading(true);
-    try {
-      await registerWithGoogle(credential, {
-        codigoReferido: formData.codigoReferido.trim() || undefined,
-        ubicacion: formData.ubicacion || undefined,
-        contacto: formData.telefono || undefined,
-      });
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError((err as Error).message || "Error al registrarse con Google");
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
+  const googleRegisterData = {
+    codigoReferido: formData.codigoReferido.trim() || undefined,
+    ubicacion: formData.ubicacion || undefined,
+    contacto: formData.telefono || undefined,
   };
 
   return (
@@ -158,10 +143,9 @@ const Registro = () => {
                 <>
                   <div className="flex items-start gap-3">
                     <GoogleRegisterPanel
-                      onCredential={handleGoogleRegister}
+                      register={googleRegisterData}
                       onError={() => setError("No se pudo iniciar sesión con Google")}
-                      disabled={loading || googleLoading}
-                      loading={googleLoading}
+                      disabled={loading}
                     />
                     <AuthDividerVertical />
                   </div>
@@ -366,7 +350,7 @@ const Registro = () => {
               variant="gold"
               size="xl"
               className="w-full group"
-              disabled={loading || googleLoading || !aceptaTerminos || !recaptchaToken}
+              disabled={loading || !aceptaTerminos || !recaptchaToken}
             >
               {loading ? "Creando cuenta..." : (
                 <>

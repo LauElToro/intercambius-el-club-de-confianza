@@ -1,16 +1,17 @@
 import { Link } from 'react-router-dom';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { isGoogleSignInEnabled } from '@/lib/google-oauth-config';
+import type { GoogleAuthPendingRegister } from '@/lib/google-oauth-redirect';
 
 interface GoogleRegisterPanelProps {
-  onCredential: (credential: string) => void;
+  register?: GoogleAuthPendingRegister;
   onError?: () => void;
   disabled?: boolean;
   loading?: boolean;
 }
 
 export function GoogleRegisterPanel({
-  onCredential,
+  register,
   onError,
   disabled,
   loading,
@@ -27,10 +28,11 @@ export function GoogleRegisterPanel({
       </div>
 
       <GoogleSignInButton
+        mode="register"
+        register={register}
         align="start"
-        onCredential={onCredential}
         onError={onError}
-        disabled={disabled}
+        disabled={disabled || loading}
       />
 
       <p className="mt-3 text-left text-xs leading-relaxed text-muted-foreground">
