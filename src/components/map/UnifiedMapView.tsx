@@ -9,7 +9,8 @@ import { Loader2 } from 'lucide-react';
 
 /** Mapa unificado: Google Maps si hay API key y funciona; sino Leaflet/OSM. */
 export function UnifiedMapView(props: MapViewProps) {
-  if (!shouldUseGoogleMaps()) {
+  const useGoogle = shouldUseGoogleMaps();
+  if (!useGoogle) {
     return <LeafletMapView {...props} />;
   }
   return <GoogleMapsBranch {...props} />;

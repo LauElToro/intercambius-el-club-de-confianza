@@ -1,4 +1,5 @@
 import api, { ApiError } from '@/lib/api';
+import { normalizeEmail } from '@/lib/normalize-email';
 
 export interface LoginCredentials {
   email: string;
@@ -56,7 +57,10 @@ export interface User {
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse | MfaRequiredResponse> {
     try {
-      const response = await api.post<AuthResponse | MfaRequiredResponse>('/api/auth/login', credentials);
+      const response = await api.post<AuthResponse | MfaRequiredResponse>('/api/auth/login', {
+        email: normalizeEmail(credentials.email),
+        password: credentials.password,
+      });
 
       if ('mfaRequired' in response && response.mfaRequired) {
         return response;
@@ -89,7 +93,7 @@ export const authService = {
   },
 
   async requestPasswordReset(email: string): Promise<void> {
-    await api.post('/api/auth/forgot-password', { email });
+    await api.post('/api/auth/forgot-password', { email: normalizeEmail(email) });
   },
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -98,10 +102,10 @@ export const authService = {
 
   async register(data: RegisterData): Promise<User | MfaRequiredResponse> {
     try {
-      await api.post<User>('/api/auth/register', data);
+      await api.post<User>('/api/auth/register', { ...data, email: normalizeEmail(data.email) });
 
       const loginResponse = await this.login({
-        email: data.email,
+        email: normalizeEmail(data.email),
         password: data.password,
       });
 

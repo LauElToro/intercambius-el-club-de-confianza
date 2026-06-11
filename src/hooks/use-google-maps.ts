@@ -8,11 +8,11 @@ import {
 } from '@/lib/google-maps';
 
 export function useGoogleMapsLoader() {
-  const enabled = shouldUseGoogleMaps();
-
+  // Opciones del loader siempre estables: @react-google-maps/api falla si cambia apiKey
+  // (p. ej. tras markGoogleMapsUnavailable() en timeout o ApiNotActivatedMapError).
   return useJsApiLoader({
     id: GOOGLE_MAPS_LOADER_ID,
-    googleMapsApiKey: enabled ? GOOGLE_MAPS_API_KEY : '',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: GOOGLE_MAPS_LIBRARIES,
     language: 'es',
     region: 'AR',

@@ -68,10 +68,6 @@ export function GoogleMapView({
   }, [onLoad]);
 
   useEffect(() => {
-    loadReportedRef.current = false;
-    timeoutReportedRef.current = false;
-    setMapReady(false);
-
     const timer = window.setTimeout(() => {
       if (!loadReportedRef.current && !timeoutReportedRef.current) {
         timeoutReportedRef.current = true;
@@ -80,7 +76,7 @@ export function GoogleMapView({
     }, loadTimeoutMs);
 
     return () => window.clearTimeout(timer);
-  }, [center.lat, center.lng, loadTimeoutMs, onLoadTimeout]);
+  }, [loadTimeoutMs, onLoadTimeout]);
 
   const handleMapClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
