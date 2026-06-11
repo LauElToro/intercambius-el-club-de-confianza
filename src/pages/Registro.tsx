@@ -12,8 +12,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { ReCaptchaField } from "@/components/auth/ReCaptchaField";
-import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { GoogleRegisterPanel } from "@/components/auth/GoogleRegisterPanel";
 import { AuthDivider } from "@/components/auth/AuthDivider";
+import { AuthDividerVertical } from "@/components/auth/AuthDividerVertical";
+import { isGoogleSignInEnabled } from "@/lib/google-oauth-config";
 
 const Registro = () => {
   const { register, registerWithGoogle } = useAuth();
@@ -122,7 +124,7 @@ const Registro = () => {
   return (
     <Layout showHeader={false}>
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-2xl mx-auto">
+        <div className="w-full max-w-5xl mx-auto">
           {/* Mismo padding horizontal que la tarjeta (p-6) para alinear título y campos */}
           <header className="mb-8 flex w-full flex-col items-center px-6 text-center">
             <Link to="/" className="mb-4 flex items-center justify-center gap-3">
@@ -138,41 +140,48 @@ const Registro = () => {
             </p>
           </header>
 
-          <form onSubmit={handleSubmit} className="space-y-6 px-6">
+          <div className="px-6 space-y-6">
             {error && (
               <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <GoogleSignInButton
-                align="start"
-                onCredential={handleGoogleRegister}
-                onError={() => setError("No se pudo iniciar sesión con Google")}
-                disabled={loading || googleLoading}
-              />
-              <p className="text-left text-xs text-muted-foreground">
-                Al registrarte con Google aceptás los{" "}
-                <Link to="/terminos-generales" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
-                  términos generales
-                </Link>{" "}
-                y los{" "}
-                <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
-                  términos IOX
-                </Link>
-                .
-              </p>
-              {(loading || googleLoading) && (
-                <p className="text-left text-sm text-muted-foreground">
-                  {googleLoading ? "Conectando con Google..." : "Creando cuenta..."}
-                </p>
+            <div
+              className={
+                isGoogleSignInEnabled
+                  ? "grid grid-cols-1 lg:grid-cols-[minmax(260px,300px)_auto_1fr] gap-6 lg:gap-8 items-stretch"
+                  : "max-w-2xl mx-auto"
+              }
+            >
+              {isGoogleSignInEnabled && (
+                <>
+                  <GoogleRegisterPanel
+                    onCredential={handleGoogleRegister}
+                    onError={() => setError("No se pudo iniciar sesión con Google")}
+                    disabled={loading || googleLoading}
+                    loading={googleLoading}
+                  />
+                  <AuthDividerVertical />
+                  <div className="lg:hidden">
+                    <AuthDivider />
+                  </div>
+                </>
               )}
-            </div>
 
-            <AuthDivider />
-
-            <div className="bg-card rounded-2xl p-6 border border-border space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+                <div className="bg-card rounded-2xl p-6 border border-border space-y-6">
+                  {isGoogleSignInEnabled && (
+                    <div className="space-y-1">
+                      <h2 className="text-lg font-semibold">Registro con email</h2>
+                      <p className="text-sm text-muted-foreground">Completá el formulario</p>
+                    </div>
+                  )}
+                  {!isGoogleSignInEnabled && (
+                    <div className="space-y-1">
+                      <h2 className="text-lg font-semibold">Datos de la cuenta</h2>
+                    </div>
+                  )}
               <section className="space-y-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Datos personales</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -259,42 +268,39 @@ const Registro = () => {
                 </div>
               </section>
 
-              <section className="space-y-4">
-                <h2 className="text-sm font-medium text-muted-foreground">Contraseña</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                      <PasswordInput
-                        id="password"
-                        name="password"
-                        placeholder="Mínimo 6 caracteres"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        minLength={6}
-                        className="pl-10 bg-surface border-border focus:border-gold"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                      <PasswordInput
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        placeholder="Repetí tu contraseña"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        required
-                        className="pl-10 bg-surface border-border focus:border-gold"
-                      />
-                    </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña *</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                    <PasswordInput
+                      id="password"
+                      name="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      minLength={6}
+                      className="pl-10 bg-surface border-border focus:border-gold"
+                    />
                   </div>
                 </div>
-              </section>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                    <PasswordInput
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      placeholder="Repetí tu contraseña"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                      className="pl-10 bg-surface border-border focus:border-gold"
+                    />
+                  </div>
+                </div>
+              </div>
 
               <LocationPicker
                 value={formData.ubicacion}
@@ -375,7 +381,9 @@ const Registro = () => {
                 Iniciar sesión
               </Link>
             </p>
-          </form>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>
