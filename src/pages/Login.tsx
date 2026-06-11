@@ -9,19 +9,23 @@ import logo from "@/assets/logo-intercambius.jpeg";
 import { ArrowRight, Mail, Lock, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
+import { useMfaResendCooldown } from "@/hooks/use-mfa-resend-cooldown";
 
 const Login = () => {
   const [searchParams] = useSearchParams();
   const sesionExpirada = searchParams.get("sesion") === "expirada";
-  const { login, mfaPending, completeLoginWithMfa, clearMfaPending } = useAuth();
+  const { login, mfaPending, completeLoginWithMfa, resendMfaCode, clearMfaPending } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const mfaInputRef = useRef<HTMLInputElement>(null);
+  const { canResend, cooldownLabel } = useMfaResendCooldown(mfaPending?.resendAvailableAt);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +52,7 @@ const Login = () => {
       return;
     }
     setError("");
+    setResendMessage("");
     setLoading(true);
     try {
       await completeLoginWithMfa(mfaPending.mfaToken, mfaCode);
@@ -59,6 +64,26 @@ const Login = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendMfa = async () => {
+    if (!mfaPending?.mfaToken || !canResend || resendLoading) return;
+    setError("");
+    setResendMessage("");
+    setResendLoading(true);
+    try {
+      await resendMfaCode();
+      setMfaCode("");
+      setResendMessage("Te enviamos un código nuevo. Revisá tu email y spam.");
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError((err as Error).message || "No se pudo reenviar el código");
+      }
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -103,6 +128,11 @@ const Login = () => {
                 {error}
               </div>
             )}
+            {resendMessage && (
+              <div className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 p-3 rounded-lg text-sm">
+                {resendMessage}
+              </div>
+            )}
 
             {showMfaStep ? (
               <form onSubmit={handleMfaSubmit} className="space-y-5">
@@ -136,6 +166,20 @@ const Login = () => {
                   {loading ? "Verificando..." : "Verificar y entrar"}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  {canResend ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleResendMfa()}
+                      disabled={resendLoading || loading}
+                      className="text-gold hover:underline font-medium disabled:opacity-50"
+                    >
+                      {resendLoading ? "Reenviando..." : "Reenviar código"}
+                    </button>
+                  ) : (
+                    <span>Podés reenviar el código en {cooldownLabel}</span>
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"

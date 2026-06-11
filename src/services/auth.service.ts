@@ -27,6 +27,13 @@ export interface MfaRequiredResponse {
   mfaRequired: true;
   mfaToken: string;
   mfaSentTo?: string;
+  mfaResendAvailableAt?: string;
+}
+
+export interface MfaResendResponse {
+  mfaToken: string;
+  mfaSentTo: string;
+  mfaResendAvailableAt: string;
 }
 
 export interface User {
@@ -89,6 +96,17 @@ export const authService = {
         throw error;
       }
       throw new ApiError('Error al verificar el código', 500);
+    }
+  },
+
+  async resendMfa(mfaToken: string): Promise<MfaResendResponse> {
+    try {
+      return await api.post<MfaResendResponse>('/api/auth/resend-mfa', { mfaToken });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError('Error al reenviar el código', 500);
     }
   },
 

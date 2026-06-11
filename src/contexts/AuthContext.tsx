@@ -1,14 +1,22 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, User } from '@/services/auth.service';
+import { ApiError } from '@/lib/api';
 import { setAuthSessionInvalidHandler } from '@/lib/auth-session';
+
+interface MfaPendingState {
+  mfaToken: string;
+  sentTo?: string;
+  resendAvailableAt?: string;
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  mfaPending: { mfaToken: string; sentTo?: string } | null;
+  mfaPending: MfaPendingState | null;
   login: (email: string, password: string) => Promise<void>;
   completeLoginWithMfa: (mfaToken: string, code: string) => Promise<void>;
+  resendMfaCode: () => Promise<void>;
   clearMfaPending: () => void;
   register: (data: any) => Promise<void>;
   logout: () => void;
@@ -21,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mfaPending, setMfaPending] = useState<{ mfaToken: string; sentTo?: string } | null>(null);
+  const [mfaPending, setMfaPending] = useState<MfaPendingState | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,7 +57,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     const response = await authService.login({ email, password });
     if ('mfaRequired' in response && response.mfaRequired) {
-      setMfaPending({ mfaToken: response.mfaToken, sentTo: response.mfaSentTo });
+      setMfaPending({
+        mfaToken: response.mfaToken,
+        sentTo: response.mfaSentTo,
+        resendAvailableAt: response.mfaResendAvailableAt,
+      });
       return;
     }
     setUser(response.user);
@@ -63,12 +75,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate('/dashboard');
   };
 
+  const resendMfaCode = async () => {
+    if (!mfaPending?.mfaToken) return;
+    try {
+      const response = await authService.resendMfa(mfaPending.mfaToken);
+      setMfaPending({
+        mfaToken: response.mfaToken,
+        sentTo: response.mfaSentTo,
+        resendAvailableAt: response.mfaResendAvailableAt,
+      });
+    } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.status === 429 &&
+        typeof err.data?.mfaResendAvailableAt === 'string'
+      ) {
+        setMfaPending((prev) =>
+          prev
+            ? { ...prev, resendAvailableAt: err.data.mfaResendAvailableAt as string }
+            : prev,
+        );
+      }
+      throw err;
+    }
+  };
+
   const clearMfaPending = () => setMfaPending(null);
 
   const register = async (data: any) => {
     const result = await authService.register(data);
     if ('mfaRequired' in result && result.mfaRequired) {
-      setMfaPending({ mfaToken: result.mfaToken });
+      setMfaPending({
+        mfaToken: result.mfaToken,
+        sentTo: result.mfaSentTo,
+        resendAvailableAt: result.mfaResendAvailableAt,
+      });
       navigate('/login');
       return;
     }
@@ -99,6 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         mfaPending,
         login,
         completeLoginWithMfa,
+        resendMfaCode,
         clearMfaPending,
         register,
         logout,

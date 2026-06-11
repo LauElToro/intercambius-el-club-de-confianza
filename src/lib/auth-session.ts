@@ -19,6 +19,7 @@ export function isPublicAuthEndpoint(endpoint: string): boolean {
     '/api/auth/login',
     '/api/auth/register',
     '/api/auth/verify-mfa',
+    '/api/auth/resend-mfa',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/refresh',

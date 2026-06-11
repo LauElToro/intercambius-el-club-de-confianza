@@ -34,8 +34,10 @@ import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { busquedasService } from "@/services/busquedas.service";
-import { resolveUbicacionToCoords, UBICACIONES_COORDENADAS } from "@/lib/ubicaciones";
+import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { DEFAULT_MAP_CENTER } from "@/lib/geo";
+import { LocationSearchField } from "@/components/location/LocationSearchField";
+import { geoService } from "@/services/geo.service";
 
 // Tipos de rubros y sus filtros específicos
 const RUBROS = {
@@ -178,12 +180,24 @@ const Market = () => {
   useEffect(() => {
     const ubicacion = usuario?.ubicacion?.trim();
     if (!ubicacion || appliedProfileLocation.current) return;
+
     const resolved = resolveUbicacionToCoords(ubicacion);
     if (resolved) {
       setUserLocation({ lat: resolved.lat, lng: resolved.lng });
+      setBusquedaUbicacion(resolved.ubicacion);
       setLocationError(null);
       appliedProfileLocation.current = true;
+      return;
     }
+
+    void geoService.geocodeAddress(ubicacion).then((geocoded) => {
+      if (geocoded && !appliedProfileLocation.current) {
+        setUserLocation({ lat: geocoded.lat, lng: geocoded.lng });
+        setBusquedaUbicacion(geocoded.address);
+        setLocationError(null);
+        appliedProfileLocation.current = true;
+      }
+    });
   }, [usuario?.ubicacion]);
 
   const getMyLocation = () => {
@@ -196,6 +210,9 @@ const Market = () => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        void geoService.reverseGeocode(pos.coords.latitude, pos.coords.longitude).then((result) => {
+          if (result?.address) setBusquedaUbicacion(result.address);
+        });
         setLocationLoading(false);
       },
       (err) => {
@@ -212,8 +229,19 @@ const Market = () => {
     const resolved = resolveUbicacionToCoords(ubicacion);
     if (resolved) {
       setUserLocation({ lat: resolved.lat, lng: resolved.lng });
+      setBusquedaUbicacion(resolved.ubicacion);
       setLocationError(null);
+      return;
     }
+    void geoService.geocodeAddress(ubicacion).then((geocoded) => {
+      if (geocoded) {
+        setUserLocation({ lat: geocoded.lat, lng: geocoded.lng });
+        setBusquedaUbicacion(geocoded.address);
+        setLocationError(null);
+      } else {
+        setLocationError('No pudimos ubicar tu perfil en el mapa');
+      }
+    });
   };
 
   // Obtener filtros específicos del rubro seleccionado
@@ -428,20 +456,33 @@ const Market = () => {
                               Elegir
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-md">
+                          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Elegir zona de búsqueda</DialogTitle>
                             </DialogHeader>
-                            <div className="space-y-3">
-                              <Input
-                                placeholder="Buscar ciudad, barrio..."
+                            <div className="space-y-3 min-w-0">
+                              <LocationSearchField
                                 value={busquedaUbicacion}
-                                onChange={(e) => setBusquedaUbicacion(e.target.value)}
+                                onValueChange={setBusquedaUbicacion}
+                                onLocationSelect={({ lat, lng, address }) => {
+                                  setUserLocation({ lat, lng });
+                                  setBusquedaUbicacion(address);
+                                  setLocationError(null);
+                                }}
+                                onError={setLocationError}
+                                placeholder="Buscar dirección, barrio o ciudad..."
                               />
                               <UnifiedMapView
                                 center={userLocation ?? DEFAULT_MAP_CENTER}
                                 radiusKm={distanciaMax[0] >= 100 ? 25 : distanciaMax[0]}
-                                height={200}
+                                height={220}
+                                draggableCenter
+                                onCenterChange={(lat, lng) => {
+                                  setUserLocation({ lat, lng });
+                                  void geoService.reverseGeocode(lat, lng).then((result) => {
+                                    if (result?.address) setBusquedaUbicacion(result.address);
+                                  });
+                                }}
                                 markers={items
                                   .filter((i) => i.lat != null && i.lng != null)
                                   .slice(0, 30)
@@ -451,30 +492,23 @@ const Market = () => {
                                     title: i.titulo,
                                   }))}
                               />
-                              <ScrollArea className="h-36">
-                                <div className="space-y-1">
-                                  {Object.entries(UBICACIONES_COORDENADAS)
-                                    .filter(([name]) => !busquedaUbicacion || name.toLowerCase().includes(busquedaUbicacion.toLowerCase()))
-                                    .map(([name]) => (
-                                      <Button
-                                        key={name}
-                                        type="button"
-                                        variant="ghost"
-                                        className="w-full justify-start"
-                                        onClick={() => {
-                                          setUserLocation(UBICACIONES_COORDENADAS[name]);
-                                          setLocationError(null);
-                                          setElegirUbicacionOpen(false);
-                                        }}
-                                      >
-                                        <MapPin className="w-4 h-4 mr-2" />
-                                        {name}
-                                      </Button>
-                                    ))}
-                                </div>
-                              </ScrollArea>
+                              {busquedaUbicacion && (
+                                <p className="text-sm text-muted-foreground break-words">
+                                  <MapPin className="w-4 h-4 inline mr-1 shrink-0" />
+                                  {busquedaUbicacion}
+                                </p>
+                              )}
+                              <Button
+                                type="button"
+                                variant="gold"
+                                className="w-full"
+                                onClick={() => setElegirUbicacionOpen(false)}
+                                disabled={!userLocation}
+                              >
+                                Usar esta zona
+                              </Button>
                               <p className="text-xs text-muted-foreground">
-                                Se mostrarán publicaciones dentro del radio elegido.
+                                Se mostrarán publicaciones dentro del radio elegido. Podés buscar cualquier dirección o mover el pin en el mapa.
                               </p>
                             </div>
                           </DialogContent>

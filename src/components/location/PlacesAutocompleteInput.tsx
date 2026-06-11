@@ -6,6 +6,7 @@ interface PlacesAutocompleteInputProps {
   value: string;
   onChange: (value: string) => void;
   onPlaceSelect: (place: { lat: number; lng: number; address: string }) => void;
+  onEnterFallback?: () => void;
   placeholder?: string;
   className?: string;
 }
@@ -14,6 +15,7 @@ export function PlacesAutocompleteInput({
   value,
   onChange,
   onPlaceSelect,
+  onEnterFallback,
   placeholder = 'Buscar dirección, barrio o ciudad...',
   className,
 }: PlacesAutocompleteInputProps) {
@@ -28,6 +30,7 @@ export function PlacesAutocompleteInput({
   const onLoad = (autocomplete: google.maps.places.Autocomplete) => {
     autocompleteRef.current = autocomplete;
     autocomplete.setComponentRestrictions({ country: 'ar' });
+    autocomplete.setFields(['formatted_address', 'geometry', 'name', 'address_components']);
   };
 
   const onPlaceChanged = () => {
@@ -45,6 +48,12 @@ export function PlacesAutocompleteInput({
         ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onEnterFallback?.();
+          }
+        }}
         placeholder={placeholder}
         className={className}
       />

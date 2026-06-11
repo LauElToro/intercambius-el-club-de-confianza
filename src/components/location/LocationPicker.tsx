@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Navigation } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,9 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UnifiedMapView } from '@/components/map/UnifiedMapView';
-import { PlacesAutocompleteInput } from '@/components/location/PlacesAutocompleteInput';
-import { useGoogleMapsLoader, shouldUseGoogleMaps } from '@/hooks/use-google-maps';
+import { LocationSearchField } from '@/components/location/LocationSearchField';
 import { geoService } from '@/services/geo.service';
-import { COMMON_LOCATION_PRESETS, resolveUbicacionToCoords } from '@/lib/ubicaciones';
+import { resolveUbicacionToCoords } from '@/lib/ubicaciones';
 import { DEFAULT_MAP_CENTER } from '@/lib/geo';
 
 interface LocationPickerProps {
@@ -47,7 +46,6 @@ function LocationPickerDialogBody({
   onRadiusChange?: (radius: number) => void;
   onClose: () => void;
 }) {
-  const { isLoaded, loadError } = useGoogleMapsLoader();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -55,16 +53,24 @@ function LocationPickerDialogBody({
     address: string;
   } | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (value && !selectedLocation) {
-      const resolved = resolveUbicacionToCoords(value);
-      if (resolved) {
-        setSelectedLocation({ lat: resolved.lat, lng: resolved.lng, address: resolved.ubicacion });
-      }
+    if (!value || selectedLocation) return;
+
+    const resolved = resolveUbicacionToCoords(value);
+    if (resolved) {
+      setSelectedLocation({ lat: resolved.lat, lng: resolved.lng, address: resolved.ubicacion });
+      setSearchQuery(resolved.ubicacion);
+      return;
     }
+
+    void geoService.geocodeAddress(value).then((geocoded) => {
+      if (geocoded) {
+        setSelectedLocation({ lat: geocoded.lat, lng: geocoded.lng, address: geocoded.address });
+        setSearchQuery(geocoded.address);
+      }
+    });
   }, [value, selectedLocation]);
 
   const mapCenter = selectedLocation ?? DEFAULT_MAP_CENTER;
@@ -73,6 +79,7 @@ function LocationPickerDialogBody({
     async (lat: number, lng: number, addressHint?: string) => {
       const address = addressHint || (await resolveAddressFromCoords(lat, lng));
       setSelectedLocation({ lat, lng, address });
+      setSearchQuery(address);
       onChange(address, lat, lng, radius);
       setLocationError(null);
     },
@@ -106,49 +113,13 @@ function LocationPickerDialogBody({
         const messages: Record<number, string> = {
           [error.PERMISSION_DENIED]:
             'Permiso denegado. Probá recargar la página o elegí en el mapa.',
-          [error.POSITION_UNAVAILABLE]: 'Ubicación no disponible. Elegí en el mapa o buscá una ciudad.',
+          [error.POSITION_UNAVAILABLE]: 'Ubicación no disponible. Elegí en el mapa o buscá una dirección.',
           [error.TIMEOUT]: 'Tiempo agotado. Probá de nuevo.',
         };
         setLocationError(messages[error.code] ?? 'No se pudo obtener tu ubicación');
       },
       { enableHighAccuracy: highAccuracy, timeout: 15000, maximumAge: 60000 },
     );
-  };
-
-  const handleLocationSelect = (location: (typeof COMMON_LOCATION_PRESETS)[number]) => {
-    setSelectedLocation({ lat: location.lat, lng: location.lng, address: location.name });
-    onChange(location.name, location.lat, location.lng, radius);
-    setSearchQuery('');
-    setLocationError(null);
-  };
-
-  const handleSearch = async () => {
-    const q = searchQuery.trim();
-    if (!q) return;
-
-    setIsSearching(true);
-    setLocationError(null);
-
-    const preset = COMMON_LOCATION_PRESETS.find(
-      (loc) =>
-        loc.name.toLowerCase().includes(q.toLowerCase()) ||
-        q.toLowerCase().includes(loc.name.toLowerCase().split(' - ')[0]),
-    );
-    if (preset) {
-      handleLocationSelect(preset);
-      setIsSearching(false);
-      return;
-    }
-
-    const geocoded = await geoService.geocodeAddress(q);
-    if (geocoded) {
-      await applyCoords(geocoded.lat, geocoded.lng, geocoded.address);
-      setIsSearching(false);
-      return;
-    }
-
-    setLocationError('No encontramos esa ubicación. Probá buscar en el mapa o elegí una ciudad de la lista.');
-    setIsSearching(false);
   };
 
   const handleRadiusChange = (newRadius: number[]) => {
@@ -159,10 +130,8 @@ function LocationPickerDialogBody({
     }
   };
 
-  const mapsReady = !shouldUseGoogleMaps() || isLoaded;
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <Button
         type="button"
         onClick={() => tryGetLocation(true)}
@@ -180,89 +149,36 @@ function LocationPickerDialogBody({
         </Alert>
       )}
 
-      {loadError && shouldUseGoogleMaps() && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            Google Maps no cargó. Usá la búsqueda por texto o la lista de ciudades.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
-          {shouldUseGoogleMaps() && isLoaded ? (
-            <PlacesAutocompleteInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              onPlaceSelect={({ lat, lng, address }) => {
-                void applyCoords(lat, lng, address);
-                setSearchQuery(address);
-              }}
-              placeholder="Buscar con Google Places..."
-              className="pl-10"
-            />
-          ) : (
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
-              placeholder="Buscar ciudad, barrio..."
-              className="pl-10"
-            />
-          )}
-        </div>
-        <Button type="button" onClick={() => void handleSearch()} variant="outline" disabled={isSearching}>
-          {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
-        </Button>
-      </div>
+      <LocationSearchField
+        value={searchQuery}
+        onValueChange={setSearchQuery}
+        onLocationSelect={({ lat, lng, address }) => void applyCoords(lat, lng, address)}
+        onError={setLocationError}
+        placeholder="Buscar dirección, barrio o ciudad..."
+      />
 
       <div className="space-y-2">
         <Label>Radio de búsqueda: {radius} km</Label>
         <Slider value={[radius]} onValueChange={handleRadiusChange} min={1} max={100} step={1} />
       </div>
 
-      {mapsReady ? (
-        <UnifiedMapView
-          center={mapCenter}
-          radiusKm={radius}
-          height={280}
-          draggableCenter
-          onCenterChange={(lat, lng) => void applyCoords(lat, lng)}
-        />
-      ) : (
-        <div className="h-[280px] rounded-lg border border-border bg-muted/30 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      <UnifiedMapView
+        center={mapCenter}
+        radiusKm={radius}
+        height={280}
+        draggableCenter
+        onCenterChange={(lat, lng) => void applyCoords(lat, lng)}
+      />
 
       {selectedLocation && (
-        <p className="text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4 inline mr-1" />
+        <p className="text-sm text-muted-foreground break-words">
+          <MapPin className="w-4 h-4 inline mr-1 shrink-0" />
           {selectedLocation.address}
           <span className="text-xs ml-2">
             ({selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)})
           </span>
         </p>
       )}
-
-      <div>
-        <Label className="mb-2 block">Ubicaciones comunes</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {COMMON_LOCATION_PRESETS.map((location) => (
-            <Button
-              key={location.name}
-              type="button"
-              variant={selectedLocation?.address === location.name ? 'default' : 'outline'}
-              onClick={() => handleLocationSelect(location)}
-              className="justify-start text-left h-auto py-2"
-            >
-              <MapPin className="w-4 h-4 mr-2 shrink-0" />
-              <span className="truncate">{location.name}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
 
       <div className="flex gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onClose} className="flex-1">
@@ -318,7 +234,7 @@ export const LocationPicker = ({
             <DialogHeader>
               <DialogTitle>Seleccionar ubicación</DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Tocá el mapa, arrastrá el pin o buscá una dirección. Necesitamos coordenadas para calcular distancias.
+                Buscá cualquier dirección, tocá el mapa o arrastrá el pin. Necesitamos coordenadas para calcular distancias.
               </p>
             </DialogHeader>
             <LocationPickerDialogBody

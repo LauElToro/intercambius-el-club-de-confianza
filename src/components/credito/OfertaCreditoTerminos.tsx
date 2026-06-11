@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { CREDITO_OFERTA_INGRESO, COMISION_IOX_PORCENTAJE, INTERCAMBIUS_EMAIL } from "@/lib/constants";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const STORAGE_KEY_PREFIX = "intercambius_credito_aceptado_";
 const STORAGE_PIONEROS_PREFIX = "intercambius_bienvenida_pioneros_";
@@ -25,7 +24,11 @@ type Props = {
 };
 
 function Seccion({ children }: { children: ReactNode }) {
-  return <div className="space-y-2 border-t border-border/80 pt-4 mt-4 first:mt-0 first:border-t-0 first:pt-0">{children}</div>;
+  return (
+    <div className="space-y-2 border-t border-border/80 pt-4 mt-4 first:mt-0 first:border-t-0 first:pt-0 min-w-0 max-w-full">
+      {children}
+    </div>
+  );
 }
 
 function ContenidoSeisMeses() {
@@ -35,7 +38,7 @@ function ContenidoSeisMeses() {
         Si pasaron 6 meses y no pudiste generar ingresos dentro de la plataforma, no te preocupes: tu deuda en IOX no genera intereses ni penalizaciones.
       </p>
       <p className="font-medium text-foreground">En Intercambius tenés distintas formas de equilibrar tu cuenta:</p>
-      <ul className="list-disc pl-4 space-y-2">
+      <ul className="list-disc pl-5 space-y-2 pr-0">
         <li>
           <strong className="text-foreground">Opción 1: Colaborar con una ONG.</strong> Podés elegir una organización de las que trabajan con nosotros y apoyamos para realizar una jornada de un día de trabajo equivalente a tu deuda (por ejemplo, si son 50.000 IOX). Una vez completada, tu deuda queda cancelada.
         </li>
@@ -119,16 +122,16 @@ export const OfertaCreditoTerminos = ({
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-2 shrink-0 space-y-1">
-            <DialogTitle className="text-xl sm:text-2xl pr-8">👋 Bienvenido a Intercambius</DialogTitle>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-4 sm:px-6 pt-6 pb-2 shrink-0 space-y-1 min-w-0">
+            <DialogTitle className="text-xl sm:text-2xl pr-8 break-words">👋 Bienvenido a Intercambius</DialogTitle>
             <DialogDescription className="sr-only">
               Oferta de crédito en IOX y condiciones de uso. Podés aceptar o usar solo dinero tradicional.
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[min(60vh,520px)] px-6">
-            <div className="pr-4 pb-2 text-sm text-muted-foreground text-left space-y-0">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-4 sm:px-6">
+            <div className="pb-4 text-sm text-muted-foreground text-left space-y-0 break-words [overflow-wrap:anywhere] max-w-full">
               <p>
                 Te ofrecemos hasta <strong className="text-foreground">{ixMax} de crédito</strong> para que puedas empezar a intercambiar.
               </p>
@@ -145,7 +148,7 @@ export const OfertaCreditoTerminos = ({
 
               <Seccion>
                 <p className="font-medium text-foreground">🚀 Si aceptás los términos y condiciones:</p>
-                <ul className="list-disc pl-4 space-y-2">
+                <ul className="list-disc pl-5 space-y-2 pr-0">
                   <li>
                     El crédito en IOX es a <strong className="text-foreground">tasa 0%</strong>, sin interés y a devolver cuando puedas dentro del sistema.
                   </li>
@@ -174,7 +177,7 @@ export const OfertaCreditoTerminos = ({
 
               <Seccion>
                 <p className="font-medium text-foreground">🙂 Si no aceptás:</p>
-                <ul className="list-disc pl-4 space-y-2">
+                <ul className="list-disc pl-5 space-y-2 pr-0">
                   <li>Tu saldo quedará en 0.</li>
                   <li>Podrás operar normalmente dentro de la plataforma utilizando dinero tradicional 💵</li>
                 </ul>
@@ -186,7 +189,7 @@ export const OfertaCreditoTerminos = ({
               <Seccion>
                 <p className="font-medium text-foreground">🔄 En cada intercambio (compra o venta):</p>
                 <p>No hay comisiones fijas.</p>
-                <ul className="list-disc pl-4 space-y-2">
+                <ul className="list-disc pl-5 space-y-2 pr-0">
                   <li>
                     👉 Si el comprador tiene IOX disponible, una parte del pago (<strong className="text-foreground">{COMISION_IOX_PORCENTAJE}%</strong>) se realiza en IOX.
                   </li>
@@ -194,7 +197,7 @@ export const OfertaCreditoTerminos = ({
                 </ul>
               </Seccion>
 
-              <p className="text-xs pt-4 pb-4">
+              <p className="text-xs pt-4">
                 Los textos legales completos están en{" "}
                 <Link to="/terminos" className="text-gold font-medium hover:underline" onClick={() => onClose()}>
                   términos y condiciones IOX
@@ -202,44 +205,44 @@ export const OfertaCreditoTerminos = ({
                 .
               </p>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="px-6 py-4 border-t border-border flex-col sm:flex-row gap-2 shrink-0 bg-background">
+          <DialogFooter className="px-4 sm:px-6 py-4 border-t border-border flex flex-col gap-3 shrink-0 bg-background min-w-0">
             <Button
               variant="outline"
-              className="flex-1 order-2 sm:order-1"
+              className="w-full min-w-0 h-auto whitespace-normal py-3 px-4 text-sm leading-snug text-center"
               onClick={handleRechazar}
               disabled={aceptando || rechazando}
             >
-              {rechazando ? "…" : "❌ No aceptar (usar solo dinero tradicional)"}
+              {rechazando ? "…" : "No aceptar (usar solo dinero tradicional)"}
             </Button>
             <Button
               variant="gold"
-              className="flex-1 order-1 sm:order-2 bg-gold hover:bg-gold/90"
+              className="w-full min-w-0 h-auto whitespace-normal py-3 px-4 text-sm leading-snug text-center bg-gold hover:bg-gold/90"
               onClick={handleAceptar}
               disabled={aceptando || rechazando}
             >
-              {aceptando ? "…" : "✅ Aceptar términos (activar crédito en IOX)"}
+              {aceptando ? "…" : "Aceptar términos (activar crédito en IOX)"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={seisMesesOpen} onOpenChange={setSeisMesesOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>¿Qué pasa si no logro vender nada en 6 meses?</DialogTitle>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="min-w-0">
+            <DialogTitle className="break-words pr-6">¿Qué pasa si no logro vender nada en 6 meses?</DialogTitle>
             <DialogDescription className="sr-only">
               Opciones para equilibrar tu cuenta sin intereses ni penalizaciones.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[55vh] pr-3">
-            <div className="pb-2">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain -mx-1 px-1">
+            <div className="pb-2 break-words [overflow-wrap:anywhere]">
               <ContenidoSeisMeses />
             </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button variant="gold" className="w-full sm:w-auto" onClick={() => setSeisMesesOpen(false)}>
+          </div>
+          <DialogFooter className="min-w-0">
+            <Button variant="gold" className="w-full min-w-0 h-auto whitespace-normal py-3 px-4 text-sm" onClick={() => setSeisMesesOpen(false)}>
               Entendido
             </Button>
           </DialogFooter>
@@ -252,15 +255,15 @@ export const OfertaCreditoTerminos = ({
           if (!o) cerrarPioneros();
         }}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-            <DialogTitle className="text-lg sm:text-xl pr-8">¡Sos de los primeros 5 mil!</DialogTitle>
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-4 sm:px-6 pt-6 pb-2 shrink-0 min-w-0">
+            <DialogTitle className="text-lg sm:text-xl pr-8 break-words">¡Sos de los primeros 5 mil!</DialogTitle>
             <DialogDescription className="sr-only">
               Beneficio para los primeros usuarios y pasos sugeridos.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6">
-            <div className="pr-2 pb-4 text-sm text-muted-foreground text-left space-y-4">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-4 sm:px-6">
+            <div className="pb-4 text-sm text-muted-foreground text-left space-y-4 break-words [overflow-wrap:anywhere] max-w-full">
               <p>
                 <strong className="text-foreground">Felicidades:</strong> estás entre los primeros 5 mil usuarios. Si seguís estos pasos, el uso de este sitio para vos va a ser gratis de por vida.
               </p>
@@ -291,8 +294,8 @@ export const OfertaCreditoTerminos = ({
               </p>
             </div>
           </div>
-          <DialogFooter className="px-6 py-4 border-t border-border shrink-0 bg-background">
-            <Button variant="gold" className="w-full sm:w-auto" onClick={cerrarPioneros}>
+          <DialogFooter className="px-4 sm:px-6 py-4 border-t border-border shrink-0 bg-background min-w-0">
+            <Button variant="gold" className="w-full min-w-0 h-auto whitespace-normal py-3 px-4 text-sm" onClick={cerrarPioneros}>
               Continuar
             </Button>
           </DialogFooter>
