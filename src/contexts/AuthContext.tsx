@@ -6,7 +6,6 @@ import { setAuthSessionInvalidHandler } from '@/lib/auth-session';
 
 type RegisterPayload = RegisterData;
 type GoogleRegisterPayload = {
-  aceptaTerminos: boolean;
   codigoReferido?: string;
   ubicacion?: string;
   contacto?: string;

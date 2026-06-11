@@ -223,7 +223,7 @@ const Login = () => {
                 {googleLoading && (
                   <p className="text-center text-sm text-muted-foreground">Conectando con Google...</p>
                 )}
-                <AuthDivider />
+                <AuthDivider surface="card" />
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>

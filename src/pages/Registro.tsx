@@ -100,15 +100,10 @@ const Registro = () => {
   };
 
   const handleGoogleRegister = async (credential: string) => {
-    if (!aceptaTerminos) {
-      setError("Debés aceptar los términos y condiciones antes de continuar con Google.");
-      return;
-    }
     setError("");
     setGoogleLoading(true);
     try {
       await registerWithGoogle(credential, {
-        aceptaTerminos: true,
         codigoReferido: formData.codigoReferido.trim() || undefined,
         ubicacion: formData.ubicacion || undefined,
         contacto: formData.telefono || undefined,
@@ -143,153 +138,164 @@ const Registro = () => {
             </p>
           </header>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <GoogleSignInButton
-              onCredential={handleGoogleRegister}
-              onError={() => setError("No se pudo iniciar sesión con Google")}
-              disabled={loading || googleLoading || !aceptaTerminos}
-            />
-            {(loading || googleLoading) && (
-              <p className="text-center text-sm text-muted-foreground">
-                {googleLoading ? "Conectando con Google..." : "Creando cuenta..."}
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-6 px-6">
+            {error && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+                {error}
+              </div>
             )}
+
+            <div className="space-y-2">
+              <GoogleSignInButton
+                align="start"
+                onCredential={handleGoogleRegister}
+                onError={() => setError("No se pudo iniciar sesión con Google")}
+                disabled={loading || googleLoading}
+              />
+              <p className="text-left text-xs text-muted-foreground">
+                Al registrarte con Google aceptás los{" "}
+                <Link to="/terminos-generales" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
+                  términos generales
+                </Link>{" "}
+                y los{" "}
+                <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">
+                  términos IOX
+                </Link>
+                .
+              </p>
+              {(loading || googleLoading) && (
+                <p className="text-left text-sm text-muted-foreground">
+                  {googleLoading ? "Conectando con Google..." : "Creando cuenta..."}
+                </p>
+              )}
+            </div>
+
             <AuthDivider />
 
-            <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
-              {error && (
-                <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Nombre y Apellido */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="nombre"
-                      name="nombre"
-                      placeholder="Juan"
-                      value={formData.nombre}
-                      onChange={handleChange}
-                      required
-                      className="pl-10 bg-surface border-border focus:border-gold"
-                    />
+            <div className="bg-card rounded-2xl p-6 border border-border space-y-6">
+              <section className="space-y-4">
+                <h2 className="text-sm font-medium text-muted-foreground">Datos personales</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nombre">Nombre *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="nombre"
+                        name="nombre"
+                        placeholder="Juan"
+                        value={formData.nombre}
+                        onChange={handleChange}
+                        required
+                        className="pl-10 bg-surface border-border focus:border-gold"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apellido">Apellido *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="apellido"
+                        name="apellido"
+                        placeholder="Pérez"
+                        value={formData.apellido}
+                        onChange={handleChange}
+                        required
+                        className="pl-10 bg-surface border-border focus:border-gold"
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="apellido">Apellido *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="apellido"
-                      name="apellido"
-                      placeholder="Pérez"
-                      value={formData.apellido}
-                      onChange={handleChange}
-                      required
-                      className="pl-10 bg-surface border-border focus:border-gold"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="pl-10 bg-surface border-border focus:border-gold"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="telefono">Teléfono *</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="telefono"
+                        name="telefono"
+                        type="tel"
+                        placeholder="+54 11 1234-5678"
+                        value={formData.telefono}
+                        onChange={handleChange}
+                        required
+                        className="pl-10 bg-surface border-border focus:border-gold"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-              {/* Código de referido (opcional) */}
-              <div className="space-y-2">
-                <Label htmlFor="codigoReferido">Código de referido (opcional)</Label>
+              <section className="space-y-2">
+                <h2 className="text-sm font-medium text-muted-foreground">Referido (opcional)</h2>
                 <div className="relative">
                   <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="codigoReferido"
                     name="codigoReferido"
                     autoComplete="off"
-                    placeholder="Si alguien te invitó, pegá su código o enlace"
+                    placeholder="Código o enlace de quien te invitó"
                     value={formData.codigoReferido}
                     onChange={handleChange}
                     className="pl-10 bg-surface border-border focus:border-gold"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  También podés entrar con un link que incluya <span className="font-mono">?ref=...</span>
-                </p>
-              </div>
+              </section>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="pl-10 bg-surface border-border focus:border-gold"
-                  />
+              <section className="space-y-4">
+                <h2 className="text-sm font-medium text-muted-foreground">Contraseña</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña *</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                      <PasswordInput
+                        id="password"
+                        name="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        minLength={6}
+                        className="pl-10 bg-surface border-border focus:border-gold"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar *</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                      <PasswordInput
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        placeholder="Repetí tu contraseña"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        required
+                        className="pl-10 bg-surface border-border focus:border-gold"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              {/* Teléfono */}
-              <div className="space-y-2">
-                <Label htmlFor="telefono">Teléfono *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="telefono"
-                    name="telefono"
-                    type="tel"
-                    placeholder="+54 11 1234-5678"
-                    value={formData.telefono}
-                    onChange={handleChange}
-                    required
-                    className="pl-10 bg-surface border-border focus:border-gold"
-                  />
-                </div>
-              </div>
-
-              {/* Contraseña */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                  <PasswordInput
-                    id="password"
-                    name="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    minLength={6}
-                    className="pl-10 bg-surface border-border focus:border-gold"
-                  />
-                </div>
-              </div>
-
-              {/* Confirmar Contraseña */}
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                  <PasswordInput
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    placeholder="Repetí tu contraseña"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    className="pl-10 bg-surface border-border focus:border-gold"
-                  />
-                </div>
-              </div>
-
-              {/* Ubicación con mapa */}
               <LocationPicker
                 value={formData.ubicacion}
                 onChange={(location, lat, lng, radius) => {
@@ -307,19 +313,18 @@ const Registro = () => {
                 required
               />
 
-              {/* Aceptación de términos */}
-              <div className="space-y-3 rounded-lg border border-border bg-surface/50 p-4">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="aceptaTerminos"
-                    checked={aceptaTerminos}
-                    onCheckedChange={(v) => setAceptaTerminos(v === true)}
-                    className="mt-0.5 border-gold/60 data-[state=checked]:bg-gold data-[state=checked]:border-gold data-[state=checked]:text-primary-foreground"
-                    aria-required="true"
-                  />
-                  <div className="space-y-1 text-sm leading-relaxed text-muted-foreground">
-                    <Label htmlFor="aceptaTerminos" className="cursor-pointer font-normal text-muted-foreground">
-                      Declaro haber leído y acepto los{" "}
+              <section className="space-y-4">
+                <div className="rounded-lg border border-border bg-surface/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="aceptaTerminos"
+                      checked={aceptaTerminos}
+                      onCheckedChange={(v) => setAceptaTerminos(v === true)}
+                      className="mt-0.5 border-gold/60 data-[state=checked]:bg-gold data-[state=checked]:border-gold data-[state=checked]:text-primary-foreground"
+                      aria-required="true"
+                    />
+                    <Label htmlFor="aceptaTerminos" className="cursor-pointer text-sm font-normal leading-relaxed text-muted-foreground">
+                      Acepto los{" "}
                       <Link
                         to="/terminos-generales"
                         target="_blank"
@@ -327,7 +332,7 @@ const Registro = () => {
                         className="font-medium text-gold hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        términos y condiciones generales y políticas de uso
+                        términos generales
                       </Link>{" "}
                       y los{" "}
                       <Link
@@ -337,15 +342,15 @@ const Registro = () => {
                         className="font-medium text-gold hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        términos y condiciones del sistema IOX
+                        términos IOX
                       </Link>
                       .
                     </Label>
                   </div>
                 </div>
-              </div>
 
-              <ReCaptchaField onTokenChange={setRecaptchaToken} />
+                <ReCaptchaField onTokenChange={setRecaptchaToken} />
+              </section>
             </div>
 
             <Button

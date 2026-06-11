@@ -14,9 +14,9 @@ export function ReCaptchaField({ onTokenChange }: ReCaptchaFieldProps) {
 
   if (!isRecaptchaEnabled) {
     return (
-      <div className="space-y-2">
-        <Label>Verificación *</Label>
-        <div className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-col items-center gap-2">
+        <Label className="text-center">Verificación *</Label>
+        <div className="flex w-fit items-start gap-3 rounded-lg border border-border bg-surface p-4">
           <Checkbox
             id="recaptcha-dev"
             onCheckedChange={(checked) => onTokenChange(checked === true ? 'dev-bypass' : null)}
@@ -30,9 +30,9 @@ export function ReCaptchaField({ onTokenChange }: ReCaptchaFieldProps) {
   }
 
   return (
-    <div className="space-y-2">
-      <Label>Verificación *</Label>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface p-2">
+    <div className="flex flex-col items-center gap-2">
+      <Label className="text-center">Verificación *</Label>
+      <div className="w-fit rounded-lg border border-border bg-surface p-1">
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={RECAPTCHA_SITE_KEY}
