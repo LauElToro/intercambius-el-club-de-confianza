@@ -18,9 +18,18 @@ export interface GoogleAuthPending {
   mode: GoogleAuthPendingMode;
   register?: GoogleAuthPendingRegister;
   returnPath: string;
+  redirectUri: string;
 }
 
 const STORAGE_KEY = 'intercambius_google_auth_pending';
+const CODE_USED_PREFIX = 'intercambius_google_code_used:';
+
+export function markGoogleAuthCodeUsed(code: string): boolean {
+  const key = CODE_USED_PREFIX + code;
+  if (sessionStorage.getItem(key)) return false;
+  sessionStorage.setItem(key, '1');
+  return true;
+}
 
 export function saveGoogleAuthPending(pending: GoogleAuthPending): void {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(pending));
@@ -46,7 +55,10 @@ export function startGoogleOAuthRedirect(pending: GoogleAuthPending): void {
     throw new Error('Google Sign-In no configurado');
   }
 
-  saveGoogleAuthPending(pending);
+  saveGoogleAuthPending({
+    ...pending,
+    redirectUri,
+  });
 
   const redirectUri = getGoogleAuthRedirectUri();
   const state = btoa(JSON.stringify({ m: pending.mode, t: Date.now() }));

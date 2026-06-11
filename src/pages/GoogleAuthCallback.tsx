@@ -1,22 +1,24 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/services/auth.service';
 import { ApiError } from '@/lib/api';
 import {
   clearGoogleAuthPending,
   getGoogleAuthRedirectUri,
   loadGoogleAuthPending,
+  markGoogleAuthCodeUsed,
 } from '@/lib/google-oauth-redirect';
 
 const GoogleAuthCallback = () => {
   const [searchParams] = useSearchParams();
-  const { loginWithGoogle, registerWithGoogle } = useAuth();
+  const navigate = useNavigate();
   const [error, setError] = useState('');
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (startedRef.current) return;
+    startedRef.current = true;
 
     const run = async () => {
       const oauthError = searchParams.get('error');
@@ -33,29 +35,33 @@ const GoogleAuthCallback = () => {
         return;
       }
 
+      if (!markGoogleAuthCodeUsed(code)) {
+        return;
+      }
+
       const pending = loadGoogleAuthPending();
       if (!pending) {
         setError('Sesión de Google expirada. Intentá de nuevo.');
         return;
       }
 
+      const redirectUri = pending.redirectUri || getGoogleAuthRedirectUri();
+
       try {
-        const redirectUri = getGoogleAuthRedirectUri();
         const { credential } = await authService.googleAuthCode({
           code,
           redirectUri,
         });
 
-        if (cancelled) return;
+        await authService.googleAuth({
+          credential,
+          mode: pending.mode,
+          ...pending.register,
+        });
 
-        if (pending.mode === 'register') {
-          await registerWithGoogle(credential, pending.register ?? {});
-        } else {
-          await loginWithGoogle(credential);
-        }
         clearGoogleAuthPending();
+        navigate('/dashboard', { replace: true });
       } catch (err: unknown) {
-        if (cancelled) return;
         clearGoogleAuthPending();
         if (err instanceof ApiError) {
           if (
@@ -64,20 +70,22 @@ const GoogleAuthCallback = () => {
             err.data?.code === 'GOOGLE_ACCOUNT_NOT_FOUND'
           ) {
             setError('No hay cuenta con ese Google. Creá una en registro o usá email y contraseña.');
+          } else if (err.message.includes('invalid_grant')) {
+            setError('El enlace de Google expiró o ya se usó. Volvé a intentar desde login o registro.');
           } else {
             setError(err.message);
           }
         } else {
-          setError((err as Error).message || 'Error al conectar con Google');
+          const msg = (err as Error).message || 'Error al conectar con Google';
+          setError(msg.includes('invalid_grant')
+            ? 'El enlace de Google expiró o ya se usó. Volvé a intentar desde login o registro.'
+            : msg);
         }
       }
     };
 
     void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams, loginWithGoogle, registerWithGoogle]);
+  }, [searchParams, navigate]);
 
   return (
     <Layout showHeader={false}>
