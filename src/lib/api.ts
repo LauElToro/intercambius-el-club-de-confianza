@@ -3,8 +3,7 @@ import {
   notifyAuthSessionInvalid,
   shouldInvalidateUserSession,
 } from '@/lib/auth-session';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://intercambios-backend.vercel.app';
+import { API_BASE_URL, buildApiUrl } from '@/lib/api-config';
 
 export class ApiError extends Error {
   /** Si true, ya se disparó cierre de sesión / redirección; no mostrar otro toast genérico. */
@@ -47,7 +46,7 @@ async function tryRefreshAccessToken(): Promise<boolean> {
   const token = localStorage.getItem('intercambius_token');
   if (!token) return false;
   try {
-    const response = await fetch(`${API_URL}/api/auth/refresh`, {
+    const response = await fetch(buildApiUrl('/api/auth/refresh'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -83,7 +82,7 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(buildApiUrl(endpoint), {
     ...fetchInit,
     headers,
   });
@@ -109,6 +108,12 @@ async function request<T>(
   } else if (!response.ok) {
     throw new ApiError(
       `El servidor devolvió una respuesta no válida (${response.status})`,
+      response.status,
+      { html: text.substring(0, 200) }
+    );
+  } else if (text.trimStart().startsWith('<')) {
+    throw new ApiError(
+      `La API no respondió JSON (revisá VITE_API_URL, actual: ${API_BASE_URL})`,
       response.status,
       { html: text.substring(0, 200) }
     );
@@ -165,7 +170,7 @@ export const api = {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(buildApiUrl(endpoint), {
       method: 'POST',
       headers,
       body: formData,
@@ -215,7 +220,7 @@ export const api = {
     formData.append('image', file);
     if (tipo) formData.append('tipo', tipo);
 
-    const response = await fetch(`${API_URL}/api/upload`, {
+    const response = await fetch(buildApiUrl('/api/upload'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

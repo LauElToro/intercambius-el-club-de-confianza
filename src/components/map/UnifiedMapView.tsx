@@ -2,25 +2,22 @@ import { hasGoogleMaps } from '@/lib/google-maps';
 import { useGoogleMapsLoader } from '@/hooks/use-google-maps';
 import { MapView as LeafletMapView, type MapViewProps } from './MapView';
 import { GoogleMapView } from './GoogleMapView';
+import { MapRenderErrorBoundary } from './MapRenderErrorBoundary';
 import { Loader2 } from 'lucide-react';
 
-/** Mapa unificado: Google Maps si hay API key, sino Leaflet/OSM. */
+/** Mapa unificado: Google Maps si hay API key y carga bien; sino Leaflet/OSM. */
 export function UnifiedMapView(props: MapViewProps) {
-  const { isLoaded, loadError } = useGoogleMapsLoader();
-
   if (!hasGoogleMaps) {
     return <LeafletMapView {...props} />;
   }
+  return <GoogleMapsBranch {...props} />;
+}
+
+function GoogleMapsBranch(props: MapViewProps) {
+  const { isLoaded, loadError } = useGoogleMapsLoader();
 
   if (loadError) {
-    return (
-      <div
-        className="rounded-lg border border-destructive/40 bg-destructive/5 flex items-center justify-center text-sm text-destructive p-4"
-        style={{ height: props.height ?? 240 }}
-      >
-        No se pudo cargar Google Maps. Revisá VITE_GOOGLE_MAPS_API_KEY.
-      </div>
-    );
+    return <LeafletMapView {...props} />;
   }
 
   if (!isLoaded) {
@@ -34,7 +31,11 @@ export function UnifiedMapView(props: MapViewProps) {
     );
   }
 
-  return <GoogleMapView {...props} />;
+  return (
+    <MapRenderErrorBoundary fallback={<LeafletMapView {...props} />}>
+      <GoogleMapView {...props} />
+    </MapRenderErrorBoundary>
+  );
 }
 
 export type { MapViewProps, MapMarker } from './GoogleMapView';

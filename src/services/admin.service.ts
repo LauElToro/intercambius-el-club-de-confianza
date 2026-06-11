@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://intercambios-backend.vercel.app';
+import { buildApiUrl } from '@/lib/api-config';
 const ADMIN_TOKEN_KEY = 'intercambius_admin_token';
 
 export class AdminApiError extends Error {
@@ -24,7 +24,7 @@ async function adminRequest<T>(endpoint: string, options: RequestInit = {}): Pro
     ...options.headers,
   };
 
-  const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+  const response = await fetch(buildApiUrl(endpoint), { ...options, headers });
   const text = await response.text();
   let data: unknown = {};
   if (text && response.headers.get('content-type')?.includes('application/json')) {
@@ -114,7 +114,7 @@ export const adminService = {
   },
 
   async login(email: string, password: string): Promise<{ token: string }> {
-    const response = await fetch(`${API_URL}/api/auth/admin-login`, {
+    const response = await fetch(buildApiUrl('/api/auth/admin-login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
