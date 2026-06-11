@@ -18,6 +18,7 @@ export function isPublicAuthEndpoint(endpoint: string): boolean {
   const prefixes = [
     '/api/auth/login',
     '/api/auth/register',
+    '/api/auth/google',
     '/api/auth/verify-mfa',
     '/api/auth/resend-mfa',
     '/api/auth/forgot-password',

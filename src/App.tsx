@@ -35,6 +35,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
 import { CookieConsentProvider } from "./contexts/CookieConsentContext";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { GOOGLE_CLIENT_ID } from "@/lib/google-oauth-config";
 
 // Cache: staleTime 2 min, gcTime 30 min para reducir consultas y mejorar carga
 const CACHE_STALE_MS = 2 * 60 * 1000;
@@ -53,6 +55,7 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || 'placeholder-not-configured'}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
@@ -183,6 +186,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
+    </GoogleOAuthProvider>
   </ThemeProvider>
 );
 

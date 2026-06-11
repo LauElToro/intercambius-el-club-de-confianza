@@ -16,6 +16,7 @@ export interface RegisterData {
   aceptaTerminos: boolean;
   /** Código o slug del usuario que refiere (opcional). */
   codigoReferido?: string;
+  recaptchaToken?: string;
 }
 
 export interface AuthResponse {
@@ -120,7 +121,11 @@ export const authService = {
 
   async register(data: RegisterData): Promise<User | MfaRequiredResponse> {
     try {
-      await api.post<User>('/api/auth/register', { ...data, email: normalizeEmail(data.email) });
+      await api.post<User>('/api/auth/register', {
+        ...data,
+        email: normalizeEmail(data.email),
+        recaptchaToken: data.recaptchaToken,
+      });
 
       const loginResponse = await this.login({
         email: normalizeEmail(data.email),
@@ -136,6 +141,27 @@ export const authService = {
         throw error;
       }
       throw new ApiError('Error al registrarse', 500);
+    }
+  },
+
+  async googleAuth(params: {
+    credential: string;
+    mode: 'login' | 'register';
+    aceptaTerminos?: boolean;
+    codigoReferido?: string;
+    ubicacion?: string;
+    contacto?: string;
+  }): Promise<AuthResponse & { isNewUser?: boolean }> {
+    try {
+      const response = await api.post<AuthResponse & { isNewUser?: boolean }>('/api/auth/google', params);
+      localStorage.setItem('intercambius_token', response.token);
+      localStorage.setItem('intercambius_user', JSON.stringify(response.user));
+      return response;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError('Error con Google Sign-In', 500);
     }
   },
 

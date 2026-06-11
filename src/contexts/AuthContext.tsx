@@ -1,8 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService, User } from '@/services/auth.service';
+import { authService, User, RegisterData } from '@/services/auth.service';
 import { ApiError } from '@/lib/api';
 import { setAuthSessionInvalidHandler } from '@/lib/auth-session';
+
+type RegisterPayload = RegisterData;
+type GoogleRegisterPayload = {
+  aceptaTerminos: boolean;
+  codigoReferido?: string;
+  ubicacion?: string;
+  contacto?: string;
+};
 
 interface MfaPendingState {
   mfaToken: string;
@@ -15,10 +23,12 @@ interface AuthContextType {
   loading: boolean;
   mfaPending: MfaPendingState | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   completeLoginWithMfa: (mfaToken: string, code: string) => Promise<void>;
   resendMfaCode: () => Promise<void>;
   clearMfaPending: () => void;
-  register: (data: any) => Promise<void>;
+  register: (data: RegisterPayload) => Promise<void>;
+  registerWithGoogle: (credential: string, data: GoogleRegisterPayload) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   refreshUser: () => Promise<void>;
@@ -68,6 +78,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate('/dashboard');
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const response = await authService.googleAuth({ credential, mode: 'login' });
+    setMfaPending(null);
+    setUser(response.user as User);
+    navigate('/dashboard');
+  };
+
   const completeLoginWithMfa = async (mfaToken: string, code: string) => {
     const response = await authService.verifyMfa(mfaToken, code);
     setMfaPending(null);
@@ -102,7 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const clearMfaPending = () => setMfaPending(null);
 
-  const register = async (data: any) => {
+  const register = async (data: RegisterPayload) => {
     const result = await authService.register(data);
     if ('mfaRequired' in result && result.mfaRequired) {
       setMfaPending({
@@ -114,6 +131,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     setUser(result as User);
+    navigate('/dashboard');
+  };
+
+  const registerWithGoogle = async (credential: string, data: GoogleRegisterPayload) => {
+    const response = await authService.googleAuth({
+      credential,
+      mode: 'register',
+      ...data,
+    });
+    setMfaPending(null);
+    setUser(response.user as User);
     navigate('/dashboard');
   };
 
@@ -139,10 +167,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         mfaPending,
         login,
+        loginWithGoogle,
         completeLoginWithMfa,
         resendMfaCode,
         clearMfaPending,
         register,
+        registerWithGoogle,
         logout,
         isAuthenticated: !!user,
         refreshUser,

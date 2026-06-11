@@ -11,9 +11,12 @@ import { ArrowRight, Sparkles, Mail, Lock, Phone, User, Gift } from "lucide-reac
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { LocationPicker } from "@/components/location/LocationPicker";
+import { ReCaptchaField } from "@/components/auth/ReCaptchaField";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AuthDivider } from "@/components/auth/AuthDivider";
 
 const Registro = () => {
-  const { register } = useAuth();
+  const { register, registerWithGoogle } = useAuth();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     nombre: "",
@@ -36,7 +39,8 @@ const Registro = () => {
   }, [searchParams]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,8 +63,8 @@ const Registro = () => {
       return;
     }
 
-    if (!recaptchaVerified) {
-      setError("Por favor, completa el reCAPTCHA");
+    if (!recaptchaToken) {
+      setError("Por favor, completá el reCAPTCHA");
       return;
     }
 
@@ -75,6 +79,7 @@ const Registro = () => {
         ubicacion: formData.ubicacion,
         aceptaTerminos: true,
         codigoReferido: formData.codigoReferido.trim() || undefined,
+        recaptchaToken,
       });
     } catch (err: any) {
       if (err instanceof ApiError) {
@@ -94,8 +99,29 @@ const Registro = () => {
     }));
   };
 
-  const handleRecaptcha = (token: string | null) => {
-    setRecaptchaVerified(!!token);
+  const handleGoogleRegister = async (credential: string) => {
+    if (!aceptaTerminos) {
+      setError("Debés aceptar los términos y condiciones antes de continuar con Google.");
+      return;
+    }
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await registerWithGoogle(credential, {
+        aceptaTerminos: true,
+        codigoReferido: formData.codigoReferido.trim() || undefined,
+        ubicacion: formData.ubicacion || undefined,
+        contacto: formData.telefono || undefined,
+      });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError((err as Error).message || "Error al registrarse con Google");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -118,6 +144,18 @@ const Registro = () => {
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <GoogleSignInButton
+              onCredential={handleGoogleRegister}
+              onError={() => setError("No se pudo iniciar sesión con Google")}
+              disabled={loading || googleLoading || !aceptaTerminos}
+            />
+            {(loading || googleLoading) && (
+              <p className="text-center text-sm text-muted-foreground">
+                {googleLoading ? "Conectando con Google..." : "Creando cuenta..."}
+              </p>
+            )}
+            <AuthDivider />
+
             <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
               {error && (
                 <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
@@ -307,22 +345,7 @@ const Registro = () => {
                 </div>
               </div>
 
-              {/* reCAPTCHA - Placeholder por ahora */}
-              <div className="space-y-2">
-                <Label>Verificación *</Label>
-                <div className="flex items-center gap-2 p-4 bg-surface rounded-lg border border-border">
-                  <input
-                    type="checkbox"
-                    id="recaptcha"
-                    checked={recaptchaVerified}
-                    onChange={(e) => setRecaptchaVerified(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="recaptcha" className="text-sm text-muted-foreground cursor-pointer">
-                    No soy un robot (reCAPTCHA se implementará)
-                  </label>
-                </div>
-              </div>
+              <ReCaptchaField onTokenChange={setRecaptchaToken} />
             </div>
 
             <Button
@@ -330,7 +353,7 @@ const Registro = () => {
               variant="gold"
               size="xl"
               className="w-full group"
-              disabled={loading || !aceptaTerminos || !recaptchaVerified}
+              disabled={loading || googleLoading || !aceptaTerminos || !recaptchaToken}
             >
               {loading ? "Creando cuenta..." : (
                 <>
