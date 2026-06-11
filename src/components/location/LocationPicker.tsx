@@ -14,7 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { UnifiedMapView } from '@/components/map/UnifiedMapView';
 import { PlacesAutocompleteInput } from '@/components/location/PlacesAutocompleteInput';
-import { useGoogleMapsLoader, hasGoogleMaps } from '@/hooks/use-google-maps';
+import { useGoogleMapsLoader, shouldUseGoogleMaps } from '@/hooks/use-google-maps';
 import { geoService } from '@/services/geo.service';
 import { COMMON_LOCATION_PRESETS, resolveUbicacionToCoords } from '@/lib/ubicaciones';
 import { DEFAULT_MAP_CENTER } from '@/lib/geo';
@@ -159,7 +159,7 @@ function LocationPickerDialogBody({
     }
   };
 
-  const mapsReady = !hasGoogleMaps || isLoaded;
+  const mapsReady = !shouldUseGoogleMaps() || isLoaded;
 
   return (
     <div className="space-y-4">
@@ -180,10 +180,10 @@ function LocationPickerDialogBody({
         </Alert>
       )}
 
-      {loadError && hasGoogleMaps && (
+      {loadError && shouldUseGoogleMaps() && (
         <Alert variant="destructive">
           <AlertDescription>
-            Google Maps no cargó. Verificá VITE_GOOGLE_MAPS_API_KEY o usá la lista de ciudades.
+            Google Maps no cargó. Usá la búsqueda por texto o la lista de ciudades.
           </AlertDescription>
         </Alert>
       )}
@@ -191,7 +191,7 @@ function LocationPickerDialogBody({
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
-          {hasGoogleMaps && isLoaded ? (
+          {shouldUseGoogleMaps() && isLoaded ? (
             <PlacesAutocompleteInput
               value={searchQuery}
               onChange={setSearchQuery}

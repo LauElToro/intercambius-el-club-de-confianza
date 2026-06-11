@@ -1,13 +1,15 @@
-import { hasGoogleMaps } from '@/lib/google-maps';
+import { useState } from 'react';
+import { shouldUseGoogleMaps } from '@/lib/google-maps';
 import { useGoogleMapsLoader } from '@/hooks/use-google-maps';
+import { useGoogleMapsFailure } from '@/hooks/use-google-maps-failure';
 import { MapView as LeafletMapView, type MapViewProps } from './MapView';
 import { GoogleMapView } from './GoogleMapView';
 import { MapRenderErrorBoundary } from './MapRenderErrorBoundary';
 import { Loader2 } from 'lucide-react';
 
-/** Mapa unificado: Google Maps si hay API key y carga bien; sino Leaflet/OSM. */
+/** Mapa unificado: Google Maps si hay API key y funciona; sino Leaflet/OSM. */
 export function UnifiedMapView(props: MapViewProps) {
-  if (!hasGoogleMaps) {
+  if (!shouldUseGoogleMaps()) {
     return <LeafletMapView {...props} />;
   }
   return <GoogleMapsBranch {...props} />;
@@ -15,8 +17,10 @@ export function UnifiedMapView(props: MapViewProps) {
 
 function GoogleMapsBranch(props: MapViewProps) {
   const { isLoaded, loadError } = useGoogleMapsLoader();
+  const { failed, reportFailure } = useGoogleMapsFailure();
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
 
-  if (loadError) {
+  if (loadError || failed || loadTimedOut) {
     return <LeafletMapView {...props} />;
   }
 
@@ -33,7 +37,13 @@ function GoogleMapsBranch(props: MapViewProps) {
 
   return (
     <MapRenderErrorBoundary fallback={<LeafletMapView {...props} />}>
-      <GoogleMapView {...props} />
+      <GoogleMapView
+        {...props}
+        onLoadTimeout={() => {
+          reportFailure();
+          setLoadTimedOut(true);
+        }}
+      />
     </MapRenderErrorBoundary>
   );
 }
