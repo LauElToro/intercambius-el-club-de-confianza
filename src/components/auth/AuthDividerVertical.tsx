@@ -6,13 +6,10 @@ export function AuthDividerVertical({ surface = 'background' }: AuthDividerVerti
   const surfaceClass = surface === 'card' ? 'bg-card' : 'bg-background';
 
   return (
-    <div className="relative hidden lg:flex w-px self-stretch mx-1">
-      <span className="absolute inset-y-0 left-0 w-px bg-border" />
-      <span
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${surfaceClass} px-1 text-xs uppercase text-muted-foreground`}
-      >
-        o
-      </span>
+    <div className="hidden lg:flex flex-col items-center self-stretch justify-center px-1">
+      <span className="h-6 w-px bg-border" />
+      <span className={`${surfaceClass} py-2 text-xs uppercase text-muted-foreground`}>o</span>
+      <span className="h-6 w-px bg-border" />
     </div>
   );
 }

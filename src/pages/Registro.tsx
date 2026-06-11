@@ -150,19 +150,21 @@ const Registro = () => {
             <div
               className={
                 isGoogleSignInEnabled
-                  ? "grid grid-cols-1 lg:grid-cols-[minmax(260px,300px)_auto_1fr] gap-6 lg:gap-8 items-stretch"
+                  ? "grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6 items-start"
                   : "max-w-2xl mx-auto"
               }
             >
               {isGoogleSignInEnabled && (
                 <>
-                  <GoogleRegisterPanel
-                    onCredential={handleGoogleRegister}
-                    onError={() => setError("No se pudo iniciar sesión con Google")}
-                    disabled={loading || googleLoading}
-                    loading={googleLoading}
-                  />
-                  <AuthDividerVertical />
+                  <div className="flex items-start gap-3">
+                    <GoogleRegisterPanel
+                      onCredential={handleGoogleRegister}
+                      onError={() => setError("No se pudo iniciar sesión con Google")}
+                      disabled={loading || googleLoading}
+                      loading={googleLoading}
+                    />
+                    <AuthDividerVertical />
+                  </div>
                   <div className="lg:hidden">
                     <AuthDivider />
                   </div>

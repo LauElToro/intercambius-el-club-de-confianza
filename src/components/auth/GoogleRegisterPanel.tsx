@@ -20,8 +20,8 @@ export function GoogleRegisterPanel({
   }
 
   return (
-    <aside className="flex flex-col justify-center rounded-2xl border border-border bg-card p-6 lg:min-h-[420px]">
-      <div className="space-y-1 mb-6">
+    <aside className="w-full max-w-[300px] self-start rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 space-y-1">
         <h2 className="text-lg font-semibold">Registro rápido</h2>
         <p className="text-sm text-muted-foreground">Continuá con tu cuenta de Google</p>
       </div>
@@ -33,7 +33,7 @@ export function GoogleRegisterPanel({
         disabled={disabled}
       />
 
-      <p className="mt-4 text-left text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-left text-xs leading-relaxed text-muted-foreground">
         Al registrarte con Google aceptás los{' '}
         <Link
           to="/terminos-generales"
