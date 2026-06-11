@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { useMfaResendCooldown } from "@/hooks/use-mfa-resend-cooldown";
 import { GoogleLoginPanel } from "@/components/auth/GoogleLoginPanel";
-import { AuthDivider } from "@/components/auth/AuthDivider";
-import { AuthDividerVertical } from "@/components/auth/AuthDividerVertical";
+import { AuthGoogleSplitLayout } from "@/components/auth/AuthGoogleSplitLayout";
 import { isGoogleSignInEnabled } from "@/lib/google-oauth-config";
 
 const Login = () => {
@@ -25,11 +24,19 @@ const Login = () => {
   });
   const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState("");
+  const [googleError, setGoogleError] = useState("");
   const [resendMessage, setResendMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const mfaInputRef = useRef<HTMLInputElement>(null);
   const { canResend, cooldownLabel } = useMfaResendCooldown(mfaPending?.resendAvailableAt);
+
+  useEffect(() => {
+    const msg = searchParams.get("google_error");
+    if (msg) {
+      setGoogleError(decodeURIComponent(msg));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +135,12 @@ const Login = () => {
                 Tu sesión expiró o el token dejó de ser válido. Volvé a iniciar sesión para continuar.
               </div>
             )}
-            {error && (
+            {error && showMfaStep && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            {!showMfaStep && error && !showGoogleSplit && (
               <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
                 {error}
               </div>
@@ -197,96 +209,146 @@ const Login = () => {
                   </Button>
                 </form>
               </div>
-            ) : (
-              <div
-                className={
-                  showGoogleSplit
-                    ? "grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6 items-start"
-                    : "max-w-md mx-auto"
+            ) : showGoogleSplit ? (
+              <AuthGoogleSplitLayout
+                googlePanel={
+                  <GoogleLoginPanel
+                    error={googleError}
+                    onError={setGoogleError}
+                    disabled={loading}
+                  />
                 }
-              >
-                {showGoogleSplit && (
+                formPanel={
                   <>
-                    <div className="flex items-start gap-3">
-                      <GoogleLoginPanel
-                        onError={() => setError("No se pudo iniciar sesión con Google")}
-                        disabled={loading}
-                      />
-                      <AuthDividerVertical />
-                    </div>
-                    <div className="lg:hidden">
-                      <AuthDivider />
-                    </div>
-                  </>
-                )}
-
-                <div className="space-y-6 min-w-0">
-                  <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
-                    {showGoogleSplit && (
+                    <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
                       <div className="space-y-1">
                         <h2 className="text-lg font-semibold">Inicio con email</h2>
                         <p className="text-sm text-muted-foreground">Ingresá tus credenciales</p>
                       </div>
-                    )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            placeholder="tu@email.com"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 bg-surface border-border focus:border-gold"
-                          />
+                      {error && (
+                        <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+                          {error}
                         </div>
+                      )}
+
+                      <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                            <Input
+                              id="email"
+                              name="email"
+                              type="email"
+                              placeholder="tu@email.com"
+                              value={formData.email}
+                              onChange={handleChange}
+                              required
+                              className="pl-10 bg-surface border-border focus:border-gold"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="password">Contraseña</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                            <PasswordInput
+                              id="password"
+                              name="password"
+                              placeholder="••••••••"
+                              value={formData.password}
+                              onChange={handleChange}
+                              required
+                              className="pl-10 bg-surface border-border focus:border-gold"
+                            />
+                          </div>
+                          <div className="text-right">
+                            <Link to="/olvide-contrasena" className="text-sm text-gold hover:underline">
+                              ¿Olvidaste tu contraseña?
+                            </Link>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          variant="gold"
+                          className="w-full"
+                          disabled={loading}
+                        >
+                          {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </form>
+                    </div>
+
+                    <p className="text-center text-sm text-muted-foreground">
+                      ¿No tenés cuenta?{" "}
+                      <Link to="/registro" className="text-gold hover:underline font-medium">
+                        Registrate acá
+                      </Link>
+                    </p>
+                  </>
+                }
+              />
+            ) : (
+              <div className="max-w-md mx-auto space-y-6">
+                <div className="bg-card rounded-2xl p-6 border border-border space-y-5">
+                  {error && (
+                    <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="tu@email.com"
+                          value={formData.email}
+                          onChange={handleChange}
+                          required
+                          className="pl-10 bg-surface border-border focus:border-gold"
+                        />
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="password">Contraseña</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                          <PasswordInput
-                            id="password"
-                            name="password"
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                            className="pl-10 bg-surface border-border focus:border-gold"
-                          />
-                        </div>
-                        <div className="text-right">
-                          <Link to="/olvide-contrasena" className="text-sm text-gold hover:underline">
-                            ¿Olvidaste tu contraseña?
-                          </Link>
-                        </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Contraseña</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                        <PasswordInput
+                          id="password"
+                          name="password"
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={handleChange}
+                          required
+                          className="pl-10 bg-surface border-border focus:border-gold"
+                        />
                       </div>
-
-                      <Button
-                        type="submit"
-                        variant="gold"
-                        className="w-full"
-                        disabled={loading}
-                      >
-                        {loading ? "Iniciando sesión..." : "Iniciar sesión"}
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </form>
-                  </div>
-
-                  <p className="text-center text-sm text-muted-foreground">
-                    ¿No tenés cuenta?{" "}
-                    <Link to="/registro" className="text-gold hover:underline font-medium">
-                      Registrate acá
-                    </Link>
-                  </p>
+                      <div className="text-right">
+                        <Link to="/olvide-contrasena" className="text-sm text-gold hover:underline">
+                          ¿Olvidaste tu contraseña?
+                        </Link>
+                      </div>
+                    </div>
+                    <Button type="submit" variant="gold" className="w-full" disabled={loading}>
+                      {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </form>
                 </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  ¿No tenés cuenta?{" "}
+                  <Link to="/registro" className="text-gold hover:underline font-medium">
+                    Registrate acá
+                  </Link>
+                </p>
               </div>
             )}
           </div>

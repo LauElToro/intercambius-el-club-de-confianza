@@ -2,11 +2,12 @@ import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { isGoogleSignInEnabled } from '@/lib/google-oauth-config';
 
 interface GoogleLoginPanelProps {
-  onError?: () => void;
+  onError?: (message: string) => void;
   disabled?: boolean;
+  error?: string;
 }
 
-export function GoogleLoginPanel({ onError, disabled }: GoogleLoginPanelProps) {
+export function GoogleLoginPanel({ onError, disabled, error }: GoogleLoginPanelProps) {
   if (!isGoogleSignInEnabled) {
     return null;
   }
@@ -24,6 +25,11 @@ export function GoogleLoginPanel({ onError, disabled }: GoogleLoginPanelProps) {
         onError={onError}
         disabled={disabled}
       />
+      {error && (
+        <div className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
     </aside>
   );
 }

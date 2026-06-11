@@ -5,16 +5,16 @@ import type { GoogleAuthPendingRegister } from '@/lib/google-oauth-redirect';
 
 interface GoogleRegisterPanelProps {
   register?: GoogleAuthPendingRegister;
-  onError?: () => void;
+  onError?: (message: string) => void;
   disabled?: boolean;
-  loading?: boolean;
+  error?: string;
 }
 
 export function GoogleRegisterPanel({
   register,
   onError,
   disabled,
-  loading,
+  error,
 }: GoogleRegisterPanelProps) {
   if (!isGoogleSignInEnabled) {
     return null;
@@ -32,7 +32,7 @@ export function GoogleRegisterPanel({
         register={register}
         align="start"
         onError={onError}
-        disabled={disabled || loading}
+        disabled={disabled}
       />
 
       <p className="mt-3 text-left text-xs leading-relaxed text-muted-foreground">
@@ -57,8 +57,10 @@ export function GoogleRegisterPanel({
         .
       </p>
 
-      {loading && (
-        <p className="mt-3 text-sm text-muted-foreground">Conectando con Google...</p>
+      {error && (
+        <div className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
       )}
     </aside>
   );

@@ -50,17 +50,24 @@ export function clearGoogleAuthPending(): void {
 }
 
 /** Flujo OAuth redirect (usa redirect URIs, no requiere orígenes JS del iframe GIS). */
-export function startGoogleOAuthRedirect(pending: GoogleAuthPending): void {
+export function startGoogleOAuthRedirect(
+  pending: Omit<GoogleAuthPending, 'redirectUri'>,
+): void {
   if (!GOOGLE_CLIENT_ID) {
-    throw new Error('Google Sign-In no configurado');
+    throw new Error('Google Sign-In no configurado (falta VITE_GOOGLE_CLIENT_ID)');
   }
 
-  saveGoogleAuthPending({
-    ...pending,
-    redirectUri,
-  });
-
   const redirectUri = getGoogleAuthRedirectUri();
+
+  try {
+    saveGoogleAuthPending({
+      ...pending,
+      redirectUri,
+    });
+  } catch {
+    throw new Error('No se pudo guardar la sesión de Google. Revisá que las cookies/storage no estén bloqueados.');
+  }
+
   const state = btoa(JSON.stringify({ m: pending.mode, t: Date.now() }));
 
   const params = new URLSearchParams({

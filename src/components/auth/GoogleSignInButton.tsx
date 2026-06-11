@@ -9,7 +9,7 @@ import {
 interface GoogleSignInButtonProps {
   mode: GoogleAuthPendingMode;
   register?: GoogleAuthPendingRegister;
-  onError?: () => void;
+  onError?: (message: string) => void;
   disabled?: boolean;
   disabledHint?: string;
   align?: 'start' | 'center';
@@ -32,15 +32,18 @@ export function GoogleSignInButton({
   const handleClick = () => {
     if (disabled || loading) return;
     setLoading(true);
+    onError?.('');
     try {
       startGoogleOAuthRedirect({
         mode,
         register,
         returnPath: window.location.pathname,
       });
-    } catch {
+    } catch (err) {
       setLoading(false);
-      onError?.();
+      const message = err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google';
+      console.error('[GoogleSignIn]', message, err);
+      onError?.(message);
     }
   };
 
