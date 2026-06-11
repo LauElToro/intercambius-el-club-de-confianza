@@ -20,7 +20,7 @@ export function GoogleRegisterPanel({
   }
 
   return (
-    <aside className="w-full max-w-[300px] self-start rounded-2xl border border-border bg-card p-5">
+    <aside className="w-full min-w-0 max-w-[320px] shrink-0 self-start overflow-hidden rounded-2xl border border-border bg-card p-5 box-border">
       <div className="mb-4 space-y-1">
         <h2 className="text-lg font-semibold">Registro rápido</h2>
         <p className="text-sm text-muted-foreground">Continuá con tu cuenta de Google</p>

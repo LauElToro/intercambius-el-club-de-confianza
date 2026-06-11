@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { isGoogleSignInEnabled } from '@/lib/google-oauth-config';
 
@@ -7,6 +8,7 @@ interface GoogleSignInButtonProps {
   disabled?: boolean;
   disabledHint?: string;
   align?: 'start' | 'center';
+  maxWidth?: number;
 }
 
 export function GoogleSignInButton({
@@ -15,7 +17,27 @@ export function GoogleSignInButton({
   disabled,
   disabledHint,
   align = 'start',
+  maxWidth = 320,
 }: GoogleSignInButtonProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [buttonWidth, setButtonWidth] = useState(maxWidth);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateWidth = () => {
+      const available = el.clientWidth;
+      if (available <= 0) return;
+      setButtonWidth(Math.min(maxWidth, Math.max(200, available)));
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [maxWidth]);
+
   if (!isGoogleSignInEnabled) {
     return null;
   }
@@ -31,7 +53,8 @@ export function GoogleSignInButton({
   return (
     <div className="space-y-2">
       <div
-        className={`relative z-10 flex w-full ${align === 'start' ? 'justify-start' : 'justify-center'} ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+        ref={containerRef}
+        className={`relative z-10 w-full max-w-full overflow-hidden ${align === 'start' ? 'flex justify-start' : 'flex justify-center'} ${disabled ? 'pointer-events-none opacity-50' : ''}`}
         aria-disabled={disabled}
       >
         <GoogleLogin
@@ -42,7 +65,7 @@ export function GoogleSignInButton({
           shape="rectangular"
           theme="outline"
           size="large"
-          width="320"
+          width={String(buttonWidth)}
         />
       </div>
       {disabledHint && (
