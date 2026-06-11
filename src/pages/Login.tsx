@@ -85,7 +85,9 @@ const Login = () => {
             </h1>
             <p className="text-muted-foreground">
               {showMfaStep
-                ? "Ingresá el código de 6 dígitos que te enviamos por email"
+                ? mfaPending?.sentTo
+                  ? `Enviamos un código de 6 dígitos a ${mfaPending.sentTo}. Revisá también spam y promociones.`
+                  : "Ingresá el código de 6 dígitos que te enviamos por email"
                 : "Ingresá a tu cuenta para continuar"}
             </p>
           </div>

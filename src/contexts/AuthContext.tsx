@@ -6,7 +6,7 @@ import { setAuthSessionInvalidHandler } from '@/lib/auth-session';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  mfaPending: { mfaToken: string } | null;
+  mfaPending: { mfaToken: string; sentTo?: string } | null;
   login: (email: string, password: string) => Promise<void>;
   completeLoginWithMfa: (mfaToken: string, code: string) => Promise<void>;
   clearMfaPending: () => void;
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mfaPending, setMfaPending] = useState<{ mfaToken: string } | null>(null);
+  const [mfaPending, setMfaPending] = useState<{ mfaToken: string; sentTo?: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     const response = await authService.login({ email, password });
     if ('mfaRequired' in response && response.mfaRequired) {
-      setMfaPending({ mfaToken: response.mfaToken });
+      setMfaPending({ mfaToken: response.mfaToken, sentTo: response.mfaSentTo });
       return;
     }
     setUser(response.user);

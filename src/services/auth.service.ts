@@ -25,6 +25,7 @@ export interface AuthResponse {
 export interface MfaRequiredResponse {
   mfaRequired: true;
   mfaToken: string;
+  mfaSentTo?: string;
 }
 
 export interface User {
