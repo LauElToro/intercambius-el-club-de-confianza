@@ -1,12 +1,23 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Search, X, Navigation } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { UnifiedMapView } from '@/components/map/UnifiedMapView';
+import { PlacesAutocompleteInput } from '@/components/location/PlacesAutocompleteInput';
+import { useGoogleMapsLoader, hasGoogleMaps } from '@/hooks/use-google-maps';
+import { geoService } from '@/services/geo.service';
+import { COMMON_LOCATION_PRESETS, resolveUbicacionToCoords } from '@/lib/ubicaciones';
+import { DEFAULT_MAP_CENTER } from '@/lib/geo';
 
 interface LocationPickerProps {
   value: string;
@@ -17,43 +28,257 @@ interface LocationPickerProps {
   required?: boolean;
 }
 
-// Función para obtener la dirección desde coordenadas (reverse geocoding)
-async function getAddressFromCoordinates(lat: number, lng: number): Promise<string> {
-  try {
-    // Usar Nominatim (OpenStreetMap) para reverse geocoding gratuito
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      {
-        headers: {
-          'User-Agent': 'Intercambius App'
-        }
+async function resolveAddressFromCoords(lat: number, lng: number): Promise<string> {
+  const fromApi = await geoService.reverseGeocode(lat, lng);
+  if (fromApi?.address) return fromApi.address;
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+function LocationPickerDialogBody({
+  value,
+  onChange,
+  radius,
+  onRadiusChange,
+  onClose,
+}: {
+  value: string;
+  onChange: LocationPickerProps['onChange'];
+  radius: number;
+  onRadiusChange?: (radius: number) => void;
+  onClose: () => void;
+}) {
+  const { isLoaded, loadError } = useGoogleMapsLoader();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+    address: string;
+  } | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (value && !selectedLocation) {
+      const resolved = resolveUbicacionToCoords(value);
+      if (resolved) {
+        setSelectedLocation({ lat: resolved.lat, lng: resolved.lng, address: resolved.ubicacion });
       }
-    );
-    const data = await response.json();
-    
-    if (data && data.address) {
-      const addr = data.address;
-      // Construir dirección legible
-      const parts: string[] = [];
-      
-      if (addr.neighbourhood || addr.suburb) {
-        parts.push(addr.neighbourhood || addr.suburb);
-      }
-      if (addr.city || addr.town || addr.village) {
-        parts.push(addr.city || addr.town || addr.village);
-      }
-      if (addr.state) {
-        parts.push(addr.state);
-      }
-      
-      return parts.length > 0 ? parts.join(', ') : data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     }
-    
-    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-  } catch (error) {
-    console.error('Error obteniendo dirección:', error);
-    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-  }
+  }, [value, selectedLocation]);
+
+  const mapCenter = selectedLocation ?? DEFAULT_MAP_CENTER;
+
+  const applyCoords = useCallback(
+    async (lat: number, lng: number, addressHint?: string) => {
+      const address = addressHint || (await resolveAddressFromCoords(lat, lng));
+      setSelectedLocation({ lat, lng, address });
+      onChange(address, lat, lng, radius);
+      setLocationError(null);
+    },
+    [onChange, radius],
+  );
+
+  const tryGetLocation = (highAccuracy: boolean) => {
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no soporta geolocalización');
+      return;
+    }
+    if (!window.isSecureContext) {
+      setLocationError('La geolocalización requiere HTTPS.');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          await applyCoords(latitude, longitude);
+        } finally {
+          setIsGettingLocation(false);
+        }
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        const messages: Record<number, string> = {
+          [error.PERMISSION_DENIED]:
+            'Permiso denegado. Probá recargar la página o elegí en el mapa.',
+          [error.POSITION_UNAVAILABLE]: 'Ubicación no disponible. Elegí en el mapa o buscá una ciudad.',
+          [error.TIMEOUT]: 'Tiempo agotado. Probá de nuevo.',
+        };
+        setLocationError(messages[error.code] ?? 'No se pudo obtener tu ubicación');
+      },
+      { enableHighAccuracy: highAccuracy, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
+  const handleLocationSelect = (location: (typeof COMMON_LOCATION_PRESETS)[number]) => {
+    setSelectedLocation({ lat: location.lat, lng: location.lng, address: location.name });
+    onChange(location.name, location.lat, location.lng, radius);
+    setSearchQuery('');
+    setLocationError(null);
+  };
+
+  const handleSearch = async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    setIsSearching(true);
+    setLocationError(null);
+
+    const preset = COMMON_LOCATION_PRESETS.find(
+      (loc) =>
+        loc.name.toLowerCase().includes(q.toLowerCase()) ||
+        q.toLowerCase().includes(loc.name.toLowerCase().split(' - ')[0]),
+    );
+    if (preset) {
+      handleLocationSelect(preset);
+      setIsSearching(false);
+      return;
+    }
+
+    const geocoded = await geoService.geocodeAddress(q);
+    if (geocoded) {
+      await applyCoords(geocoded.lat, geocoded.lng, geocoded.address);
+      setIsSearching(false);
+      return;
+    }
+
+    setLocationError('No encontramos esa ubicación. Probá buscar en el mapa o elegí una ciudad de la lista.');
+    setIsSearching(false);
+  };
+
+  const handleRadiusChange = (newRadius: number[]) => {
+    const radiusValue = newRadius[0];
+    onRadiusChange?.(radiusValue);
+    if (selectedLocation) {
+      onChange(selectedLocation.address, selectedLocation.lat, selectedLocation.lng, radiusValue);
+    }
+  };
+
+  const mapsReady = !hasGoogleMaps || isLoaded;
+
+  return (
+    <div className="space-y-4">
+      <Button
+        type="button"
+        onClick={() => tryGetLocation(true)}
+        disabled={isGettingLocation}
+        variant="outline"
+        className="w-full"
+      >
+        <Navigation className={`w-4 h-4 mr-2 ${isGettingLocation ? 'animate-spin' : ''}`} />
+        {isGettingLocation ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual (GPS)'}
+      </Button>
+
+      {locationError && (
+        <Alert variant="destructive">
+          <AlertDescription>{locationError}</AlertDescription>
+        </Alert>
+      )}
+
+      {loadError && hasGoogleMaps && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Google Maps no cargó. Verificá VITE_GOOGLE_MAPS_API_KEY o usá la lista de ciudades.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10 pointer-events-none" />
+          {hasGoogleMaps && isLoaded ? (
+            <PlacesAutocompleteInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onPlaceSelect={({ lat, lng, address }) => {
+                void applyCoords(lat, lng, address);
+                setSearchQuery(address);
+              }}
+              placeholder="Buscar con Google Places..."
+              className="pl-10"
+            />
+          ) : (
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
+              placeholder="Buscar ciudad, barrio..."
+              className="pl-10"
+            />
+          )}
+        </div>
+        <Button type="button" onClick={() => void handleSearch()} variant="outline" disabled={isSearching}>
+          {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Radio de búsqueda: {radius} km</Label>
+        <Slider value={[radius]} onValueChange={handleRadiusChange} min={1} max={100} step={1} />
+      </div>
+
+      {mapsReady ? (
+        <UnifiedMapView
+          center={mapCenter}
+          radiusKm={radius}
+          height={280}
+          draggableCenter
+          onCenterChange={(lat, lng) => void applyCoords(lat, lng)}
+        />
+      ) : (
+        <div className="h-[280px] rounded-lg border border-border bg-muted/30 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {selectedLocation && (
+        <p className="text-sm text-muted-foreground">
+          <MapPin className="w-4 h-4 inline mr-1" />
+          {selectedLocation.address}
+          <span className="text-xs ml-2">
+            ({selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)})
+          </span>
+        </p>
+      )}
+
+      <div>
+        <Label className="mb-2 block">Ubicaciones comunes</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {COMMON_LOCATION_PRESETS.map((location) => (
+            <Button
+              key={location.name}
+              type="button"
+              variant={selectedLocation?.address === location.name ? 'default' : 'outline'}
+              onClick={() => handleLocationSelect(location)}
+              className="justify-start text-left h-auto py-2"
+            >
+              <MapPin className="w-4 h-4 mr-2 shrink-0" />
+              <span className="truncate">{location.name}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+          Cancelar
+        </Button>
+        <Button
+          type="button"
+          onClick={onClose}
+          className="flex-1"
+          disabled={!selectedLocation && !value}
+        >
+          Confirmar
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export const LocationPicker = ({
@@ -61,294 +286,54 @@ export const LocationPicker = ({
   onChange,
   radius = 20,
   onRadiusChange,
-  label = "Ubicación",
+  label = 'Ubicación',
   required = false,
 }: LocationPickerProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
-
-  // Ubicaciones comunes en Argentina
-  const commonLocations = [
-    { name: "CABA - Centro", lat: -34.6037, lng: -58.3816 },
-    { name: "CABA - Palermo", lat: -34.5885, lng: -58.4204 },
-    { name: "CABA - Belgrano", lat: -34.5631, lng: -58.4584 },
-    { name: "CABA - Caballito", lat: -34.6208, lng: -58.4414 },
-    { name: "CABA - San Telmo", lat: -34.6208, lng: -58.3731 },
-    { name: "La Plata", lat: -34.9215, lng: -57.9545 },
-    { name: "Mar del Plata", lat: -38.0055, lng: -57.5426 },
-    { name: "Córdoba", lat: -31.4201, lng: -64.1888 },
-    { name: "Rosario", lat: -32.9442, lng: -60.6505 },
-  ];
-
-  useEffect(() => {
-    if (value && !selectedLocation) {
-      // Intentar encontrar la ubicación en las comunes
-      const found = commonLocations.find(loc => loc.name === value);
-      if (found) {
-        setSelectedLocation({ ...found, address: found.name });
-      }
-    }
-  }, [value]);
-
-  // Función para obtener ubicación automática
-  const tryGetLocation = (highAccuracy: boolean) => {
-    if (!navigator.geolocation) {
-      setLocationError('Tu navegador no soporta geolocalización');
-      return;
-    }
-    if (!window.isSecureContext) {
-      setLocationError('La geolocalización requiere HTTPS. Asegurate de estar en una conexión segura.');
-      return;
-    }
-
-    setIsGettingLocation(true);
-    setLocationError(null);
-
-    const onSuccess = async (position: GeolocationPosition) => {
-      const { latitude, longitude } = position.coords;
-      try {
-        const address = await getAddressFromCoordinates(latitude, longitude);
-        setSelectedLocation({ lat: latitude, lng: longitude, address });
-        onChange(address, latitude, longitude, radius);
-        setLocationError(null);
-      } catch (error) {
-        console.error('Error obteniendo dirección:', error);
-        const fallbackAddress = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        setSelectedLocation({ lat: latitude, lng: longitude, address: fallbackAddress });
-        onChange(fallbackAddress, latitude, longitude, radius);
-      } finally {
-        setIsGettingLocation(false);
-      }
-    };
-
-    const onError = (error: GeolocationPositionError) => {
-      setIsGettingLocation(false);
-      let errorMessage = 'No se pudo obtener tu ubicación';
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
-          errorMessage = 'Permiso denegado. Si ya lo permitiste en la configuración, probá recargar la página y volver a intentar. También podés elegir una ubicación de la lista o buscar manualmente.';
-          break;
-        case error.POSITION_UNAVAILABLE:
-          errorMessage = 'Ubicación no disponible (GPS/WiFi desactivado o sin señal). Probá elegir una ubicación de la lista.';
-          break;
-        case error.TIMEOUT:
-          errorMessage = 'Tiempo agotado. Probá de nuevo o elegí una ubicación de la lista.';
-          break;
-      }
-      setLocationError(errorMessage);
-    };
-
-    const options: PositionOptions = {
-      enableHighAccuracy: highAccuracy,
-      timeout: 15000,
-      maximumAge: 60000, // Usar posición en caché hasta 1 min (más tolerante)
-    };
-
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
-  };
-
-  const handleGetCurrentLocation = () => tryGetLocation(false);
-
-  const handleLocationSelect = (location: typeof commonLocations[0]) => {
-    setSelectedLocation({ ...location, address: location.name });
-    onChange(location.name, location.lat, location.lng, radius);
-    setSearchQuery("");
-  };
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      // Buscar: nombre contiene búsqueda O búsqueda contiene nombre (ej: "córdoba" matchea "Córdoba")
-      const found = commonLocations.find(
-        loc => loc.name.toLowerCase().includes(query) || query.includes(loc.name.toLowerCase().split(' - ')[0])
-      );
-      if (found) {
-        handleLocationSelect(found);
-      } else {
-        // Si no se encuentra, usar el texto pero sin coordenadas (no aparecerá en filtro por distancia)
-        onChange(searchQuery);
-        setSelectedLocation(null);
-      }
-    }
-  };
-
-  const handleRadiusChange = (newRadius: number[]) => {
-    const radiusValue = newRadius[0];
-    if (onRadiusChange) {
-      onRadiusChange(radiusValue);
-    }
-    if (selectedLocation) {
-      onChange(selectedLocation.address, selectedLocation.lat, selectedLocation.lng, radiusValue);
-    }
-  };
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="location">{label} {required && "*"}</Label>
-      
+      <Label htmlFor="location">{label} {required && '*'}</Label>
+
       <div className="flex gap-2">
         <div className="relative flex-1">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
             id="location"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Buscar ubicación..."
+            readOnly
+            placeholder="Seleccioná ubicación en el mapa..."
             required={required}
             className="pl-10 bg-surface border-border focus:border-gold"
-            readOnly
           />
         </div>
-        
-        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setLocationError(null); }}>
+
+        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); }}>
           <DialogTrigger asChild>
-            <Button type="button" variant="outline" size="icon">
+            <Button type="button" variant="outline" size="icon" aria-label="Abrir mapa">
               <MapPin className="w-4 h-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Seleccionar ubicación</DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Para que tu publicación aparezca en búsquedas por distancia, seleccioná una ubicación de la lista o usá tu ubicación actual.
+                Tocá el mapa, arrastrá el pin o buscá una dirección. Necesitamos coordenadas para calcular distancias.
               </p>
             </DialogHeader>
-            
-            <div className="space-y-4">
-              {/* Botón de ubicación automática */}
-              <Button
-                type="button"
-                onClick={handleGetCurrentLocation}
-                disabled={isGettingLocation}
-                variant="outline"
-                className="w-full"
-              >
-                <Navigation className={`w-4 h-4 mr-2 ${isGettingLocation ? 'animate-spin' : ''}`} />
-                {isGettingLocation ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual'}
-              </Button>
-
-              {locationError && (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    <span className="block mb-2">{locationError}</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setLocationError(null); handleGetCurrentLocation(); }}
-                      disabled={isGettingLocation}
-                    >
-                      Reintentar
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Búsqueda */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                    placeholder="Buscar ciudad, barrio..."
-                    className="pl-10"
-                  />
-                </div>
-                <Button type="button" onClick={handleSearch} variant="outline">
-                  Buscar
-                </Button>
-              </div>
-
-              {/* Radio de búsqueda */}
-              <div className="space-y-2">
-                <Label>Radio de búsqueda: {radius} km</Label>
-                <Slider
-                  value={[radius]}
-                  onValueChange={handleRadiusChange}
-                  min={1}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1 km</span>
-                  <span>50 km</span>
-                  <span>100 km</span>
-                </div>
-              </div>
-
-              {/* Mapa placeholder */}
-              <Card className="h-64 bg-muted/50 flex items-center justify-center">
-                <div className="text-center space-y-2">
-                  <MapPin className="w-12 h-12 mx-auto text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Mapa interactivo (se implementará con Google Maps)
-                  </p>
-                  {selectedLocation && (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedLocation.address}
-                    </p>
-                  )}
-                </div>
-              </Card>
-
-              {/* Ubicaciones comunes */}
-              <div>
-                <Label className="mb-2 block">Ubicaciones comunes</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {commonLocations.map((location) => (
-                    <Button
-                      key={location.name}
-                      type="button"
-                      variant={selectedLocation?.name === location.name ? "default" : "outline"}
-                      onClick={() => handleLocationSelect(location)}
-                      className="justify-start"
-                    >
-                      <MapPin className="w-4 h-4 mr-2" />
-                      {location.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Botones */}
-              <div className="flex gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (selectedLocation || value) {
-                      setIsOpen(false);
-                    }
-                  }}
-                  className="flex-1"
-                  disabled={!selectedLocation && !value}
-                >
-                  Confirmar
-                </Button>
-              </div>
-            </div>
+            <LocationPickerDialogBody
+              value={value}
+              onChange={onChange}
+              radius={radius}
+              onRadiusChange={onRadiusChange}
+              onClose={() => setIsOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
 
       {radius > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Radio de búsqueda: {radius} km
-        </p>
+        <p className="text-xs text-muted-foreground">Radio de búsqueda: {radius} km</p>
       )}
     </div>
   );

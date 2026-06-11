@@ -65,7 +65,7 @@ const AdminLogin = () => {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="admin@intercambius.com"
+                  placeholder="admin@intercambius.com.ar"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

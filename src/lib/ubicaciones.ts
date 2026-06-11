@@ -1,3 +1,16 @@
+/** Presets para selector rápido (CABA, GBA, ciudades). */
+export const COMMON_LOCATION_PRESETS = [
+  { name: 'CABA - Centro', lat: -34.6037, lng: -58.3816 },
+  { name: 'CABA - Palermo', lat: -34.5885, lng: -58.4204 },
+  { name: 'CABA - Belgrano', lat: -34.5631, lng: -58.4584 },
+  { name: 'CABA - Caballito', lat: -34.6208, lng: -58.4414 },
+  { name: 'CABA - San Telmo', lat: -34.6208, lng: -58.3731 },
+  { name: 'La Plata', lat: -34.9215, lng: -57.9545 },
+  { name: 'Mar del Plata', lat: -38.0055, lng: -57.5426 },
+  { name: 'Córdoba', lat: -31.4201, lng: -64.1888 },
+  { name: 'Rosario', lat: -32.9442, lng: -60.6505 },
+] as const;
+
 export const UBICACIONES_COORDENADAS: Record<string, { lat: number; lng: number }> = {
   "CABA": { lat: -34.6037, lng: -58.3816 },
   "CABA - Centro": { lat: -34.6037, lng: -58.3816 },

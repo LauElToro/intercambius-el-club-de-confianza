@@ -20,7 +20,7 @@ Marketplace de intercambios y compras dentro de un club de confianza. Sistema de
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Netlify)                          │
+│                         FRONTEND (Vercel)                           │
 │  React + Vite + TypeScript + Tailwind + shadcn/ui                   │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -39,7 +39,7 @@ Marketplace de intercambios y compras dentro de un club de confianza. Sistema de
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Frontend**: SPA en Netlify, consume API del backend.
+- **Frontend**: SPA en Vercel, consume API del backend.
 - **Backend**: API REST en Vercel (serverless), Prisma + PostgreSQL.
 - **Storage**: Vercel Blob para imágenes.
 
@@ -219,22 +219,25 @@ npm run db:check-coords  # Backfill coordenadas en MarketItems
 
 ## Infraestructura
 
-### Frontend: Netlify
+### Frontend: Vercel
 
-- **Build**: `npm run build`
-- **Publish**: `dist/`
-- **SPA**: redirect `/*` → `/index.html`
-- **Headers**: cache para assets, seguridad básica.
+- **Proyecto:** raíz del repo (no `backend/`)
+- **Build:** `npm run build` → `dist/`
+- **Config:** `vercel.json` (SPA rewrites, headers, cache)
+- **Guía paso a paso:** [`docs/DEPLOY-FRONT-VERCEL.md`](docs/DEPLOY-FRONT-VERCEL.md)
 
-Configuración en `netlify.toml`:
+Variables en el proyecto front (Vercel → Settings → Environment Variables):
 
-```toml
-[build]
-  command = "npm run build"
-  publish = "dist"
+| Variable | Ejemplo |
+|----------|---------|
+| `VITE_API_URL` | `https://intercambios-backend.vercel.app` |
+| `VITE_GOOGLE_MAPS_API_KEY` | (Google Cloud) |
 
-[build.environment]
-```
+Dominio: `intercambius.com.ar` → proyecto **front**, no el backend.
+
+### Frontend legacy: Netlify
+
+`netlify.toml` se mantiene por referencia; el deploy oficial es Vercel.
 
 ### Backend: Vercel
 
@@ -335,12 +338,15 @@ npm run dev
 
 ## Deploy
 
-### Frontend (Netlify)
+### Frontend (Vercel)
 
-1. Conectar el repo a Netlify.
-2. **Build command**: `npm run build`
-3. **Publish directory**: `dist`
-4. **Environment variables**:
+Guía completa: [`docs/DEPLOY-FRONT-VERCEL.md`](docs/DEPLOY-FRONT-VERCEL.md)
+
+1. [vercel.com/new](https://vercel.com/new) → importar el repo (proyecto **nuevo**, separado del backend).
+2. **Root Directory:** vacío (raíz). **No** `backend/`.
+3. Build y output vienen de `vercel.json` (`npm run build` → `dist`).
+4. **Environment variables:** `VITE_API_URL`, `VITE_GOOGLE_MAPS_API_KEY`.
+5. **Domains:** `intercambius.com.ar` y `www` en este proyecto; quitar el dominio del proyecto backend si está duplicado.
 
 ### Backend (Vercel)
 
@@ -360,6 +366,7 @@ Si hay errores P1001 o de conexión a la base, revisar `backend/DEPLOY.md`.
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
 | `VITE_API_URL` | URL base del backend | `https://intercambios-backend.vercel.app` |
+| `VITE_GOOGLE_MAPS_API_KEY` | API key de Google Maps (JS + Places) | (Google Cloud Console) |
 
 ### Backend
 
@@ -373,11 +380,16 @@ Si hay errores P1001 o de conexión a la base, revisar `backend/DEPLOY.md`.
 | `NODE_ENV` | development / production | No |
 | `SKIP_DB_MIGRATE` | Saltar migrate deploy en build | No |
 
-### Google Maps (opcional)
+### Google Maps
 
-Para usar Google Maps en lugar de Leaflet:
+| Variable | Descripción | Requerido |
+|----------|-------------|-----------|
+| `VITE_GOOGLE_MAPS_API_KEY` | Frontend: Maps JS, Places Autocomplete | Recomendado |
+| `GOOGLE_MAPS_API_KEY` | Backend: Geocoding API (`/api/geo/*`) | Recomendado |
 
-- Frontend: `VITE_GOOGLE_MAPS_API_KEY`
+Sin API key el front usa Leaflet/OSM como fallback; el geocoding del backend responde 503.
+
+APIs a habilitar en Google Cloud: **Maps JavaScript API**, **Places API**, **Geocoding API**.
 
 ---
 

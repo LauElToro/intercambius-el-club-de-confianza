@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
-import { CREDITO_OFERTA_INGRESO, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
+import { CREDITO_OFERTA_INGRESO, COMISION_IOX_PORCENTAJE, INTERCAMBIUS_EMAIL } from "@/lib/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const STORAGE_KEY_PREFIX = "intercambius_credito_aceptado_";
@@ -274,8 +274,8 @@ export const OfertaCreditoTerminos = ({
               </ol>
               <p>
                 Si no tenés Instagram podés usar alguna otra red social y si no usás ninguna no pasa nada: <strong className="text-foreground">avisános</strong> así te damos este beneficio igual. Si no, no te podemos considerar para este beneficio. También podés conversar este beneficio refiriendo a dos personas que realmente usen la página: enviá un mail a{" "}
-                <a href="mailto:beneficios@intercambius.com.ar" className="text-gold font-medium hover:underline break-all">
-                  beneficios@intercambius.com.ar
+                <a href={`mailto:${INTERCAMBIUS_EMAIL}`} className="text-gold font-medium hover:underline break-all">
+                  {INTERCAMBIUS_EMAIL}
                 </a>{" "}
                 y te contamos cómo hacerlo, es muy fácil.
               </p>

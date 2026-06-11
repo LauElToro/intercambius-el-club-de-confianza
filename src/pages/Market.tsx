@@ -27,44 +27,15 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapView } from "@/components/map/MapView";
+import { UnifiedMapView } from "@/components/map/UnifiedMapView";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { busquedasService } from "@/services/busquedas.service";
-
-// Coordenadas de ubicaciones comunes (fallback cuando geolocalización falla)
-const UBICACIONES_COORDENADAS: Record<string, { lat: number; lng: number }> = {
-  "CABA": { lat: -34.6037, lng: -58.3816 },
-  "CABA - Centro": { lat: -34.6037, lng: -58.3816 },
-  "CABA - Palermo": { lat: -34.5885, lng: -58.4204 },
-  "CABA - Belgrano": { lat: -34.5631, lng: -58.4584 },
-  "CABA - Caballito": { lat: -34.6208, lng: -58.4414 },
-  "CABA - San Telmo": { lat: -34.6208, lng: -58.3731 },
-  "Caballito": { lat: -34.6208, lng: -58.4414 },
-  "Palermo": { lat: -34.5885, lng: -58.4204 },
-  "Belgrano": { lat: -34.5631, lng: -58.4584 },
-  "La Plata": { lat: -34.9215, lng: -57.9545 },
-  "Mar del Plata": { lat: -38.0055, lng: -57.5426 },
-  "Córdoba": { lat: -31.4201, lng: -64.1888 },
-  "Rosario": { lat: -32.9442, lng: -60.6505 },
-};
-
-// Alias para matching fuzzy (ej: "caballito bsas" -> Caballito, "mardelpata" -> Mar del Plata)
-const UBICACION_ALIASES: Record<string, string> = {
-  "caballito": "CABA - Caballito",
-  "caballito bsas": "CABA - Caballito",
-  "caballito buenos aires": "CABA - Caballito",
-  "bsas": "CABA",
-  "buenos aires": "CABA",
-  "capital": "CABA",
-  "capital federal": "CABA",
-  "mardelpata": "Mar del Plata",
-  "mardelplata": "Mar del Plata",
-  "mar del plata": "Mar del Plata",
-};
+import { resolveUbicacionToCoords, UBICACIONES_COORDENADAS } from "@/lib/ubicaciones";
+import { DEFAULT_MAP_CENTER } from "@/lib/geo";
 
 // Tipos de rubros y sus filtros específicos
 const RUBROS = {
@@ -207,27 +178,9 @@ const Market = () => {
   useEffect(() => {
     const ubicacion = usuario?.ubicacion?.trim();
     if (!ubicacion || appliedProfileLocation.current) return;
-    const exact = UBICACIONES_COORDENADAS[ubicacion];
-    if (exact) {
-      setUserLocation(exact);
-      setLocationError(null);
-      appliedProfileLocation.current = true;
-      return;
-    }
-    const ubNorm = ubicacion.toLowerCase().trim();
-    const aliasKey = UBICACION_ALIASES[ubNorm] ?? Object.keys(UBICACION_ALIASES).find((a) => ubNorm.includes(a));
-    const resolvedKey = aliasKey ? (UBICACION_ALIASES[aliasKey] ?? aliasKey) : null;
-    if (resolvedKey && UBICACIONES_COORDENADAS[resolvedKey]) {
-      setUserLocation(UBICACIONES_COORDENADAS[resolvedKey]);
-      setLocationError(null);
-      appliedProfileLocation.current = true;
-      return;
-    }
-    const match = Object.keys(UBICACIONES_COORDENADAS).find(
-      (k) => ubNorm.includes(k.toLowerCase()) || k.toLowerCase().includes(ubNorm.split(/\s+/)[0])
-    );
-    if (match) {
-      setUserLocation(UBICACIONES_COORDENADAS[match]);
+    const resolved = resolveUbicacionToCoords(ubicacion);
+    if (resolved) {
+      setUserLocation({ lat: resolved.lat, lng: resolved.lng });
       setLocationError(null);
       appliedProfileLocation.current = true;
     }
@@ -256,25 +209,9 @@ const Market = () => {
   const usarUbicacionPerfil = () => {
     const ubicacion = usuario?.ubicacion?.trim();
     if (!ubicacion) return;
-    const exact = UBICACIONES_COORDENADAS[ubicacion];
-    if (exact) {
-      setUserLocation(exact);
-      setLocationError(null);
-      return;
-    }
-    const ubNorm = ubicacion.toLowerCase().trim();
-    const aliasKey = UBICACION_ALIASES[ubNorm] ?? Object.keys(UBICACION_ALIASES).find((a) => ubNorm.includes(a));
-    const resolvedKey = aliasKey ? (UBICACION_ALIASES[aliasKey] ?? aliasKey) : null;
-    if (resolvedKey && UBICACIONES_COORDENADAS[resolvedKey]) {
-      setUserLocation(UBICACIONES_COORDENADAS[resolvedKey]);
-      setLocationError(null);
-      return;
-    }
-    const match = Object.keys(UBICACIONES_COORDENADAS).find(
-      (k) => ubNorm.includes(k.toLowerCase()) || k.toLowerCase().includes(ubNorm.split(/\s+/)[0])
-    );
-    if (match) {
-      setUserLocation(UBICACIONES_COORDENADAS[match]);
+    const resolved = resolveUbicacionToCoords(ubicacion);
+    if (resolved) {
+      setUserLocation({ lat: resolved.lat, lng: resolved.lng });
       setLocationError(null);
     }
   };
@@ -501,10 +438,18 @@ const Market = () => {
                                 value={busquedaUbicacion}
                                 onChange={(e) => setBusquedaUbicacion(e.target.value)}
                               />
-                              <MapView
-                                center={userLocation ?? { lat: -34.6037, lng: -58.3816 }}
+                              <UnifiedMapView
+                                center={userLocation ?? DEFAULT_MAP_CENTER}
                                 radiusKm={distanciaMax[0] >= 100 ? 25 : distanciaMax[0]}
                                 height={200}
+                                markers={items
+                                  .filter((i) => i.lat != null && i.lng != null)
+                                  .slice(0, 30)
+                                  .map((i) => ({
+                                    lat: i.lat!,
+                                    lng: i.lng!,
+                                    title: i.titulo,
+                                  }))}
                               />
                               <ScrollArea className="h-36">
                                 <div className="space-y-1">

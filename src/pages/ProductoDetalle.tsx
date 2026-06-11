@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -35,6 +35,8 @@ import { ApiError } from "@/lib/api";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
+import { UnifiedMapView } from "@/components/map/UnifiedMapView";
+import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +47,8 @@ const ProductoDetalle = () => {
   const [selectedMedia, setSelectedMedia] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const geoRequested = useRef(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -55,9 +59,31 @@ const ProductoDetalle = () => {
   const usuario = currentUser || user;
   const { formatIX } = useCurrencyVariant();
 
+  useEffect(() => {
+    if (geoRequested.current) return;
+    geoRequested.current = true;
+
+    const fromProfile = resolveUbicacionToCoords(usuario?.ubicacion);
+    if (fromProfile) {
+      setUserCoords({ lat: fromProfile.lat, lng: fromProfile.lng });
+    }
+
+    if (navigator.geolocation && window.isSecureContext) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+      );
+    }
+  }, [usuario?.ubicacion]);
+
   const { data: item, isLoading, error } = useQuery({
-    queryKey: ['marketItem', id],
-    queryFn: () => marketService.getItemById(Number(id!)),
+    queryKey: ['marketItem', id, userCoords?.lat, userCoords?.lng],
+    queryFn: () =>
+      marketService.getItemById(Number(id!), {
+        userLat: userCoords?.lat,
+        userLng: userCoords?.lng,
+      }),
     enabled: !!id,
   });
 
@@ -330,6 +356,14 @@ const ProductoDetalle = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {item.lat != null && item.lng != null && (
+                  <UnifiedMapView
+                    center={{ lat: item.lat, lng: item.lng }}
+                    radiusKm={0}
+                    height={220}
+                    markers={[{ lat: item.lat, lng: item.lng, title: item.titulo }]}
+                  />
+                )}
                 {/* Descripción */}
                 <div>
                   <h3 className="font-semibold mb-2">Descripción</h3>

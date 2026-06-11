@@ -3,6 +3,8 @@
 ## Contenido
 
 - **DOCUMENTACION-PROYECTO-INTERCAMBIUS.md** – Documentación técnica del proyecto (Mail, Admin, Métricas, Usuarios, Newsletter, Front, Excel).
+- **GMAIL-WORKSPACE-ENROUTAMIENTO.md** – Google Workspace: buzones, enrutamiento por OU, OAuth y variables en Vercel.
+- **DEPLOY-FRONT-VERCEL.md** – Deploy del frontend en Vercel (dominio + env).
 
 ## Generar PDF
 

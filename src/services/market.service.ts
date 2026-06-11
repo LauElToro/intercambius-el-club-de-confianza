@@ -144,9 +144,16 @@ export const marketService = {
     }
   },
 
-  async getItemById(id: number): Promise<MarketItem> {
+  async getItemById(
+    id: number,
+    opts?: { userLat?: number; userLng?: number },
+  ): Promise<MarketItem> {
     try {
-      return await api.get<MarketItem>(`/api/market/${id}`);
+      const params = new URLSearchParams();
+      if (opts?.userLat !== undefined) params.append('userLat', String(opts.userLat));
+      if (opts?.userLng !== undefined) params.append('userLng', String(opts.userLng));
+      const qs = params.toString();
+      return await api.get<MarketItem>(`/api/market/${id}${qs ? `?${qs}` : ''}`);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;

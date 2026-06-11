@@ -10,11 +10,11 @@ export const CREDIT_LIMIT_DEFAULT = 50_000;
 /** Crédito que se ofrece al ingresar al portal si acepta términos y condiciones. Queda como saldo negativo (-50k). */
 export const CREDITO_OFERTA_INGRESO = 50_000;
 
-/** Contacto general (diálogo Contactanos, copiar al portapapeles). */
-export const CONTACT_EMAIL = "Intercambius.info@gmail.com";
+/** Correo único de Intercambius (contacto, quejas, transaccional, formulario web). */
+export const INTERCAMBIUS_EMAIL = "noreply@intercambius.com.ar";
 
-/** Correo para quejas y sugerencias (enlace mailto en el pie de página). */
-export const COMPLAINTS_EMAIL = "INTERCAMBIUS@www.intercambius.com.ar";
+export const CONTACT_EMAIL = INTERCAMBIUS_EMAIL;
+export const COMPLAINTS_EMAIL = INTERCAMBIUS_EMAIL;
 
 /** Parte del pago en IOX cuando el comprador tiene saldo IOX disponible (referencia 5%). Si no hay IOX del comprador, puede ser 100% dinero tradicional. */
 export const COMISION_IOX_PORCENTAJE = 5;
