@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
-import logo from "@/assets/logo-intercambius.jpeg";
+import { LANDING_BANNER_DARK, LANDING_BANNER_LIGHT } from "@/lib/constants";
 import { ArrowRight } from "lucide-react";
 
 const Landing = () => {
@@ -14,31 +14,32 @@ const Landing = () => {
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
+          <div
+            className="animate-fade-in mx-auto mb-8 w-full max-w-md md:max-w-xl"
+            style={{ animationDelay: "0.1s" }}
+          >
             <img
-              src={logo}
+              src={LANDING_BANNER_DARK}
               alt="Intercambius"
-              className="w-32 h-32 mx-auto mb-8 rounded-full shadow-2xl animate-float"
+              className="hidden h-auto w-full object-contain dark:block"
+            />
+            <img
+              src={LANDING_BANNER_LIGHT}
+              alt="Intercambius"
+              className="block h-auto w-full object-contain dark:hidden"
             />
           </div>
 
-          <p
-            className="text-sm md:text-base text-muted-foreground mb-3 animate-fade-in"
-            style={{ animationDelay: "0.15s" }}
-          >
-            Intercambius
-          </p>
-
           <h1
             className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-fade-in"
-            style={{ animationDelay: "0.2s" }}
+            style={{ animationDelay: "0.15s" }}
           >
             Intercambiá lo que tenés por lo que necesitás
           </h1>
 
           <p
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in"
-            style={{ animationDelay: "0.3s" }}
+            style={{ animationDelay: "0.25s" }}
           >
             Empezá ahora mismo a intercambiar valor real, sin comisiones y sin depender
             siempre del dinero.
@@ -46,7 +47,7 @@ const Landing = () => {
 
           <div
             className="flex flex-col items-center gap-4 animate-fade-in"
-            style={{ animationDelay: "0.4s" }}
+            style={{ animationDelay: "0.35s" }}
           >
             <Link to="/registro">
               <Button variant="gold" size="xl" className="group">

@@ -10,6 +10,12 @@ export const CREDIT_LIMIT_DEFAULT = 50_000;
 /** Crédito que se ofrece al ingresar al portal si acepta términos y condiciones. Queda como saldo negativo (-50k). */
 export const CREDITO_OFERTA_INGRESO = 50_000;
 
+/** Banner horizontal del hero en la landing (Vercel Blob / brand). */
+export const LANDING_BANNER_DARK =
+  "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_1.png";
+export const LANDING_BANNER_LIGHT =
+  "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_transparent.png";
+
 /** Correo único de Intercambius (contacto, quejas, transaccional, formulario web). */
 export const INTERCAMBIUS_EMAIL = "noreply@intercambius.com.ar";
 
