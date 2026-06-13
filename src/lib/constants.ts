@@ -18,7 +18,7 @@ export const BRAND_LOGO_URL =
 export const LANDING_BANNER_DARK =
   "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_1.png?v=2";
 export const LANDING_BANNER_LIGHT =
-  "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_transparent.png?v=2";
+  "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_transparent.png?v=3";
 
 /** Correo único de Intercambius (contacto, quejas, transaccional, formulario web). */
 export const INTERCAMBIUS_EMAIL = "noreply@intercambius.com.ar";
