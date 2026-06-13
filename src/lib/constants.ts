@@ -14,11 +14,9 @@ export const CREDITO_OFERTA_INGRESO = 50_000;
 export const BRAND_LOGO_URL =
   "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/logo-intercambius.jpg";
 
-/** Banner horizontal del hero en la landing (Vercel Blob / brand, recortados sin márgenes). */
-export const LANDING_BANNER_DARK =
-  "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_1.png?v=2";
-export const LANDING_BANNER_LIGHT =
-  "https://iuw1gnctn1hxzcnx.public.blob.vercel-storage.com/brand/intercambius_banner_transparent.png?v=3";
+/** Banners del hero en la landing (public/, generados con scripts/prepare-landing-banners.ts). */
+export const LANDING_BANNER_DARK = "/intercambius_banner_1.png";
+export const LANDING_BANNER_LIGHT = "/intercambius_banner_transparent.png";
 
 /** Correo único de Intercambius (contacto, quejas, transaccional, formulario web). */
 export const INTERCAMBIUS_EMAIL = "noreply@intercambius.com.ar";
