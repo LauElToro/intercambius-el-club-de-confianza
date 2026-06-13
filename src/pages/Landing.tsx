@@ -392,7 +392,7 @@ const Landing = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={logo} alt="Intercambius" className="w-8 h-8 rounded-full" />
+              <img src={BRAND_LOGO_URL} alt="Intercambius" className="w-8 h-8 rounded-full object-cover" />
               <span className="text-sm text-muted-foreground">Intercambius © 2026</span>
             </div>
             <div className="text-sm text-muted-foreground text-center md:text-right space-y-1">
