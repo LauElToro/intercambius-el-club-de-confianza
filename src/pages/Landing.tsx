@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
-import { LANDING_BANNER_LIGHT, BRAND_LOGO_URL } from "@/lib/constants";
+import { LANDING_BANNER_DARK, LANDING_BANNER_LIGHT, BRAND_LOGO_URL } from "@/lib/constants";
 import { ArrowRight } from "lucide-react";
 
 const Landing = () => {
@@ -14,16 +14,16 @@ const Landing = () => {
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="animate-fade-in mb-8" style={{ animationDelay: "0.1s" }}>
+          <div className="animate-fade-in mb-6 w-full" style={{ animationDelay: "0.1s" }}>
             <img
-              src={BRAND_LOGO_URL}
+              src={LANDING_BANNER_DARK}
               alt="Intercambius"
-              className="mx-auto hidden h-auto w-full max-w-[220px] object-contain drop-shadow-2xl md:max-w-[260px] dark:block"
+              className="mx-auto hidden h-auto w-full max-w-2xl object-contain sm:max-w-3xl dark:block"
             />
             <img
               src={LANDING_BANNER_LIGHT}
               alt="Intercambius"
-              className="mx-auto block h-auto w-full max-w-md object-contain md:max-w-xl dark:hidden"
+              className="mx-auto block h-auto w-full max-w-2xl object-contain sm:max-w-3xl dark:hidden"
             />
           </div>
 
