@@ -16,8 +16,8 @@ import { Loader2 } from "lucide-react";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Texto según contexto (compra vs intercambio) */
-  contexto?: "compra" | "intercambio";
+  /** Texto según contexto (compra vs intercambio vs publicación) */
+  contexto?: "compra" | "intercambio" | "publicacion";
 };
 
 export function KycRequiredDialog({ open, onOpenChange, contexto = "compra" }: Props) {
@@ -27,7 +27,9 @@ export function KycRequiredDialog({ open, onOpenChange, contexto = "compra" }: P
   const accion =
     contexto === "intercambio"
       ? "Para proponer un intercambio tenés que verificar tu identidad con un proceso seguro (Didit)."
-      : "Para comprar con IOX en Intercambius tenés que verificar tu identidad con un proceso seguro (Didit).";
+      : contexto === "publicacion"
+        ? "Para publicar productos o servicios en el market tenés que verificar tu identidad con un proceso seguro (Didit)."
+        : "Para comprar con IOX en Intercambius tenés que verificar tu identidad con un proceso seguro (Didit).";
 
   const irAVerificar = async () => {
     setLoading(true);

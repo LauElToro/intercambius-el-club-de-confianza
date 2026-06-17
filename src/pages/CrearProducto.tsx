@@ -21,6 +21,7 @@ import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { isImageNsfw } from "@/lib/nsfwCheck";
 import { userService } from "@/services/user.service";
 import { MAX_BLOB_UPLOAD_BYTES } from "@/lib/constants";
+import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 
 const CrearProducto = () => {
   const navigate = useNavigate();
@@ -67,6 +68,7 @@ const CrearProducto = () => {
 
   const [nuevaCaracteristica, setNuevaCaracteristica] = useState("");
   const [isCheckingMedia, setIsCheckingMedia] = useState(false);
+  const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
   const hasInicializadoUbicacion = useRef(false);
 
 
@@ -85,6 +87,10 @@ const CrearProducto = () => {
     onError: (error: unknown) => {
       setIsSubmitting(false);
       if (error instanceof ApiError && error.sessionInvalidated) return;
+      if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {
+        setKycRequiredOpen(true);
+        return;
+      }
       const message = error instanceof Error ? error.message : "No se pudo crear el producto";
       toast({
         title: "Error",
@@ -176,6 +182,11 @@ const CrearProducto = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || createMutation.isPending) return;
+
+    if (!usuario?.kycVerificado) {
+      setKycRequiredOpen(true);
+      return;
+    }
 
     if (formData.medias.length === 0) {
       toast({
@@ -329,6 +340,19 @@ const CrearProducto = () => {
             <CardTitle className="text-2xl">Crear producto o servicio</CardTitle>
           </CardHeader>
           <CardContent>
+            {usuario && !usuario.kycVerificado && (
+              <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+                Para publicar en el market necesitás{" "}
+                <button
+                  type="button"
+                  className="text-gold font-medium hover:underline"
+                  onClick={() => setKycRequiredOpen(true)}
+                >
+                  verificar tu identidad
+                </button>
+                . Sin KYC no podés vender ni enviar códigos de intercambio.
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Información básica */}
               <div className="space-y-4">
@@ -651,6 +675,7 @@ const CrearProducto = () => {
           </CardContent>
         </Card>
       </div>
+      <KycRequiredDialog open={kycRequiredOpen} onOpenChange={setKycRequiredOpen} contexto="publicacion" />
     </Layout>
   );
 };
