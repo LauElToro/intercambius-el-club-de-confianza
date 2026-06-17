@@ -12,11 +12,15 @@ import { intercambiosService } from "@/services/intercambios.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import type { PropuestaPago } from "@/lib/chat-propuesta";
+import { propuestaPagoToResumenCorto } from "@/lib/chat-propuesta";
+import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 
 type StateFromChat = {
   creditos?: number;
   tipoPago?: "pesos" | "usd";
   monto?: number;
+  propuesta?: PropuestaPago;
   conversacionId?: number;
   requiereCodigo?: boolean;
 };
@@ -33,6 +37,8 @@ const RegistrarIntercambio = () => {
   const conversacionId = stateFromChat.conversacionId;
   const tipoPagoDesdeChat = stateFromChat.tipoPago;
   const montoDesdeChat = stateFromChat.monto;
+  const propuestaDesdeChat = stateFromChat.propuesta;
+  const { formatIX } = useCurrencyVariant();
 
   const [formData, setFormData] = useState({
     otraEmail: "",
@@ -243,7 +249,16 @@ const RegistrarIntercambio = () => {
                 </div>
               )}
 
-              {requiereCodigo && tipoPagoDesdeChat && montoDesdeChat != null && (
+              {requiereCodigo && propuestaDesdeChat && (
+                <p className="text-sm text-muted-foreground">
+                  Acuerdo en el chat: {propuestaPagoToResumenCorto(propuestaDesdeChat, formatIX)}.
+                  {propuestaDesdeChat.iox
+                    ? " Al confirmar se aplican los IOX acordados."
+                    : " Sin movimiento de IOX en la cuenta (pago por fuera)."}
+                </p>
+              )}
+
+              {requiereCodigo && !propuestaDesdeChat && tipoPagoDesdeChat && montoDesdeChat != null && (
                 <p className="text-sm text-muted-foreground">
                   Incluiste en el acuerdo un monto en{" "}
                   {tipoPagoDesdeChat === "pesos" ? "pesos" : "USD"}: {montoDesdeChat} (se registra al confirmar, sin

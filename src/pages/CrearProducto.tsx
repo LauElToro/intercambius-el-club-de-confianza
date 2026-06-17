@@ -398,27 +398,34 @@ const CrearProducto = () => {
                       required
                     />
                   </div>
-                  {formData.rubro && formData.rubro !== "servicios" && (
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="stock">Stock (unidades) *</Label>
-                      <Input
-                        id="stock"
-                        type="text"
-                        inputMode="numeric"
-                        min={1}
-                        value={formData.stock}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, "");
-                          setFormData((prev) => ({ ...prev, stock: digits || "" }));
-                        }}
-                        placeholder="Ej: 5"
-                        required
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Cuando llegue a 0, la publicación deja de mostrarse en el market (no aplica a servicios).
-                      </p>
-                    </div>
-                  )}
+                </div>
+
+                {formData.rubro !== "servicios" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="stock">Cantidad a vender (unidades) *</Label>
+                    <Input
+                      id="stock"
+                      type="text"
+                      inputMode="numeric"
+                      min={1}
+                      value={formData.rubro ? formData.stock : ""}
+                      disabled={!formData.rubro}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "");
+                        setFormData((prev) => ({ ...prev, stock: digits || "" }));
+                      }}
+                      placeholder={formData.rubro ? "Ej: 1" : "Seleccioná un rubro arriba"}
+                      required={!!formData.rubro}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {!formData.rubro
+                        ? "Elegí primero el rubro (productos, alimentos o experiencias) para indicar cuántas unidades tenés."
+                        : "Cuando llegue a 0, la publicación deja de mostrarse en el market (no aplica a servicios)."}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2 md:col-span-2">
                     <Label>Formas de intercambio que aceptás</Label>
                     <p className="text-xs text-muted-foreground mb-2">

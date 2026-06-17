@@ -19,7 +19,14 @@ import { ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
-import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, Banknote, Check, DollarSign, CheckCircle2, ExternalLink } from "lucide-react";
+import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, HandCoins, Check, CheckCircle2, ExternalLink } from "lucide-react";
+import {
+  buildPropuestaPagoMessage,
+  buildAceptacionTexto,
+  contenidoParaMostrar,
+  encontrarPropuestaPendienteDelOtro,
+  propuestaPagoToResumenCorto,
+} from "@/lib/chat-propuesta";
 
 const RUBROS_CHAT: Record<string, { label: string; icon: string }> = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -103,6 +110,8 @@ const Chat = () => {
   const { data: conversaciones, isLoading: loadingLista } = useQuery({
     queryKey: ['chat'],
     queryFn: () => chatService.getConversaciones(),
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
 
   const conversacionIdNum = Number(conversacionId);
@@ -121,6 +130,8 @@ const Chat = () => {
     queryKey: ['chat', conversacionId],
     queryFn: () => chatService.getMensajes(conversacionIdNum),
     enabled: !!conversacionId && conversacionIdOk,
+    refetchInterval: conversacionIdOk ? 4000 : false,
+    refetchIntervalInBackground: false,
     retry: (failureCount, err) => {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return false;
       return failureCount < 5;
@@ -182,9 +193,7 @@ const Chat = () => {
   const truncar = (s: string, n: number) => s.length > n ? s.slice(0, n) + '…' : s;
 
   const { formatIX } = useCurrencyVariant();
-  const [pagarIxOpen, setPagarIxOpen] = useState(false);
-  const [propuestaPesosOpen, setPropuestaPesosOpen] = useState(false);
-  const [propuestaUSDOpen, setPropuestaUSDOpen] = useState(false);
+  const [propuestaOpen, setPropuestaOpen] = useState(false);
   const [aprobarIntercambioOpen, setAprobarIntercambioOpen] = useState(false);
   const [codigoEmailInfo, setCodigoEmailInfo] = useState<{ para: string } | null>(null);
   const [montoIX, setMontoIX] = useState("");
@@ -229,102 +238,66 @@ const Chat = () => {
   const primerMensajeIntercambio = msgs.find((m) => esPropuestaIntercambio(m.contenido));
   const soyReceptor = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId !== user?.id;
 
-  const propuestaDelOtro = (() => {
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const m = msgs[i];
-      if (m.senderId !== user?.id) {
-        const matchIX = m.contenido.match(/propongo pagar (\d+)\s*(?:IX|IOX)/i);
-        if (matchIX) return { tipo: "ix" as const, monto: parseInt(matchIX[1], 10), mensaje: m };
-        const matchPesos = m.contenido.match(/propongo pagar (\d+)\s*pesos/i);
-        if (matchPesos) return { tipo: "pesos" as const, monto: parseInt(matchPesos[1], 10), mensaje: m };
-        const matchUSD = m.contenido.match(/propongo pagar (\d+)\s*USD/i);
-        if (matchUSD) return { tipo: "usd" as const, monto: parseInt(matchUSD[1], 10), mensaje: m };
-        break;
-      }
+  const propuestaDelOtro =
+    user?.id != null
+      ? encontrarPropuestaPendienteDelOtro(msgs, user.id)
+      : null;
+
+  const handleEnviarPropuesta = () => {
+    const iox = montoIX.trim() ? parseInt(montoIX, 10) : null;
+    const pesos = montoPesos.trim() ? parseInt(montoPesos, 10) : null;
+    const usd = montoUSD.trim() ? parseInt(montoUSD, 10) : null;
+    if (
+      (iox != null && (isNaN(iox) || iox <= 0)) ||
+      (pesos != null && (isNaN(pesos) || pesos <= 0)) ||
+      (usd != null && (isNaN(usd) || usd <= 0))
+    ) {
+      toast({ title: "Montos inválidos", description: "Completá al menos un monto mayor a 0.", variant: "destructive" });
+      return;
     }
-    return null;
-  })();
-
-  const handlePagarConIX = () => {
-    const n = parseInt(montoIX, 10);
-    if (isNaN(n) || n <= 0) return;
-    const texto = `Propongo pagar ${n} IOX de diferencia para cerrar el intercambio.`;
-    enviarMutation.mutate(texto, {
+    if (!iox && !pesos && !usd) {
+      toast({ title: "Propuesta vacía", description: "Completá al menos IOX, pesos o USD.", variant: "destructive" });
+      return;
+    }
+    const payload = buildPropuestaPagoMessage(iox, pesos, usd);
+    enviarMutation.mutate(payload, {
       onSuccess: () => {
-        setPagarIxOpen(false);
+        setPropuestaOpen(false);
         setMontoIX("");
-      },
-    });
-  };
-
-  const handleProponerPesos = () => {
-    const n = parseInt(montoPesos, 10);
-    if (isNaN(n) || n <= 0) return;
-    const texto = `Propongo pagar ${n} pesos (por fuera de la plataforma) para cerrar el intercambio. Ambos debemos aprobar el acuerdo.`;
-    enviarMutation.mutate(texto, {
-      onSuccess: () => {
-        setPropuestaPesosOpen(false);
         setMontoPesos("");
-      },
-    });
-  };
-
-  const handleProponerUSD = () => {
-    const n = parseInt(montoUSD, 10);
-    if (isNaN(n) || n <= 0) return;
-    const texto = `Propongo pagar ${n} USD (por fuera de la plataforma) para cerrar el intercambio. Ambos debemos aprobar el acuerdo.`;
-    enviarMutation.mutate(texto, {
-      onSuccess: () => {
-        setPropuestaUSDOpen(false);
         setMontoUSD("");
       },
     });
   };
 
-  const handleAceptarMonto = () => {
+  const handleAceptarMonto = async () => {
     if (!propuestaDelOtro || !conversacionId) return;
-    if (propuestaDelOtro.tipo === "ix") {
-      const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} IOX. ¡Cerramos el intercambio!`;
-      enviarMutation.mutate(texto, {
-        onSuccess: () => {
-          navigate("/registrar-intercambio", {
-            state: {
-              creditos: propuestaDelOtro.monto,
-              conversacionId: Number(conversacionId),
-              requiereCodigo: true,
-            },
+    const { propuesta } = propuestaDelOtro;
+    const texto = buildAceptacionTexto(propuesta);
+    enviarMutation.mutate(texto, {
+      onSuccess: async () => {
+        try {
+          await chatService.enviarCodigoIntercambio(Number(conversacionId));
+          toast({
+            title: "Código enviado",
+            description: "Se envió el código de verificación por email a quien hizo la propuesta.",
           });
-        },
-      });
-    } else if (propuestaDelOtro.tipo === "pesos") {
-      const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} pesos (por fuera). ¡Ambos aprobamos el acuerdo!`;
-      enviarMutation.mutate(texto, {
-        onSuccess: () => {
-          navigate("/registrar-intercambio", {
-            state: {
-              tipoPago: "pesos" as const,
-              monto: propuestaDelOtro.monto,
-              conversacionId: Number(conversacionId),
-              requiereCodigo: true,
-            },
-          });
-        },
-      });
-    } else if (propuestaDelOtro.tipo === "usd") {
-      const texto = `Acepto la propuesta de ${propuestaDelOtro.monto} USD (por fuera). ¡Ambos aprobamos el acuerdo!`;
-      enviarMutation.mutate(texto, {
-        onSuccess: () => {
-          navigate("/registrar-intercambio", {
-            state: {
-              tipoPago: "usd" as const,
-              monto: propuestaDelOtro.monto,
-              conversacionId: Number(conversacionId),
-              requiereCodigo: true,
-            },
-          });
-        },
-      });
-    }
+        } catch (e) {
+          const msg = e instanceof ApiError ? e.message : "No se pudo enviar el código por email";
+          toast({ title: "Aviso", description: `${msg}. Podés reintentar desde el chat.`, variant: "destructive" });
+        }
+        navigate("/registrar-intercambio", {
+          state: {
+            creditos: propuesta.iox,
+            tipoPago: propuesta.pesos ? ("pesos" as const) : propuesta.usd ? ("usd" as const) : undefined,
+            monto: propuesta.pesos ?? propuesta.usd,
+            propuesta,
+            conversacionId: Number(conversacionId),
+            requiereCodigo: true,
+          },
+        });
+      },
+    });
   };
 
   return (
@@ -506,7 +479,22 @@ const Chat = () => {
                                       </div>
                                     );
                                   }
-                                  const textoLegacy = m.contenido.replace(/\*\*/g, '');
+                                  const textoPropuesta = contenidoParaMostrar(m.contenido);
+                                  if (textoPropuesta) {
+                                    return (
+                                      <div
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                                          m.senderId === user?.id ? 'bg-gold text-primary-foreground' : 'bg-muted'
+                                        }`}
+                                      >
+                                        <p className="text-sm break-words whitespace-pre-wrap">{textoPropuesta}</p>
+                                        <p className={`text-xs mt-1 ${m.senderId === user?.id ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                                          {formatearHora(m.createdAt)}
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  const textoLegacy = m.contenido.replace(/\*\*/g, '').split('\n')[0];
                                   return (
                                     <div
                                       className={`max-w-[80%] rounded-2xl px-4 py-2 ${
@@ -530,11 +518,7 @@ const Chat = () => {
                     {propuestaDelOtro && (
                       <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-sm text-muted-foreground">
-                          {propuestaDelOtro.tipo === "ix"
-                            ? `Te propusieron pagar ${formatIX(propuestaDelOtro.monto)} de diferencia`
-                            : propuestaDelOtro.tipo === "pesos"
-                              ? `Te propusieron pagar ${propuestaDelOtro.monto} pesos (por fuera). Ambos deben aprobar.`
-                              : `Te propusieron pagar ${propuestaDelOtro.monto} USD (por fuera). Ambos deben aprobar.`}
+                          Te propusieron: {propuestaPagoToResumenCorto(propuestaDelOtro.propuesta, formatIX)}. Ambos deben aprobar.
                         </span>
                         <Button
                           variant="gold"
@@ -582,27 +566,12 @@ const Chat = () => {
                         />
                         <Button
                           variant="outline"
-                          size="icon"
-                          onClick={() => setPagarIxOpen(true)}
-                          title="Proponer pago con IOX"
+                          size="sm"
+                          onClick={() => setPropuestaOpen(true)}
+                          title="Proponer pago (IOX, pesos o USD)"
                         >
-                          <Banknote className="w-5 h-5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setPropuestaPesosOpen(true)}
-                          title="Proponer pago en pesos (por fuera)"
-                        >
-                          <DollarSign className="w-5 h-5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setPropuestaUSDOpen(true)}
-                          title="Proponer pago en USD (por fuera)"
-                        >
-                          <span className="text-xs font-bold">U$D</span>
+                          <HandCoins className="w-4 h-4 mr-1" />
+                          Propuesta
                         </Button>
                         <Button
                           variant="gold"
@@ -617,92 +586,62 @@ const Chat = () => {
                           )}
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">Podés proponer IOX, pesos o USD (por fuera). Ambos deben aprobar el acuerdo.</p>
+                      <p className="text-xs text-muted-foreground">Usá «Propuesta» para ofrecer IOX, pesos y/o USD en un solo mensaje. Ambos deben aprobar el acuerdo.</p>
                     </div>
-                    <Dialog open={pagarIxOpen} onOpenChange={setPagarIxOpen}>
+                    <Dialog open={propuestaOpen} onOpenChange={setPropuestaOpen}>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Pagar con IOX</DialogTitle>
+                          <DialogTitle>Propuesta de pago</DialogTitle>
                         </DialogHeader>
                         <p className="text-sm text-muted-foreground">
-                          Proponé un monto en IOX para cubrir la diferencia del intercambio.
+                          Completá uno o más montos. Se enviará una sola propuesta con todo el acuerdo.
                         </p>
-                        <div className="flex gap-2 items-center">
-                          <Input
-                            type="number"
-                            min={1}
-                            placeholder="Ej: 50"
-                            value={montoIX}
-                            onChange={(e) => setMontoIX(e.target.value)}
-                          />
-                          <span className="text-sm font-medium">IOX</span>
+                        <div className="space-y-3">
+                          <div className="flex gap-2 items-center">
+                            <Label className="w-14 shrink-0">IOX</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Ej: 500"
+                              value={montoIX}
+                              onChange={(e) => setMontoIX(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <Label className="w-14 shrink-0">$</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Ej: 3000"
+                              value={montoPesos}
+                              onChange={(e) => setMontoPesos(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <Label className="w-14 shrink-0">USD</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Ej: 20"
+                              value={montoUSD}
+                              onChange={(e) => setMontoUSD(e.target.value)}
+                            />
+                          </div>
                         </div>
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setPagarIxOpen(false)}>
+                          <Button variant="outline" onClick={() => setPropuestaOpen(false)}>
                             Cancelar
                           </Button>
                           <Button
                             variant="gold"
-                            onClick={handlePagarConIX}
-                            disabled={!montoIX || parseInt(montoIX, 10) <= 0 || enviarMutation.isPending}
+                            onClick={handleEnviarPropuesta}
+                            disabled={enviarMutation.isPending}
                           >
                             {enviarMutation.isPending ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               "Enviar propuesta"
                             )}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog open={propuestaPesosOpen} onOpenChange={setPropuestaPesosOpen}>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Proponer pago en pesos (por fuera)</DialogTitle>
-                        </DialogHeader>
-                        <p className="text-sm text-muted-foreground">
-                          Proponé un monto en pesos para cerrar el intercambio. El pago se coordina por fuera de la plataforma. Ambos deben aprobar el acuerdo.
-                        </p>
-                        <div className="flex gap-2 items-center">
-                          <Input
-                            type="number"
-                            min={1}
-                            placeholder="Ej: 5000"
-                            value={montoPesos}
-                            onChange={(e) => setMontoPesos(e.target.value)}
-                          />
-                          <span className="text-sm font-medium">pesos</span>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setPropuestaPesosOpen(false)}>Cancelar</Button>
-                          <Button variant="gold" onClick={handleProponerPesos} disabled={!montoPesos || parseInt(montoPesos, 10) <= 0 || enviarMutation.isPending}>
-                            Enviar propuesta
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog open={propuestaUSDOpen} onOpenChange={setPropuestaUSDOpen}>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Proponer pago en USD (por fuera)</DialogTitle>
-                        </DialogHeader>
-                        <p className="text-sm text-muted-foreground">
-                          Proponé un monto en USD para cerrar el intercambio. El pago se coordina por fuera de la plataforma. Ambos deben aprobar el acuerdo.
-                        </p>
-                        <div className="flex gap-2 items-center">
-                          <Input
-                            type="number"
-                            min={1}
-                            placeholder="Ej: 20"
-                            value={montoUSD}
-                            onChange={(e) => setMontoUSD(e.target.value)}
-                          />
-                          <span className="text-sm font-medium">USD</span>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setPropuestaUSDOpen(false)}>Cancelar</Button>
-                          <Button variant="gold" onClick={handleProponerUSD} disabled={!montoUSD || parseInt(montoUSD, 10) <= 0 || enviarMutation.isPending}>
-                            Enviar propuesta
                           </Button>
                         </DialogFooter>
                       </DialogContent>
