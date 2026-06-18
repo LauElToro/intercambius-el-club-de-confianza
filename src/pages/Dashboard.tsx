@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight, CheckCircle2, Shie
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { kycService } from "@/services/kyc.service";
+import { ApiError } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { intercambiosService } from "@/services/intercambios.service";
@@ -73,7 +74,14 @@ const Dashboard = () => {
             description: "Didit aún no marca el resultado como aprobado. Reintentá en unos minutos o desde tu perfil.",
           });
         }
-      } catch {
+      } catch (e) {
+        if (!cancelled && e instanceof ApiError && e.data?.code === "KYC_DUPLICATE_DOCUMENT") {
+          toast({
+            title: "Documento ya registrado",
+            description: e.message || "Ya hay una cuenta verificada con este DNI. Usá esa cuenta o contactá soporte.",
+            variant: "destructive",
+          });
+        }
         // El webhook puede haber actualizado igual; seguimos refrescando usuario.
       } finally {
         if (!cancelled) {
