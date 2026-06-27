@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Bell, MessageCircle, ShoppingCart, TrendingUp, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/AuthContext";
 import { notificacionesService, Notificacion } from "@/services/notificaciones.service";
+import { useNotificationAlerts } from "@/hooks/use-notification-alerts";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,15 +37,8 @@ export const NotificationDropdown = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<Notificacion | null>(null);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["notificaciones", user?.id],
-    queryFn: () => notificacionesService.getNotificaciones(15),
-    enabled: !!user?.id,
-    staleTime: 60 * 1000, // 1 min para que se actualicen más seguido
-  });
+  const { noLeidas, notificaciones, isLoading } = useNotificationAlerts();
 
   const marcarLeidaMutation = useMutation({
     mutationFn: (id: number) => notificacionesService.marcarLeida(id),
@@ -71,9 +64,6 @@ export const NotificationDropdown = () => {
       });
     },
   });
-
-  const noLeidas = data?.noLeidas ?? 0;
-  const notificaciones = data?.notificaciones ?? [];
 
   const handleClick = (n: Notificacion) => {
     if (!n.leido) marcarLeidaMutation.mutate(n.id);

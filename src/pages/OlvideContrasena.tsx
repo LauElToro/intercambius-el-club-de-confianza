@@ -50,7 +50,11 @@ const OlvideContrasena = () => {
             </div>
             <div className="bg-card rounded-2xl p-6 border border-border text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                ¿No lo ves? Revisá la carpeta de spam o volvé a intentar.
+                Si existe una cuenta con ese correo, te enviamos un enlace para restablecer tu contraseña.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                ¿Usás Hotmail, Outlook o Live? Revisá también la carpeta de <strong>correo no deseado</strong>; a veces
+                tarda unos minutos en llegar.
               </p>
               <Link to="/login">
                 <Button variant="gold" className="w-full">

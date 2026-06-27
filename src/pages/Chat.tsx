@@ -20,12 +20,14 @@ import { ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
-import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, HandCoins, Check, CheckCircle2, ExternalLink } from "lucide-react";
+import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, HandCoins, Check, CheckCircle2, ExternalLink, X } from "lucide-react";
 import {
   buildPropuestaPagoMessage,
   buildAceptacionTexto,
+  buildRechazoTexto,
   contenidoParaMostrar,
   encontrarPropuestaPendienteDelOtro,
+  encontrarPropuestaPendientePropia,
   propuestaPagoToResumenCorto,
 } from "@/lib/chat-propuesta";
 
@@ -140,11 +142,29 @@ const Chat = () => {
     retryDelay: (i) => Math.min(600 * 2 ** i, 4000),
   });
 
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    if (!chatDetalle?.mensajes || !conversacionIdOk) return;
+    const count = chatDetalle.mensajes.length;
+    if (count > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+      queryClient.invalidateQueries({ queryKey: ["notificaciones"] });
+    }
+    prevMsgCountRef.current = count;
+  }, [chatDetalle?.mensajes, conversacionIdOk, queryClient]);
+
+  useEffect(() => {
+    if (!conversacionIdOk || !conversacionId) return;
+    chatService.marcarConversacionLeida(conversacionIdNum).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["chat"] });
+    }).catch(() => {});
+  }, [conversacionId, conversacionIdOk, conversacionIdNum, queryClient]);
+
   const enviarMutation = useMutation({
     mutationFn: (contenido: string) => chatService.enviarMensaje(Number(conversacionId!), contenido),
     onSuccess: (nuevoMensaje) => {
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       queryClient.invalidateQueries({ queryKey: ['chat', conversacionId] });
+      queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
       setMensaje("");
     },
     onError: (e: unknown) => {
@@ -244,6 +264,13 @@ const Chat = () => {
       ? encontrarPropuestaPendienteDelOtro(msgs, user.id)
       : null;
 
+  const propuestaPropiaPendiente =
+    user?.id != null
+      ? encontrarPropuestaPendientePropia(msgs, user.id)
+      : null;
+
+  const puedeConfirmarRegistro = chatDetalle?.conversacion.puedeConfirmarRegistro ?? false;
+
   const handleEnviarPropuesta = () => {
     const iox = montoIX.trim() ? parseInt(montoIX, 10) : null;
     const pesos = montoPesos.trim() ? parseInt(montoPesos, 10) : null;
@@ -278,27 +305,23 @@ const Chat = () => {
     enviarMutation.mutate(texto, {
       onSuccess: async () => {
         try {
-          await chatService.enviarCodigoIntercambio(Number(conversacionId));
+          const data = await chatService.enviarCodigoIntercambio(Number(conversacionId));
           toast({
             title: "Código enviado",
-            description: "Se envió el código de verificación por email a quien hizo la propuesta.",
+            description: `Se envió el código por email a ${data.emailEnviadoA}. Solo esa persona puede confirmar el intercambio con el código.`,
           });
+          setCodigoEmailInfo({ para: data.emailEnviadoA });
         } catch (e) {
           const msg = e instanceof ApiError ? e.message : "No se pudo enviar el código por email";
           toast({ title: "Aviso", description: `${msg}. Podés reintentar desde el chat.`, variant: "destructive" });
         }
-        navigate("/registrar-intercambio", {
-          state: {
-            creditos: propuesta.iox,
-            tipoPago: propuesta.pesos ? ("pesos" as const) : propuesta.usd ? ("usd" as const) : undefined,
-            monto: propuesta.pesos ?? propuesta.usd,
-            propuesta,
-            conversacionId: Number(conversacionId),
-            requiereCodigo: true,
-          },
-        });
       },
     });
+  };
+
+  const handleRechazarPropuesta = () => {
+    if (!propuestaDelOtro || enviarMutation.isPending) return;
+    enviarMutation.mutate(buildRechazoTexto());
   };
 
   return (
@@ -346,15 +369,22 @@ const Chat = () => {
                       onClick={() => navigate(`/chat/${c.id}`)}
                       className={`w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors ${
                         Number(conversacionId) === c.id ? 'bg-muted' : ''
-                      }`}
+                      } ${(c.mensajesNoLeidos ?? 0) > 0 && Number(conversacionId) !== c.id ? 'bg-blue-500/5' : ''}`}
                     >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-gold/20 text-gold">
-                          {c.otroUsuario.nombre?.slice(0, 2).toUpperCase() ?? '?'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative shrink-0">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-gold/20 text-gold">
+                            {c.otroUsuario.nombre?.slice(0, 2).toUpperCase() ?? '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        {(c.mensajesNoLeidos ?? 0) > 0 && Number(conversacionId) !== c.id && (
+                          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white">
+                            {(c.mensajesNoLeidos ?? 0) > 9 ? "9+" : c.mensajesNoLeidos}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate flex items-center gap-1 min-w-0">
+                        <p className={`truncate flex items-center gap-1 min-w-0 ${(c.mensajesNoLeidos ?? 0) > 0 ? 'font-semibold' : 'font-medium'}`}>
                           <span className="truncate">{c.otroUsuario.nombre}</span>
                           {c.otroUsuario.kycVerificado && <IdentidadVerificadaBadge iconClassName="h-3.5 w-3.5 shrink-0" />}
                         </p>
@@ -517,18 +547,59 @@ const Chat = () => {
                       <div ref={messagesEndRef} />
                     </div>
                     {propuestaDelOtro && (
-                      <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="px-4 py-2 border-b border-border bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
                           Te propusieron: {propuestaPagoToResumenCorto(propuestaDelOtro.propuesta, formatIX)}. Ambos deben aprobar.
+                        </span>
+                        <div className="flex flex-wrap gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRechazarPropuesta}
+                            disabled={enviarMutation.isPending}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Rechazar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPropuestaOpen(true)}
+                            disabled={enviarMutation.isPending}
+                          >
+                            <HandCoins className="w-4 h-4 mr-1" />
+                            Otra propuesta
+                          </Button>
+                          <Button
+                            variant="gold"
+                            size="sm"
+                            onClick={handleAceptarMonto}
+                            disabled={enviarMutation.isPending}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Aceptar propuesta
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {propuestaPropiaPendiente && !propuestaDelOtro && (
+                      <div className="px-4 py-2 border-b border-border bg-gold/5 text-sm text-muted-foreground">
+                        Esperando respuesta a tu propuesta ({propuestaPagoToResumenCorto(propuestaPropiaPendiente.propuesta, formatIX)}).
+                      </div>
+                    )}
+                    {puedeConfirmarRegistro && (
+                      <div className="px-4 py-2 border-b border-border bg-green-500/10 flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-sm">
+                          Tenés un código por email para confirmar este intercambio.
                         </span>
                         <Button
                           variant="gold"
                           size="sm"
-                          onClick={handleAceptarMonto}
-                          disabled={enviarMutation.isPending}
+                          onClick={() =>
+                            navigate(`/registrar-intercambio?conversacionId=${conversacionId}`)
+                          }
                         >
-                          <Check className="w-4 h-4 mr-1" />
-                          Aceptar propuesta
+                          Confirmar intercambio
                         </Button>
                       </div>
                     )}
@@ -570,6 +641,7 @@ const Chat = () => {
                           size="sm"
                           onClick={() => setPropuestaOpen(true)}
                           title="Proponer pago (IOX, pesos o USD)"
+                          disabled={!!propuestaPropiaPendiente}
                         >
                           <HandCoins className="w-4 h-4 mr-1" />
                           Propuesta

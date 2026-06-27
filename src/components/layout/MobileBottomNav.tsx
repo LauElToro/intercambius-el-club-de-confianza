@@ -1,10 +1,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { ShoppingBag, Users, MessageCircle, Heart, User, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { notificacionesService } from "@/services/notificaciones.service";
+import { useNotificationAlerts } from "@/hooks/use-notification-alerts";
 import { isNavItemActive } from "@/lib/nav-link-active";
 
 /** Barra de navegación inferior fija para mobile - acceso rápido a las 5 secciones principales */
@@ -26,12 +25,7 @@ export const MobileBottomNav = () => {
     ] as const;
   }, [user?.id]);
 
-  const { data } = useQuery({
-    queryKey: ["notificaciones", user?.id],
-    queryFn: () => notificacionesService.getNotificaciones(5),
-    enabled: !!user?.id,
-  });
-  const noLeidas = data?.noLeidas ?? 0;
+  const { noLeidas } = useNotificationAlerts();
 
   if (!user) return null;
 

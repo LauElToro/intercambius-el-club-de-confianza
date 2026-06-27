@@ -81,6 +81,14 @@ export function mensajeEsAceptacionPropuesta(contenido: string): boolean {
   return /acepto la propuesta/i.test(contenido);
 }
 
+export function mensajeEsRechazoPropuesta(contenido: string): boolean {
+  return /rechazo la propuesta/i.test(contenido);
+}
+
+export function buildRechazoTexto(): string {
+  return "Rechazo la propuesta. Podemos seguir negociando con otra oferta.";
+}
+
 function mergePropuestas(a: PropuestaPago, b: PropuestaPago): PropuestaPago {
   return {
     ...(b.iox ? { iox: b.iox } : a.iox ? { iox: a.iox } : {}),
@@ -120,11 +128,42 @@ function mergePropuestasConsecutivas(
   return combined.iox || combined.pesos || combined.usd ? { propuesta: combined, firstIdx } : null;
 }
 
-function hayAceptacionPosterior(mensajes: MensajePropuesta[], desdeIdx: number, proposerId: number): boolean {
+/** Propuesta propia que aún no fue aceptada ni rechazada por el otro. */
+export function encontrarPropuestaPendientePropia(
+  mensajes: MensajePropuesta[],
+  myUserId: number
+): { propuesta: PropuestaPago; mensaje: MensajePropuesta } | null {
+  for (let i = mensajes.length - 1; i >= 0; i--) {
+    const m = mensajes[i];
+    if (m.senderId !== myUserId) continue;
+
+    const merged = mergePropuestasConsecutivas(mensajes, i, m.senderId);
+    if (!merged) break;
+
+    for (let k = i + 1; k < mensajes.length; k++) {
+      const next = mensajes[k];
+      if (next.senderId === myUserId) continue;
+      if (mensajeEsAceptacionPropuesta(next.contenido)) return null;
+      if (mensajeEsRechazoPropuesta(next.contenido)) return null;
+      if (esMensajePropuestaPago(next.contenido)) return null;
+    }
+
+    return { propuesta: merged.propuesta, mensaje: mensajes[merged.firstIdx] };
+  }
+  return null;
+}
+
+function hayRespuestaPosteriorALaPropuesta(
+  mensajes: MensajePropuesta[],
+  desdeIdx: number,
+  proposerId: number
+): boolean {
   for (let k = desdeIdx + 1; k < mensajes.length; k++) {
     const m = mensajes[k];
     if (m.senderId === proposerId) continue;
     if (mensajeEsAceptacionPropuesta(m.contenido)) return true;
+    if (mensajeEsRechazoPropuesta(m.contenido)) return true;
+    if (esMensajePropuestaPago(m.contenido)) return true;
   }
   return false;
 }
@@ -141,7 +180,7 @@ export function encontrarPropuestaPendienteDelOtro(
     const merged = mergePropuestasConsecutivas(mensajes, i, m.senderId);
     if (!merged) break;
 
-    if (hayAceptacionPosterior(mensajes, i, m.senderId)) return null;
+    if (hayRespuestaPosteriorALaPropuesta(mensajes, i, m.senderId)) return null;
 
     return { propuesta: merged.propuesta, mensaje: mensajes[merged.firstIdx] };
   }

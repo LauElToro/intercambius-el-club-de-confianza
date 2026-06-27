@@ -1,10 +1,12 @@
 import api, { ApiError } from '@/lib/api';
+import type { PropuestaPago } from '@/lib/chat-propuesta';
 
 export interface Conversacion {
   id: number;
   otroUsuario: { id: number; nombre: string; kycVerificado?: boolean };
   marketItem?: { id: number; titulo: string; rubro: string; imagen: string };
   ultimoMensaje?: { contenido: string; createdAt: string } | null;
+  mensajesNoLeidos?: number;
   updatedAt: string;
 }
 
@@ -23,9 +25,19 @@ export interface ChatDetalle {
     id: number;
     otroUsuario: { id: number; nombre: string; kycVerificado?: boolean };
     marketItem?: { id: number; titulo: string; rubro: string; imagen: string; precio: number };
+    puedeConfirmarRegistro?: boolean;
+    registroCompletado?: boolean;
   };
   mensajes: Mensaje[];
 }
+
+export type RegistroPendiente = {
+  conversacionId: number;
+  otroUsuario: { id: number; nombre: string };
+  marketItem?: { id: number; titulo: string } | null;
+  propuesta: PropuestaPago & { pagadorId?: number };
+  acuerdoResumen: string;
+};
 
 export const chatService = {
   /**
@@ -99,6 +111,24 @@ export const chatService = {
     } catch (error) {
       if (error instanceof ApiError) throw error;
       throw new ApiError('Error al cargar mensajes', 500);
+    }
+  },
+
+  async marcarConversacionLeida(conversacionId: number): Promise<void> {
+    try {
+      await api.patch(`/api/chat/${conversacionId}/leer`, {});
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError('Error al marcar mensajes como leídos', 500);
+    }
+  },
+
+  async getRegistroPendiente(): Promise<RegistroPendiente[]> {
+    try {
+      return await api.get<RegistroPendiente[]>('/api/chat/registro-pendiente');
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError('Error al cargar registros pendientes', 500);
     }
   },
 
