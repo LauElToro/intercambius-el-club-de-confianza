@@ -6,7 +6,8 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfertaCreditoTerminos, hasRespondidoOfertaCredito } from "@/components/credito/OfertaCreditoTerminos";
 import { useQueryClient } from "@tanstack/react-query";
-import { COMPLAINTS_EMAIL, CONTACT_EMAIL } from "@/lib/constants";
+import { CONTACT_EMAIL } from "@/lib/constants";
+import type { CategoriaContacto } from "@/services/contact.service";
 import { useToast } from "@/hooks/use-toast";
 import { Copy } from "lucide-react";
 import { ContactDialog } from "@/components/contact/ContactDialog";
@@ -22,6 +23,12 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
   const { toast } = useToast();
   const [showOfertaCredito, setShowOfertaCredito] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
+  const [contactCategoria, setContactCategoria] = useState<CategoriaContacto>("consulta");
+
+  const openContact = (categoria: CategoriaContacto = "consulta") => {
+    setContactCategoria(categoria);
+    setContactOpen(true);
+  };
 
   const copyContactEmail = async () => {
     try {
@@ -62,7 +69,7 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
             <span className="inline-flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => setContactOpen(true)}
+                onClick={() => openContact("consulta")}
                 className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2 bg-transparent border-0 p-0 cursor-pointer"
               >
                 Contactanos
@@ -99,12 +106,13 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
               Términos IOX
             </Link>
             <span className="hidden sm:inline">·</span>
-            <a
-              href={`mailto:${COMPLAINTS_EMAIL}`}
-              className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2"
+            <button
+              type="button"
+              onClick={() => openContact("queja")}
+              className="text-gold hover:text-gold/90 hover:underline font-medium underline-offset-2 bg-transparent border-0 p-0 cursor-pointer"
             >
-              Quejas y sugerencias por correo
-            </a>
+              Quejas y sugerencias
+            </button>
           </div>
         </footer>
       </main>
@@ -122,6 +130,7 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
         open={contactOpen}
         onOpenChange={setContactOpen}
         defaultEmail={user?.email ?? null}
+        defaultCategoria={contactCategoria}
       />
     </div>
   );

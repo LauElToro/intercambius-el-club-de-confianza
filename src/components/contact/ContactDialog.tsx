@@ -43,23 +43,27 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   /** Email inicial (ej. usuario logueado) */
   defaultEmail?: string | null;
+  /** Categoría preseleccionada (ej. queja desde el pie del sitio) */
+  defaultCategoria?: CategoriaContacto;
 };
 
-export function ContactDialog({ open, onOpenChange, defaultEmail }: Props) {
+export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategoria = "consulta" }: Props) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
-  const [categoria, setCategoria] = useState<CategoriaContacto>("consulta");
+  const [categoria, setCategoria] = useState<CategoriaContacto>(defaultCategoria);
   const [mensaje, setMensaje] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (open && defaultEmail) {
+    if (!open) return;
+    if (defaultEmail) {
       setEmail((e) => e || defaultEmail);
     }
-  }, [open, defaultEmail]);
+    setCategoria(defaultCategoria);
+  }, [open, defaultEmail, defaultCategoria]);
 
   useEffect(() => {
     if (!open) {
@@ -70,7 +74,7 @@ export function ContactDialog({ open, onOpenChange, defaultEmail }: Props) {
   const reset = () => {
     setEmail(defaultEmail || "");
     setNombre("");
-    setCategoria("consulta");
+    setCategoria(defaultCategoria);
     setMensaje("");
     setFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = "";

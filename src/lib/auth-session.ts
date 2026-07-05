@@ -24,6 +24,7 @@ export function isPublicAuthEndpoint(endpoint: string): boolean {
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/refresh',
+    '/api/contact',
   ];
   return prefixes.some((p) => path === p || path.startsWith(`${p}/`));
 }
