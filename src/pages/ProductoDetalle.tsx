@@ -32,7 +32,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
 import { CREDIT_LIMIT_DEFAULT, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
 import { ApiError } from "@/lib/api";
-import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
+import { perfilPath } from "@/lib/perfil";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { UnifiedMapView } from "@/components/map/UnifiedMapView";
@@ -94,9 +94,15 @@ const ProductoDetalle = () => {
   });
 
   const iniciarChatMutation = useMutation({
-    mutationFn: () => chatService.iniciarConversacion({ marketItemId: Number(id!) }),
+    mutationFn: (opts?: { openPropuesta?: boolean }) =>
+      chatService.iniciarConversacion({ marketItemId: Number(id!) }).then((data) => ({
+        ...data,
+        openPropuesta: opts?.openPropuesta,
+      })),
     onSuccess: async (data) => {
-      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
+      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId, {
+        openPropuesta: data.openPropuesta,
+      });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "No se pudo iniciar la conversación", variant: "destructive" });
@@ -120,8 +126,12 @@ const ProductoDetalle = () => {
           // no bloquear el flujo si falla el mensaje
         }
       }
-      toast({ title: "¡Compra exitosa!", description: "Ya podés coordinar la entrega con el vendedor por chat." });
+      toast({ title: "¡Compra exitosa!", description: "Contanos cómo fue tu experiencia." });
       setCheckoutOpen(false);
+      if (data.intercambio?.id) {
+        navigate(`/evaluar/${data.intercambio.id}`);
+        return;
+      }
       if (data.conversacionId) {
         await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
       }
@@ -482,7 +492,7 @@ const ProductoDetalle = () => {
                       <MapPin className="w-3 h-3" />
                       <span>{vendedor.ubicacion}</span>
                     </div>
-                    <Link to={`/perfil/${vendedor.id}`}>
+                    <Link to={perfilPath(vendedor)}>
                       <Button variant="outline" className="w-full">
                         <User className="w-4 h-4 mr-2" />
                         Ver perfil
@@ -526,7 +536,7 @@ const ProductoDetalle = () => {
                       variant="gold-outline"
                       className="w-full"
                       size="lg"
-                      onClick={() => iniciarChatMutation.mutate()}
+                      onClick={() => iniciarChatMutation.mutate({ openPropuesta: true })}
                       disabled={iniciarChatMutation.isPending}
                     >
                       {iniciarChatMutation.isPending ? (
@@ -534,6 +544,15 @@ const ProductoDetalle = () => {
                       ) : (
                         <MessageCircle className="w-5 h-5 mr-2" />
                       )}
+                      Enviar propuesta
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                      onClick={() => iniciarChatMutation.mutate()}
+                      disabled={iniciarChatMutation.isPending}
+                    >
                       Contactar al vendedor
                     </Button>
                     {disponible && enLimiteDeuda && (
@@ -558,7 +577,7 @@ const ProductoDetalle = () => {
                         }}
                       >
                         <CreditCard className="w-5 h-5 mr-2" />
-                        {item.rubro === 'servicios' ? 'Contratar' : 'Comprar'}
+                        {item.rubro === 'servicios' ? 'Contratar con IOX' : 'Pagar con IOX ahora'}
                       </Button>
                     )}
                     {(() => {

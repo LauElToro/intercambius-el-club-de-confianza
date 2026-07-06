@@ -17,7 +17,6 @@ import {
   MessageCircle,
   ShoppingCart,
   Gift,
-  Table2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
@@ -40,7 +39,10 @@ import { CurrencySwitch } from "@/components/ui/currency-switch";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { HeaderSaldo } from "@/components/layout/HeaderSaldo";
+import { OfertaCreditoTerminos, getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
+import { useQueryClient } from "@tanstack/react-query";
 import { IX_PESOS_PER_USD } from "@/lib/currency";
+import { perfilPath } from "@/lib/perfil";
 import { isNavItemActive } from "@/lib/nav-link-active";
 import logo from "@/assets/logo-intercambius.jpeg";
 
@@ -55,6 +57,10 @@ const Header = () => {
     enabled: !!user,
   });
   const usuario = currentUser || user;
+  const queryClient = useQueryClient();
+  const [showOfertaCredito, setShowOfertaCredito] = useState(false);
+  const uid = usuario?.id ?? user?.id;
+  const puedeActivarIOX = !!uid && getCreditoAceptado(uid) !== "aceptado";
   const isHome = location.pathname === "/";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -74,9 +80,6 @@ const Header = () => {
     const uid = usuario?.id ?? user?.id;
     return [
       { to: "/market", label: "Market", icon: ShoppingBag },
-      ...(uid
-        ? [{ to: `/perfil/${uid}?intereses=1`, label: "Tabla", icon: Table2 } as const]
-        : []),
       { to: "/coincidencias", label: "Coincidencias", icon: Users },
       { to: "/favoritos", label: "Favoritos", icon: Heart },
       { to: "/chat", label: "Mensajes", icon: MessageCircle },
@@ -176,7 +179,11 @@ const Header = () => {
         <div className="flex min-w-0 shrink items-center justify-end gap-1 sm:gap-2 md:gap-2 lg:gap-3">
           {usuario && (
             <div className="hidden min-w-0 md:block md:max-w-[min(100%,14rem)] lg:max-w-none">
-              <HeaderSaldo saldo={usuario.saldo ?? 0} />
+              <HeaderSaldo
+                saldo={usuario.saldo ?? 0}
+                showActivarIOX={puedeActivarIOX}
+                onActivarIOX={() => setShowOfertaCredito(true)}
+              />
             </div>
           )}
           <div className="hidden shrink-0 md:block">
@@ -238,7 +245,7 @@ const Header = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to={`/perfil/${user?.id}`}>
+                      <Link to={usuario ? perfilPath(usuario) : '/dashboard'}>
                         <User className="h-4 w-4 mr-2" />
                         Mi perfil
                       </Link>
@@ -497,6 +504,15 @@ const Header = () => {
           </Sheet>
         </div>
       </div>
+      {uid && (
+        <OfertaCreditoTerminos
+          userId={uid}
+          open={showOfertaCredito}
+          onClose={() => setShowOfertaCredito(false)}
+          onAceptar={() => queryClient.invalidateQueries({ queryKey: ["currentUser"] })}
+          onRechazar={() => queryClient.invalidateQueries({ queryKey: ["currentUser"] })}
+        />
+      )}
     </header>
   );
 };

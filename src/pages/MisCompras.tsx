@@ -1,11 +1,13 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShoppingBag, Loader2, MessageCircle, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, ShoppingBag, Loader2, MessageCircle, ExternalLink, Star } from "lucide-react";
 import { intercambiosService, Intercambio } from "@/services/intercambios.service";
+import { evaluacionesService } from "@/services/evaluaciones.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { userService } from "@/services/user.service";
@@ -40,6 +42,12 @@ const MisCompras = () => {
   const { data: intercambios = [], isLoading } = useQuery({
     queryKey: ['intercambios', currentUser?.id],
     queryFn: () => intercambiosService.getByUserId(currentUser!.id!),
+    enabled: !!currentUser?.id,
+  });
+
+  const { data: evaluacionesPendientes = [] } = useQuery({
+    queryKey: ['evaluacion', 'pendientes'],
+    queryFn: () => evaluacionesService.getPendientes(),
     enabled: !!currentUser?.id,
   });
 
@@ -82,6 +90,28 @@ const MisCompras = () => {
             </p>
           </div>
         </div>
+
+        {evaluacionesPendientes.length > 0 && (
+          <Alert className="mb-6 border-gold/40 bg-gold/5">
+            <Star className="h-4 w-4 text-gold" />
+            <AlertTitle>Evaluaciones pendientes</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>
+                Tenés {evaluacionesPendientes.length} intercambio
+                {evaluacionesPendientes.length === 1 ? '' : 's'} sin evaluar.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {evaluacionesPendientes.slice(0, 3).map((ev) => (
+                  <Button key={ev.intercambioId} variant="outline" size="sm" asChild>
+                    <Link to={`/evaluar/${ev.intercambioId}`}>
+                      Evaluar {ev.marketItem?.titulo ?? ev.descripcion.slice(0, 30)}
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-12">

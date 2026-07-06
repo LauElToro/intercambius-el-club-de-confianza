@@ -1,0 +1,40 @@
+/** Ruta pública de perfil: slug personalizado si existe, si no id numérico (legacy). */
+export function perfilPath(user: { id: number; profileSlug?: string | null }): string {
+  const slug = user.profileSlug?.trim();
+  if (slug) return `/perfil/${slug}`;
+  return `/perfil/${user.id}`;
+}
+
+/** Nombre visible en perfil y publicaciones: tienda si hay, si no nombre de cuenta. */
+export function nombrePublico(user: {
+  nombre: string;
+  nombreTienda?: string | null;
+}): string {
+  const tienda = user.nombreTienda?.trim();
+  return tienda || user.nombre;
+}
+
+/** Normaliza el slug que el usuario escribe (preview en el formulario). */
+export function sanitizeProfileSlugInput(raw: string): string {
+  return raw
+    .trim()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase()
+    .slice(0, 48);
+}
+
+export function validateProfileSlugClient(slug: string): string | null {
+  if (!slug) return 'La URL no puede estar vacía';
+  if (slug.length < 3) return 'Mínimo 3 caracteres';
+  if (slug.length > 48) return 'Máximo 48 caracteres';
+  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) && !/^[a-z0-9]{3}$/.test(slug)) {
+    return 'Solo letras, números y guiones';
+  }
+  if (/^\d+$/.test(slug)) return 'No puede ser solo números';
+  return null;
+}

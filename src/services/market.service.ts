@@ -2,6 +2,7 @@ import api, { ApiError } from '@/lib/api';
 
 export interface VendedorInfo {
   id: number;
+  profileSlug?: string | null;
   nombre: string;
   avatar?: string;
   contacto?: string;

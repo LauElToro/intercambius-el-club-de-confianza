@@ -24,14 +24,19 @@ export const userService = {
     }
   },
 
-  async getUserById(id: number): Promise<User> {
+  async getUser(idOrSlug: string | number): Promise<User> {
     try {
-      return await api.get<User>(`/api/users/${id}`);
+      return await api.get<User>(`/api/users/${idOrSlug}`);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
       throw new ApiError('Error al obtener el usuario', 500);
     }
+  },
+
+  /** @deprecated Usar getUser */
+  async getUserById(id: number): Promise<User> {
+    return this.getUser(id);
   },
 };

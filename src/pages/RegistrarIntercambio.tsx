@@ -91,6 +91,10 @@ const RegistrarIntercambio = () => {
           ? `Se aplicaron ${data.creditosAplicados} IOX según el acuerdo en el chat. Revisá tu saldo.`
           : "Quedó asentado el acuerdo (pago acordado por fuera; sin movimiento de IOX en la cuenta).";
       toast({ title: "Intercambio registrado", description: desc });
+      if (data.intercambioId) {
+        navigate(`/evaluar/${data.intercambioId}`);
+        return;
+      }
       navigate("/dashboard");
     },
     onError: (e: unknown) => {

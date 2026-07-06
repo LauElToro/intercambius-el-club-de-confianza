@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -103,6 +103,7 @@ function ProductoCardChat({
 
 const Chat = () => {
   const { conversacionId } = useParams<{ conversacionId?: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -221,6 +222,14 @@ const Chat = () => {
   const [montoPesos, setMontoPesos] = useState("");
   const [montoUSD, setMontoUSD] = useState("");
 
+  useEffect(() => {
+    const st = location.state as { openPropuesta?: boolean } | null;
+    if (st?.openPropuesta) {
+      setPropuestaOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
+
   const codigoIntercambioMutation = useMutation({
     mutationFn: () => chatService.enviarCodigoIntercambio(Number(conversacionId!)),
     onSuccess: (data) => {
@@ -308,7 +317,7 @@ const Chat = () => {
           const data = await chatService.enviarCodigoIntercambio(Number(conversacionId));
           toast({
             title: "Código enviado",
-            description: `Se envió el código por email a ${data.emailEnviadoA}. Solo esa persona puede confirmar el intercambio con el código.`,
+            description: `Se envió el código por email al comprador (${data.emailEnviadoA}). Solo esa persona puede confirmar el intercambio.`,
           });
           setCodigoEmailInfo({ para: data.emailEnviadoA });
         } catch (e) {
@@ -622,7 +631,7 @@ const Chat = () => {
                     {codigoEmailInfo && (
                       <div className="px-4 py-2 border-b border-border bg-green-500/10 flex items-center justify-between gap-2">
                         <span className="text-sm">
-                          Código enviado por <strong>email</strong> a {codigoEmailInfo.para}. No se muestra en el chat; la otra parte debe revisar su casilla e ingresarlo en Registrar intercambio.
+                          Código enviado por <strong>email</strong> al comprador ({codigoEmailInfo.para}). Solo quien compra debe revisar su casilla e ingresarlo en Registrar intercambio.
                         </span>
                         <Button variant="ghost" size="sm" onClick={() => setCodigoEmailInfo(null)}>Cerrar</Button>
                       </div>

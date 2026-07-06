@@ -17,11 +17,13 @@ export const BRAND_LOGO_URL =
 /** Banner del hero en la landing (public/intercambius_banner_1.png). */
 export const LANDING_BANNER = "/intercambius_banner_1.png";
 
-/** Correo único de Intercambius (contacto, quejas, transaccional, formulario web). */
+/** Correo visible en el sitio (escribinos). Los envíos del formulario van a CONTACT_INBOX en el backend. */
+export const CONTACT_INBOX_EMAIL = "contactenos@intercambius.com.ar";
+
 export const INTERCAMBIUS_EMAIL = "noreply@intercambius.com.ar";
 
-export const CONTACT_EMAIL = INTERCAMBIUS_EMAIL;
-export const COMPLAINTS_EMAIL = INTERCAMBIUS_EMAIL;
+export const CONTACT_EMAIL = CONTACT_INBOX_EMAIL;
+export const COMPLAINTS_EMAIL = CONTACT_INBOX_EMAIL;
 
 /** Parte del pago en IOX cuando el comprador tiene saldo IOX disponible (referencia 5%). Si no hay IOX del comprador, puede ser 100% dinero tradicional. */
 export const COMISION_IOX_PORCENTAJE = 5;

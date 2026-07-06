@@ -50,6 +50,8 @@ export interface User {
   verificado: boolean;
   /** Identidad verificada con Didit (KYC). */
   kycVerificado?: boolean;
+  profileSlug?: string | null;
+  nombreTienda?: string | null;
   miembroDesde: string;
   bio?: string;
   fotoPerfil?: string;

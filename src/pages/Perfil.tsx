@@ -18,6 +18,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { kycService } from "@/services/kyc.service";
+import { OfertaCreditoTerminos, getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
+import { nombrePublico, sanitizeProfileSlugInput } from "@/lib/perfil";
 
 const REDES_KEYS = ['instagram', 'facebook', 'twitter', 'linkedin', 'web'] as const;
 const REDES_ICONS: Record<string, typeof Instagram> = {
@@ -36,7 +38,7 @@ const REDES_LABELS: Record<string, string> = {
 };
 
 const Perfil = () => {
-  const { id } = useParams<{ id: string }>();
+  const { idOrSlug } = useParams<{ idOrSlug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
@@ -46,28 +48,29 @@ const Perfil = () => {
   const [editando, setEditando] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({});
   const [interesInput, setInteresInput] = useState("");
+  const [showOfertaCredito, setShowOfertaCredito] = useState(false);
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  const esMiPerfil = user && id && Number(id) === user.id;
+  const esMiPerfil = user && usuario && user.id === usuario.id;
   const { formatIX } = useCurrencyVariant();
   const [pageProductos, setPageProductos] = useState(1);
   const PRODUCTOS_POR_PAGINA = 12;
 
   const { data: usuario, isLoading, error } = useQuery({
-    queryKey: ['user', id],
-    queryFn: () => userService.getUserById(Number(id!)),
-    enabled: !!id,
+    queryKey: ['user', idOrSlug],
+    queryFn: () => userService.getUser(idOrSlug!),
+    enabled: !!idOrSlug,
   });
 
   const { data: productosResponse } = useQuery({
-    queryKey: ['marketItems', 'perfil', id, pageProductos],
+    queryKey: ['marketItems', 'perfil', usuario?.id, pageProductos],
     queryFn: () => marketService.getItems({
-      vendedorId: Number(id!),
+      vendedorId: usuario!.id,
       page: pageProductos,
       limit: PRODUCTOS_POR_PAGINA,
     }),
-    enabled: !!id,
+    enabled: !!usuario?.id,
   });
 
   const productos = productosResponse?.data ?? [];
@@ -76,14 +79,18 @@ const Perfil = () => {
 
   const guardarMutation = useMutation({
     mutationFn: (data: Partial<User>) => userService.updateUser(data),
-    onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['user', id] });
+    onSuccess: async (_saved, variables) => {
+      const newSlug = variables.profileSlug?.trim() || usuario?.profileSlug;
+      queryClient.invalidateQueries({ queryKey: ['user', idOrSlug] });
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['coincidencias'] });
       await refreshUser();
       toast({ title: "Perfil actualizado", description: "Los cambios se guardaron correctamente." });
       setEditando(false);
       setFormData({});
+      if (newSlug && newSlug !== idOrSlug) {
+        navigate(`/perfil/${newSlug}`, { replace: true });
+      }
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.message || "No se pudo guardar", variant: "destructive" });
@@ -93,6 +100,8 @@ const Perfil = () => {
   const iniciarEdicion = useCallback(() => {
     setFormData({
       nombre: usuario?.nombre ?? '',
+      nombreTienda: usuario?.nombreTienda ?? '',
+      profileSlug: usuario?.profileSlug ?? '',
       bio: usuario?.bio ?? '',
       ubicacion: usuario?.ubicacion ?? '',
       fotoPerfil: usuario?.fotoPerfil ?? '',
@@ -148,7 +157,14 @@ const Perfil = () => {
   };
 
   const handleGuardar = () => {
-    guardarMutation.mutate(formData);
+    const payload: Partial<User> = { ...formData };
+    if (formData.profileSlug != null) {
+      payload.profileSlug = sanitizeProfileSlugInput(String(formData.profileSlug));
+    }
+    if ('nombreTienda' in formData) {
+      payload.nombreTienda = String(formData.nombreTienda ?? '').trim() || null;
+    }
+    guardarMutation.mutate(payload);
   };
 
   const handleUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,7 +191,7 @@ const Perfil = () => {
 
   useEffect(() => {
     setPageProductos(1);
-  }, [id]);
+  }, [idOrSlug]);
 
   const kycReturn = searchParams.get("kyc");
   useEffect(() => {
@@ -197,7 +213,7 @@ const Perfil = () => {
       } finally {
         if (!cancelled) {
           await refreshUser();
-          queryClient.invalidateQueries({ queryKey: ["user", id] });
+          queryClient.invalidateQueries({ queryKey: ["user", idOrSlug] });
           queryClient.invalidateQueries({ queryKey: ["currentUser"] });
           setSearchParams({}, { replace: true });
         }
@@ -206,9 +222,17 @@ const Perfil = () => {
     return () => {
       cancelled = true;
     };
-  }, [esMiPerfil, kycReturn, setSearchParams, refreshUser, queryClient, id, toast]);
+  }, [esMiPerfil, kycReturn, setSearchParams, refreshUser, queryClient, idOrSlug, toast]);
 
-  /** Desde Coincidencias: `/perfil/:id?intereses=1` abre edición y baja a "Lo que quiero". */
+  /** Desde Coincidencias: `/perfil/:slug?intereses=1` abre edición y baja a "Lo que quiero". */
+  useEffect(() => {
+    if (!usuario || !esMiPerfil || !idOrSlug) return;
+    if (/^\d+$/.test(idOrSlug) && usuario.profileSlug) {
+      const q = searchParams.toString();
+      navigate(`/perfil/${usuario.profileSlug}${q ? `?${q}` : ''}`, { replace: true });
+    }
+  }, [usuario, esMiPerfil, idOrSlug, navigate, searchParams]);
+
   useEffect(() => {
     if (!usuario || !esMiPerfil) return;
     if (searchParams.get("intereses") !== "1") return;
@@ -225,7 +249,9 @@ const Perfil = () => {
   }, [usuario, esMiPerfil, searchParams, setSearchParams, iniciarEdicion]);
 
   const displayData = editando ? formData : usuario;
-  const nombre = displayData?.nombre ?? usuario?.nombre ?? '';
+  const nombreMostrar = editando
+    ? (formData.nombreTienda?.trim() || formData.nombre || usuario?.nombre || '')
+    : nombrePublico(usuario!);
   const bio = displayData?.bio ?? usuario?.bio ?? '';
   const ubicacion = displayData?.ubicacion ?? usuario?.ubicacion ?? '';
   const fotoPerfil = displayData?.fotoPerfil ?? usuario?.fotoPerfil ?? '';
@@ -262,7 +288,7 @@ const Perfil = () => {
     );
   }
 
-  const iniciales = nombre
+  const iniciales = nombreMostrar
     ?.split(" ")
     .map((n) => n[0])
     .join("")
@@ -301,6 +327,22 @@ const Perfil = () => {
             </div>
           )}
         </div>
+
+        {esMiPerfil && !editando && user?.id && getCreditoAceptado(user.id) !== "aceptado" && (
+          <div className="mb-4 rounded-xl border border-gold/40 bg-gold/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Crédito IOX</p>
+              <p className="text-sm text-muted-foreground">
+                {getCreditoAceptado(user.id) === "rechazado"
+                  ? "Elegiste operar solo con dinero tradicional. Podés activar IOX cuando quieras."
+                  : "Activá el crédito IOX para comprar e intercambiar dentro de la plataforma."}
+              </p>
+            </div>
+            <Button variant="gold" size="sm" className="shrink-0" onClick={() => setShowOfertaCredito(true)}>
+              Activar IOX
+            </Button>
+          </div>
+        )}
 
         {esMiPerfil && !editando && (
           <div className="mb-4 rounded-xl border border-border bg-card/80 backdrop-blur-sm px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -388,7 +430,7 @@ const Perfil = () => {
               {/* Foto de perfil */}
               <div className="relative flex-shrink-0">
                 <Avatar className="h-32 w-32 border-4 border-background shadow-xl ring-2 ring-gold/20">
-                  {fotoPerfil && <AvatarImage src={fotoPerfil} alt={nombre} />}
+                  {fotoPerfil && <AvatarImage src={fotoPerfil} alt={nombreMostrar} />}
                   <AvatarFallback className="text-2xl bg-gold/20 text-gold">
                     {iniciales}
                   </AvatarFallback>
@@ -418,12 +460,48 @@ const Perfil = () => {
                 {editando ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Nombre</label>
+                      <label className="text-sm font-medium text-muted-foreground">Nombre de tu tienda o perfil público</label>
+                      <Input
+                        value={formData.nombreTienda ?? ''}
+                        onChange={(e) => setFormData((p) => ({ ...p, nombreTienda: e.target.value }))}
+                        className="mt-1"
+                        placeholder="Ej: Mi Tienda, Taller Hernando, Lautaro Figueroa"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Es lo que verán otros en tu perfil y publicaciones. Si lo dejás vacío, se usa tu nombre de cuenta.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">URL de tu perfil</label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-sm text-muted-foreground shrink-0">/perfil/</span>
+                        <Input
+                          value={formData.profileSlug ?? ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              profileSlug: sanitizeProfileSlugInput(e.target.value),
+                            }))
+                          }
+                          placeholder="mi-tienda"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Solo letras, números y guiones. Ej: <code className="text-foreground">mi-tienda</code> o{' '}
+                        <code className="text-foreground">lautaro-figueroa-b7324s23</code>
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Nombre de cuenta</label>
                       <Input
                         value={formData.nombre ?? ''}
                         onChange={(e) => setFormData((p) => ({ ...p, nombre: e.target.value }))}
                         className="mt-1"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Nombre registrado en la plataforma (intercambios y mensajes internos).
+                      </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Ubicación</label>
@@ -524,7 +602,7 @@ const Perfil = () => {
                 ) : (
                   <>
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{nombre}</h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{nombreMostrar}</h1>
                       {usuario?.kycVerificado && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                           <IdentidadVerificadaBadge iconClassName="h-5 w-5" />
@@ -717,6 +795,15 @@ const Perfil = () => {
         </Card>
         </div>
       </div>
+      {esMiPerfil && user?.id && (
+        <OfertaCreditoTerminos
+          userId={user.id}
+          open={showOfertaCredito}
+          onClose={() => setShowOfertaCredito(false)}
+          onAceptar={() => queryClient.invalidateQueries({ queryKey: ["currentUser"] })}
+          onRechazar={() => queryClient.invalidateQueries({ queryKey: ["currentUser"] })}
+        />
+      )}
     </Layout>
   );
 };

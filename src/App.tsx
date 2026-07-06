@@ -30,7 +30,7 @@ import Referidos from "./pages/Referidos";
 import TerminosCondiciones from "./pages/TerminosCondiciones";
 import TerminosGenerales from "./pages/TerminosGenerales";
 import DisenoEconomico from "./pages/DisenoEconomico";
-import NotFound from "./pages/NotFound";
+import EvaluarIntercambio from "./pages/EvaluarIntercambio";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
@@ -71,7 +71,7 @@ const App = () => (
               <Route path="/market" element={<Market />} />
               <Route path="/market/:id" element={<ProductoDetalle />} />
               <Route path="/producto/:id" element={<ProductoDetalle />} />
-              <Route path="/perfil/:id" element={<Perfil />} />
+              <Route path="/perfil/:idOrSlug" element={<Perfil />} />
               <Route 
                 path="/dashboard" 
                 element={
@@ -167,6 +167,14 @@ const App = () => (
                     <RegistrarIntercambio />
                   </ProtectedRoute>
                 } 
+              />
+              <Route
+                path="/evaluar/:intercambioId"
+                element={
+                  <ProtectedRoute>
+                    <EvaluarIntercambio />
+                  </ProtectedRoute>
+                }
               />
               <Route path="/ofertas" element={<Ofertas />} />
               <Route path="/terminos" element={<TerminosCondiciones />} />

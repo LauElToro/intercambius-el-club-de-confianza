@@ -21,6 +21,7 @@ import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { userService } from "@/services/user.service";
 import { MAX_BLOB_UPLOAD_BYTES } from "@/lib/constants";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ImageCropDialog } from "@/components/media/ImageCropDialog";
 
 const EditarProducto = () => {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +61,9 @@ const EditarProducto = () => {
 
   const [nuevaCaracteristica, setNuevaCaracteristica] = useState("");
   const [isCheckingMedia, setIsCheckingMedia] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
 
   const tiposValidos = ["ix", "convenir", "pesos", "usd", "ix_pesos"] as const;
 
@@ -126,6 +130,73 @@ const EditarProducto = () => {
     },
   });
 
+  const addMediaFile = async (file: File, type: "image" | "video") => {
+    const hasVideo = formData.medias.some((m) => m.type === "video");
+    const imgCount = formData.medias.filter((m) => m.type === "image").length;
+    if (type === "video") {
+      if (hasVideo) {
+        toast({ title: "Máximo 1 video", variant: "destructive" });
+        return;
+      }
+      if (imgCount >= 5) {
+        toast({ title: "Con video: máx 5 imágenes", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (hasVideo && imgCount >= 5) return;
+      if (!hasVideo && imgCount >= 6) {
+        toast({ title: "Máximo 6 imágenes", variant: "destructive" });
+        return;
+      }
+      try {
+        const nsfw = await isImageNsfw(file);
+        if (nsfw) {
+          toast({
+            title: "Imagen no permitida",
+            description: "La imagen no cumple con las políticas de contenido de Intercambius.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch {
+        toast({
+          title: "Error al verificar la imagen",
+          description: "No se pudo procesar. Probá con otra imagen.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setFormData((prev) => ({
+      ...prev,
+      medias: [...prev.medias, { file, preview: URL.createObjectURL(file), type }],
+    }));
+  };
+
+  const processCropQueue = (queue: File[]) => {
+    if (queue.length === 0) return;
+    const [next, ...rest] = queue;
+    setCropQueue(rest);
+    setCropFile(next);
+    setCropOpen(true);
+  };
+
+  const handleCroppedImage = (file: File) => {
+    void addMediaFile(file, "image").then(() => {
+      setCropQueue((q) => {
+        if (q.length > 0) {
+          const [next, ...rest] = q;
+          setCropFile(next);
+          setCropOpen(true);
+          return rest;
+        }
+        setCropOpen(false);
+        setCropFile(null);
+        return [];
+      });
+    });
+  };
+
   const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -134,6 +205,7 @@ const EditarProducto = () => {
     setIsCheckingMedia(true);
     try {
       const toAdd: { file?: File; preview: string; type: "image" | "video"; url?: string }[] = [];
+      const imageFilesForCrop: File[] = [];
 
       for (const file of files) {
         if (file.size > MAX_BLOB_UPLOAD_BYTES) {
@@ -153,32 +225,18 @@ const EditarProducto = () => {
         if (type === "image" && hasVideo && imgCount >= 5) continue;
         if (type === "image" && !hasVideo && imgCount >= 6) continue;
 
-        if (type === "image") {
-          try {
-            const nsfw = await isImageNsfw(file);
-            if (nsfw) {
-              toast({
-                title: "Imagen no permitida",
-                description: "La imagen no cumple con las políticas de contenido de Intercambius.",
-                variant: "destructive",
-              });
-              continue;
-            }
-          } catch {
-            toast({
-              title: "Error al verificar la imagen",
-              description: "No se pudo procesar. Probá con otra imagen.",
-              variant: "destructive",
-            });
-            continue;
-          }
+        if (type === "video") {
+          toAdd.push({ file, preview: URL.createObjectURL(file), type });
+        } else {
+          imageFilesForCrop.push(file);
         }
-
-        toAdd.push({ file, preview: URL.createObjectURL(file), type });
       }
 
       if (toAdd.length > 0) {
         setFormData((prev) => ({ ...prev, medias: [...prev.medias, ...toAdd] }));
+      }
+      if (imageFilesForCrop.length > 0) {
+        processCropQueue(imageFilesForCrop);
       }
     } finally {
       setIsCheckingMedia(false);
@@ -587,6 +645,14 @@ const EditarProducto = () => {
           </CardContent>
         </Card>
       </div>
+      <ImageCropDialog
+        open={cropOpen}
+        file={cropFile}
+        onOpenChange={setCropOpen}
+        onCropped={handleCroppedImage}
+        aspect={4 / 3}
+        title="Encuadrar foto del producto"
+      />
     </Layout>
   );
 };

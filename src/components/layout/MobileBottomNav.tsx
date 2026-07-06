@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMemo } from "react";
-import { ShoppingBag, Users, MessageCircle, Heart, User, Table2 } from "lucide-react";
+import { ShoppingBag, Users, MessageCircle, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationAlerts } from "@/hooks/use-notification-alerts";
@@ -13,17 +13,14 @@ export const MobileBottomNav = () => {
   const { user } = useAuth();
 
   const navItems = useMemo(() => {
-    const uid = user?.id;
-    const tablaTo = uid ? `/perfil/${uid}?intereses=1` : "/dashboard";
     return [
       { to: "/market", label: "Market", icon: ShoppingBag },
-      { to: tablaTo, label: "Tabla", icon: Table2 },
       { to: "/coincidencias", label: "Coincidencias", icon: Users },
       { to: "/chat", label: "Mensajes", icon: MessageCircle },
       { to: "/favoritos", label: "Favoritos", icon: Heart },
       { to: "/dashboard", label: "Cuenta", icon: User },
     ] as const;
-  }, [user?.id]);
+  }, []);
 
   const { noLeidas } = useNotificationAlerts();
 

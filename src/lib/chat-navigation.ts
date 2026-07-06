@@ -10,6 +10,7 @@ export async function prefetchChatDetalleYNavigate(
   queryClient: QueryClient,
   navigate: NavigateFunction,
   conversacionId: number,
+  options?: { openPropuesta?: boolean },
 ): Promise<void> {
   const idStr = String(conversacionId);
   try {
@@ -21,5 +22,5 @@ export async function prefetchChatDetalleYNavigate(
     // Chat.tsx reintentará al entrar
   }
   await queryClient.invalidateQueries({ queryKey: ["chat"] });
-  navigate(`/chat/${conversacionId}`);
+  navigate(`/chat/${conversacionId}`, options?.openPropuesta ? { state: { openPropuesta: true } } : undefined);
 }
