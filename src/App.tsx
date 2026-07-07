@@ -31,6 +31,7 @@ import TerminosCondiciones from "./pages/TerminosCondiciones";
 import TerminosGenerales from "./pages/TerminosGenerales";
 import DisenoEconomico from "./pages/DisenoEconomico";
 import EvaluarIntercambio from "./pages/EvaluarIntercambio";
+import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
