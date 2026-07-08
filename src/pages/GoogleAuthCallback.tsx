@@ -60,6 +60,11 @@ const GoogleAuthCallback = () => {
       }
 
       if (!markGoogleAuthCodeUsed(code)) {
+        redirectWithGoogleError(
+          navigate,
+          pending,
+          'Este enlace de Google ya se utilizó. Volvé a intentar desde login o registro.',
+        );
         return;
       }
 

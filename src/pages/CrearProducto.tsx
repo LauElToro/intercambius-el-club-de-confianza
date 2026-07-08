@@ -22,6 +22,7 @@ import { isImageNsfw } from "@/lib/nsfwCheck";
 import { userService } from "@/services/user.service";
 import { MAX_BLOB_UPLOAD_BYTES } from "@/lib/constants";
 import { ImageCropDialog } from "@/components/media/ImageCropDialog";
+import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 
 const CrearProducto = () => {
   const navigate = useNavigate();

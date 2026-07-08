@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
@@ -37,6 +37,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CurrencyVariantProvider } from "./contexts/CurrencyVariantContext";
 import { CookieConsentProvider } from "./contexts/CookieConsentContext";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { RouteErrorBoundary } from "./components/layout/RouteErrorBoundary";
 
 const CACHE_STALE_MS = 2 * 60 * 1000;
 const CACHE_GC_MS = 30 * 60 * 1000;
@@ -62,6 +63,7 @@ const App = () => (
           <AuthProvider>
             <Toaster />
             <Sonner />
+            <RouteErrorBoundary>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
@@ -105,6 +107,8 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/crear-publicacion" element={<Navigate to="/crear-producto" replace />} />
+              <Route path="/publicaciones" element={<Navigate to="/mis-publicaciones" replace />} />
               <Route 
                 path="/editar-producto/:id" 
                 element={
@@ -186,6 +190,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </RouteErrorBoundary>
             <CookieConsentBanner />
           </AuthProvider>
           </CurrencyVariantProvider>

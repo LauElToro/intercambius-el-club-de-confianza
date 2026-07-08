@@ -108,7 +108,14 @@ const Chat = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { formatIX } = useCurrencyVariant();
   const [mensaje, setMensaje] = useState("");
+  const [propuestaOpen, setPropuestaOpen] = useState(false);
+  const [aprobarIntercambioOpen, setAprobarIntercambioOpen] = useState(false);
+  const [codigoEmailInfo, setCodigoEmailInfo] = useState<{ para: string } | null>(null);
+  const [montoIX, setMontoIX] = useState("");
+  const [montoPesos, setMontoPesos] = useState("");
+  const [montoUSD, setMontoUSD] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: conversaciones, isLoading: loadingLista } = useQuery({
@@ -213,14 +220,6 @@ const Chat = () => {
   };
 
   const truncar = (s: string, n: number) => s.length > n ? s.slice(0, n) + '…' : s;
-
-  const { formatIX } = useCurrencyVariant();
-  const [propuestaOpen, setPropuestaOpen] = useState(false);
-  const [aprobarIntercambioOpen, setAprobarIntercambioOpen] = useState(false);
-  const [codigoEmailInfo, setCodigoEmailInfo] = useState<{ para: string } | null>(null);
-  const [montoIX, setMontoIX] = useState("");
-  const [montoPesos, setMontoPesos] = useState("");
-  const [montoUSD, setMontoUSD] = useState("");
 
   useEffect(() => {
     const st = location.state as { openPropuesta?: boolean } | null;

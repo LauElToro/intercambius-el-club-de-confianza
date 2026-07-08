@@ -30,7 +30,7 @@ const EditarProducto = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: item, isLoading } = useQuery({
+  const { data: item, isLoading, isError, error } = useQuery({
     queryKey: ["marketItem", id],
     queryFn: () => marketService.getItemById(Number(id!)),
     enabled: !!id,
@@ -355,7 +355,7 @@ const EditarProducto = () => {
 
   const fichaTecnica = formData.rubro ? FICHAS_TECNICAS[formData.rubro] : null;
 
-  if (isLoading || !item) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8 flex justify-center min-h-[40vh]">
@@ -365,10 +365,34 @@ const EditarProducto = () => {
     );
   }
 
+  if (isError || !item) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 max-w-lg text-center">
+          <p className="text-destructive mb-2 font-medium">No se pudo cargar la publicación</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {error instanceof Error ? error.message : "La publicación no existe o no tenés acceso."}
+          </p>
+          <Button variant="gold" onClick={() => navigate("/mis-publicaciones")}>
+            Volver a mis publicaciones
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
   if (item.vendedorId !== user?.id) {
-    toast({ title: "No autorizado", description: "No podés editar esta publicación", variant: "destructive" });
-    navigate("/mis-publicaciones");
-    return null;
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 max-w-lg text-center">
+          <p className="text-destructive mb-2 font-medium">No autorizado</p>
+          <p className="text-sm text-muted-foreground mb-6">No podés editar esta publicación.</p>
+          <Button variant="gold" onClick={() => navigate("/mis-publicaciones")}>
+            Volver a mis publicaciones
+          </Button>
+        </div>
+      </Layout>
+    );
   }
 
   return (

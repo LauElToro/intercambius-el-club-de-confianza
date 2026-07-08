@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight, CheckCircle2, Shield, Loader2 } from "lucide-react";
@@ -31,10 +31,10 @@ function formatFechaRelativa(dateStr: string): string {
 }
 
 const Dashboard = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user, loading: authLoading, refreshUser } = useAuth();
+  const { formatIX } = useCurrencyVariant();
   const { toast } = useToast();
   const [kycBtnLoading, setKycBtnLoading] = useState(false);
 
@@ -107,11 +107,15 @@ const Dashboard = () => {
   }
 
   if (!currentUser) {
-    navigate('/login');
-    return null;
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-gold" />
+        </div>
+      </Layout>
+    );
   }
 
-  const { formatIX } = useCurrencyVariant();
   const saldo = Number(currentUser?.saldo ?? 0) || 0;
   const limite = Number(currentUser?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const saldoPositivo = saldo >= 0;
