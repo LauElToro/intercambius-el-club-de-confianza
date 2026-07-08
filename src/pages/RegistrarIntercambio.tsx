@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Loader2, MessageCircle, Repeat } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, MessageCircle, Receipt, Repeat } from "lucide-react";
 import { chatService } from "@/services/chat.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
@@ -50,12 +50,26 @@ const RegistrarIntercambio = () => {
   const pendienteActual = useMemo(() => {
     if (!pendientes?.length) return null;
     if (conversacionIdResolved != null) {
-      return pendientes.find((p) => p.conversacionId === conversacionIdResolved) ?? pendientes[0];
+      return pendientes.find((p) => p.conversacionId === conversacionIdResolved) ?? null;
     }
     return pendientes[0];
   }, [pendientes, conversacionIdResolved]);
 
-  const conversacionId = pendienteActual?.conversacionId ?? conversacionIdResolved;
+  const necesitaConsultarChat =
+    conversacionIdResolved != null &&
+    !loadingPendientes &&
+    pendientes != null &&
+    !pendientes.some((p) => p.conversacionId === conversacionIdResolved);
+
+  const { data: chatConsultado, isLoading: loadingChatConsultado } = useQuery({
+    queryKey: ["chat", "registro-estado", conversacionIdResolved],
+    queryFn: () => chatService.getMensajes(conversacionIdResolved!),
+    enabled: necesitaConsultarChat,
+  });
+
+  const yaConfirmado = chatConsultado?.conversacion.registroCompletado === true;
+
+  const conversacionId = pendienteActual?.conversacionId ?? null;
   const propuestaDesdeChat = pendienteActual?.propuesta ?? stateFromChat.propuesta;
 
   const [formData, setFormData] = useState({
@@ -139,7 +153,9 @@ const RegistrarIntercambio = () => {
     codigoMutation.mutate();
   };
 
-  const sinPendiente = !loadingPendientes && !conversacionId;
+  const cargandoEstado =
+    loadingPendientes || (necesitaConsultarChat && loadingChatConsultado);
+  const sinPendiente = !cargandoEstado && !conversacionId && !yaConfirmado;
 
   return (
     <Layout>
@@ -154,9 +170,28 @@ const RegistrarIntercambio = () => {
             el chat.
           </p>
 
-          {loadingPendientes ? (
+          {cargandoEstado ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-gold" />
+            </div>
+          ) : yaConfirmado ? (
+            <div className="bg-card rounded-2xl p-6 border border-border space-y-4 text-center">
+              <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
+              <p className="font-medium">Este intercambio ya fue confirmado</p>
+              <p className="text-muted-foreground text-sm">
+                Los IOX del acuerdo ya se aplicaron en las cuentas. No hace falta ingresar el código otra vez; si el
+                saldo no se actualizaba, refrescá la página o volvé a iniciar sesión.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button variant="gold" onClick={() => navigate("/historial")}>
+                  <Receipt className="w-4 h-4 mr-2" />
+                  Ver historial
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/chat")}>
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Ir a mensajes
+                </Button>
+              </div>
             </div>
           ) : sinPendiente ? (
             <div className="bg-card rounded-2xl p-6 border border-border space-y-4 text-center">
