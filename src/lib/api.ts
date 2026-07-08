@@ -1,5 +1,6 @@
 import {
   isPublicAuthEndpoint,
+  isPublicReadEndpoint,
   notifyAuthSessionInvalid,
   shouldInvalidateUserSession,
 } from '@/lib/auth-session';
@@ -32,6 +33,7 @@ function throwApiError(
   if (
     hadToken &&
     !isPublicAuthEndpoint(endpoint) &&
+    !isPublicReadEndpoint(endpoint) &&
     shouldInvalidateUserSession(status, msg)
   ) {
     notifyAuthSessionInvalid();
@@ -64,6 +66,31 @@ async function tryRefreshAccessToken(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** GET sin Authorization (perfiles públicos, market, etc.). Si falla con 401 y había token, reintenta sin él. */
+async function requestPublic<T>(endpoint: string): Promise<T> {
+  const response = await fetch(buildApiUrl(endpoint), {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType && contentType.includes('application/json');
+  const text = await response.text();
+  let data: any = {};
+  if (isJson && text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new ApiError('Error al procesar la respuesta del servidor', response.status);
+    }
+  }
+  if (!response.ok) {
+    const msg =
+      typeof data?.error === 'string' ? data.error : `HTTP error! status: ${response.status}`;
+    throw new ApiError(msg, response.status, data);
+  }
+  return data as T;
 }
 
 async function request<T>(
@@ -127,6 +154,7 @@ async function request<T>(
       !authRetried &&
       hadToken &&
       !isPublicAuthEndpoint(endpoint) &&
+      !isPublicReadEndpoint(endpoint) &&
       shouldInvalidateUserSession(response.status, msg)
     ) {
       const refreshed = await tryRefreshAccessToken();
@@ -142,6 +170,9 @@ async function request<T>(
 
 export const api = {
   get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
+
+  /** GET sin enviar token (perfiles públicos). */
+  getPublic: <T>(endpoint: string) => requestPublic<T>(endpoint),
   
   post: <T>(endpoint: string, body?: any) =>
     request<T>(endpoint, {

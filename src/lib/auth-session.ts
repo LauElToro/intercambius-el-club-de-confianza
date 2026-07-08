@@ -23,9 +23,20 @@ export function isPublicAuthEndpoint(endpoint: string): boolean {
     '/api/auth/resend-mfa',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
-    '/api/auth/refresh',
-    '/api/contact',
-  ];
+  '/api/auth/refresh',
+  '/api/contact',
+];
+
+/** Lecturas públicas donde un 401 con token vencido no debe cerrar sesión. */
+export function isPublicReadEndpoint(endpoint: string): boolean {
+  const path = endpoint.split('?')[0] ?? endpoint;
+  if (path === '/api/users/me') return false;
+  if (/^\/api\/users\/[^/]+$/.test(path)) return true;
+  if (path === '/api/market' || path.startsWith('/api/market/')) return true;
+  if (path === '/api/coincidencias' || path.startsWith('/api/coincidencias/')) return true;
+  if (path === '/api/geo' || path.startsWith('/api/geo/')) return true;
+  return false;
+}
   return prefixes.some((p) => path === p || path.startsWith(`${p}/`));
 }
 

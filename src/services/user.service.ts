@@ -37,9 +37,9 @@ export const userService = {
   },
 
   async getUser(idOrSlug: string | number): Promise<User> {
+    const path = `/api/users/${idOrSlug}`;
     try {
-      const user = await api.get<User>(`/api/users/${idOrSlug}`);
-      return user;
+      return await api.getPublic<User>(path);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
