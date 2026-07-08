@@ -27,6 +27,8 @@ export interface ChatDetalle {
     marketItem?: { id: number; titulo: string; rubro: string; imagen: string; precio: number };
     puedeConfirmarRegistro?: boolean;
     registroCompletado?: boolean;
+    acuerdoPendienteConfirmacion?: boolean;
+    necesitaReenvioCodigo?: boolean;
   };
   mensajes: Mensaje[];
 }

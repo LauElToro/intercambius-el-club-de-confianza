@@ -278,6 +278,7 @@ const Chat = () => {
       : null;
 
   const puedeConfirmarRegistro = chatDetalle?.conversacion.puedeConfirmarRegistro ?? false;
+  const necesitaReenvioCodigo = chatDetalle?.conversacion.necesitaReenvioCodigo ?? false;
 
   const handleEnviarPropuesta = () => {
     const iox = montoIX.trim() ? parseInt(montoIX, 10) : null;
@@ -593,6 +594,21 @@ const Chat = () => {
                     {propuestaPropiaPendiente && !propuestaDelOtro && (
                       <div className="px-4 py-2 border-b border-border bg-gold/5 text-sm text-muted-foreground">
                         Esperando respuesta a tu propuesta ({propuestaPagoToResumenCorto(propuestaPropiaPendiente.propuesta, formatIX)}).
+                      </div>
+                    )}
+                    {necesitaReenvioCodigo && (
+                      <div className="px-4 py-2 border-b border-border bg-amber-500/10 flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-sm">
+                          Hay un acuerdo aceptado pendiente de confirmar, pero falta el código por email.
+                        </span>
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={() => codigoIntercambioMutation.mutate()}
+                          disabled={codigoIntercambioMutation.isPending}
+                        >
+                          Reenviar código
+                        </Button>
                       </div>
                     )}
                     {puedeConfirmarRegistro && (
