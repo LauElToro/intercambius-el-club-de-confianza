@@ -196,8 +196,25 @@ export function buildAceptacionTexto(p: PropuestaPago): string {
 }
 
 export function contenidoParaMostrar(contenido: string): string | null {
-  const firstLine = contenido.trim().split("\n")[0];
-  const p = parsePropuestaPagoJson(firstLine);
-  if (p) return propuestaPagoToDisplayText(p);
+  const trimmed = contenido.trim();
+  const json = parsePropuestaPagoJson(trimmed);
+  if (json) return propuestaPagoToDisplayText(json);
+  const legacy = parseLegacyPropuestaLinea(trimmed);
+  if (legacy) return propuestaPagoToDisplayText(legacy);
   return null;
+}
+
+/** Texto corto para listas de chat, notificaciones y emails (nunca JSON crudo). */
+export function resumenMensajeParaPreview(contenido: string): string {
+  const display = contenidoParaMostrar(contenido);
+  if (display) return display;
+  const trimmed = contenido.trim();
+  if (trimmed.startsWith('{"_t":"intercambio"')) return "Propuesta de intercambio";
+  if (/quiero realizar un intercambio/i.test(contenido)) return "Propuesta de intercambio";
+  if (mensajeEsAceptacionPropuesta(contenido)) return "Aceptó la propuesta de pago";
+  if (mensajeEsRechazoPropuesta(contenido)) return "Rechazó la propuesta de pago";
+  if (/código de verificación enviado por email/i.test(contenido)) {
+    return "Código de verificación enviado por email";
+  }
+  return contenido.replace(/\*\*/g, "").split("\n")[0];
 }

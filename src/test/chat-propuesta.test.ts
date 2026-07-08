@@ -5,6 +5,7 @@ import {
   buildRechazoTexto,
   encontrarPropuestaPendienteDelOtro,
   mensajeEsRechazoPropuesta,
+  resumenMensajeParaPreview,
 } from "@/lib/chat-propuesta";
 
 const mk = (id: number, senderId: number, contenido: string) => ({
@@ -44,5 +45,11 @@ describe("chat-propuesta", () => {
       mk(2, 20, buildRechazoTexto()),
     ];
     expect(encontrarPropuestaPendienteDelOtro(msgs, 20)).toBeNull();
+  });
+
+  it("resumenMensajeParaPreview formatea propuesta_pago JSON", () => {
+    const json = buildPropuestaPagoMessage(20000, null, null);
+    expect(resumenMensajeParaPreview(json)).toContain("20000 IOX");
+    expect(resumenMensajeParaPreview(json)).not.toContain('"_t"');
   });
 });

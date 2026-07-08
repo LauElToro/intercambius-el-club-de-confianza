@@ -24,13 +24,13 @@ import {
 } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
-import { checkoutService } from "@/services/checkout.service";
 import { chatService } from "@/services/chat.service";
+import { buildPropuestaPagoMessage } from "@/lib/chat-propuesta";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
-import { CREDIT_LIMIT_DEFAULT, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
+import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { ApiError } from "@/lib/api";
 import { perfilPath, nombrePublico } from "@/lib/perfil";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
@@ -110,32 +110,22 @@ const ProductoDetalle = () => {
     },
   });
 
-  const checkoutMutation = useMutation({
-    mutationFn: () => checkoutService.pay(Number(id!)),
+  const comprarConCodigoMutation = useMutation({
+    mutationFn: async () => {
+      const { conversacionId } = await chatService.iniciarConversacion({ marketItemId: Number(id!) });
+      const payload = buildPropuestaPagoMessage(precio, null, null);
+      await chatService.enviarMensaje(conversacionId, payload);
+      return { conversacionId };
+    },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-      queryClient.invalidateQueries({ queryKey: ['marketItem', id] });
-      queryClient.invalidateQueries({ queryKey: ['intercambios'] });
       queryClient.invalidateQueries({ queryKey: ['chat'] });
       queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
-      const precio = Number(item?.precio ?? 0) || 0;
-      if (data.conversacionId && precio > 0) {
-        try {
-          await chatService.enviarMensaje(data.conversacionId, `Compré este producto por ${formatIX(precio)}.`);
-          queryClient.invalidateQueries({ queryKey: ['chat', String(data.conversacionId)] });
-        } catch {
-          // no bloquear el flujo si falla el mensaje
-        }
-      }
-      toast({ title: "¡Compra exitosa!", description: "Contanos cómo fue tu experiencia." });
+      toast({
+        title: "Propuesta enviada",
+        description: "El vendedor debe aprobar. Recibirás un código por email para confirmar la compra.",
+      });
       setCheckoutOpen(false);
-      if (data.intercambio?.id) {
-        navigate(`/evaluar/${data.intercambio.id}`);
-        return;
-      }
-      if (data.conversacionId) {
-        await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
-      }
+      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },
     onError: (error: any) => {
       if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {
@@ -143,7 +133,7 @@ const ProductoDetalle = () => {
         setKycRequiredOpen(true);
         return;
       }
-      const msg = error?.data?.error || error?.message || "No se pudo completar el pago";
+      const msg = error?.data?.error || error?.message || "No se pudo iniciar la compra";
       const esLimite = /límite|limite|crédito|credito|insuficiente/i.test(String(msg));
       toast({
         title: esLimite ? "Límite de crédito" : "Error",
@@ -578,7 +568,7 @@ const ProductoDetalle = () => {
                         }}
                       >
                         <CreditCard className="w-5 h-5 mr-2" />
-                        {item.rubro === 'servicios' ? 'Contratar con IOX' : 'Pagar con IOX ahora'}
+                        {item.rubro === 'servicios' ? 'Contratar con IOX' : 'Comprar con IOX'}
                       </Button>
                     )}
                     {(() => {
@@ -609,15 +599,15 @@ const ProductoDetalle = () => {
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Pagar con IOX</DialogTitle>
+              <DialogTitle>Comprar con IOX</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{item.titulo}</span>
                 <span className="font-bold">{formatIX(precio)}</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Si tenés IOX disponible, una parte del pago ({COMISION_IOX_PORCENTAJE}%) puede realizarse en IOX; si no tenés IOX, el pago puede ser 100% en dinero tradicional. Sin comisiones fijas.
+              <p className="text-sm text-muted-foreground rounded-md border border-gold/30 bg-gold/5 px-3 py-2">
+                Se enviará una propuesta al vendedor. Cuando la apruebe, recibirás un <strong>código por email</strong> para confirmar la compra en «Registrar intercambio». El saldo se mueve solo al ingresar el código.
               </p>
               <div className="bg-muted rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -645,17 +635,17 @@ const ProductoDetalle = () => {
               </Button>
               <Button
                 variant="gold"
-                onClick={() => checkoutMutation.mutate()}
-                disabled={!puedeComprar || checkoutMutation.isPending}
+                onClick={() => comprarConCodigoMutation.mutate()}
+                disabled={!puedeComprar || comprarConCodigoMutation.isPending}
                 className="min-w-[140px]"
               >
-                {checkoutMutation.isPending ? (
+                {comprarConCodigoMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Procesando...
+                    Enviando...
                   </>
                 ) : (
-                  "Confirmar pago"
+                  "Enviar propuesta de compra"
                 )}
               </Button>
             </DialogFooter>

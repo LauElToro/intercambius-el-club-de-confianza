@@ -29,6 +29,7 @@ import {
   encontrarPropuestaPendienteDelOtro,
   encontrarPropuestaPendientePropia,
   propuestaPagoToResumenCorto,
+  resumenMensajeParaPreview,
 } from "@/lib/chat-propuesta";
 
 const RUBROS_CHAT: Record<string, { label: string; icon: string }> = {
@@ -266,6 +267,7 @@ const Chat = () => {
     parseIntercambio(c) !== null || (/quiero realizar un intercambio/i.test(c) && (/ver mi producto/i.test(c) || /imagen del producto/i.test(c)));
   const primerMensajeIntercambio = msgs.find((m) => esPropuestaIntercambio(m.contenido));
   const soyReceptor = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId !== user?.id;
+  const soyEmisorIntercambio = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId === user?.id;
 
   const propuestaDelOtro =
     user?.id != null
@@ -277,8 +279,32 @@ const Chat = () => {
       ? encontrarPropuestaPendientePropia(msgs, user.id)
       : null;
 
+  const intercambioParseado = primerMensajeIntercambio
+    ? parseIntercambio(primerMensajeIntercambio.contenido)
+    : null;
+  const miPrecioEnIntercambio = intercambioParseado
+    ? (soyEmisorIntercambio ? intercambioParseado.miProducto.precio : intercambioParseado.tuProducto.precio)
+    : undefined;
+  const suPrecioEnIntercambio = intercambioParseado
+    ? (soyEmisorIntercambio ? intercambioParseado.tuProducto.precio : intercambioParseado.miProducto.precio)
+    : undefined;
+  const diferenciaSugerida =
+    miPrecioEnIntercambio != null && suPrecioEnIntercambio != null && suPrecioEnIntercambio > miPrecioEnIntercambio
+      ? Math.floor(suPrecioEnIntercambio - miPrecioEnIntercambio)
+      : null;
+  const puedoOfrecerDiferencia =
+    soyEmisorIntercambio &&
+    diferenciaSugerida != null &&
+    diferenciaSugerida > 0 &&
+    !propuestaPropiaPendiente &&
+    !propuestaDelOtro;
+
   const puedeConfirmarRegistro = chatDetalle?.conversacion.puedeConfirmarRegistro ?? false;
   const necesitaReenvioCodigo = chatDetalle?.conversacion.necesitaReenvioCodigo ?? false;
+  const codigoIntercambioEnviado = chatDetalle?.conversacion.codigoIntercambioEnviado ?? false;
+  const registroCompletado = chatDetalle?.conversacion.registroCompletado ?? false;
+  const mostrarAprobarIntercambio =
+    soyReceptor && !codigoIntercambioEnviado && !registroCompletado && !codigoEmailInfo;
 
   const handleEnviarPropuesta = () => {
     const iox = montoIX.trim() ? parseInt(montoIX, 10) : null;
@@ -405,7 +431,7 @@ const Chat = () => {
                         )}
                         {c.ultimoMensaje && (
                           <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {truncar(c.ultimoMensaje.contenido, 40)}
+                            {truncar(resumenMensajeParaPreview(c.ultimoMensaje.contenido), 40)}
                           </p>
                         )}
                       </div>
@@ -534,7 +560,7 @@ const Chat = () => {
                                       </div>
                                     );
                                   }
-                                  const textoLegacy = m.contenido.replace(/\*\*/g, '').split('\n')[0];
+                                  const textoLegacy = resumenMensajeParaPreview(m.contenido);
                                   return (
                                     <div
                                       className={`max-w-[80%] rounded-2xl px-4 py-2 ${
@@ -591,6 +617,27 @@ const Chat = () => {
                         </div>
                       </div>
                     )}
+                    {puedoOfrecerDiferencia && (
+                      <div className="px-4 py-2 border-b border-border bg-blue-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Tu producto vale menos ({formatIX(miPrecioEnIntercambio ?? 0)} vs {formatIX(suPrecioEnIntercambio ?? 0)}).
+                          Podés ofrecer la diferencia de <strong>{formatIX(diferenciaSugerida!)}</strong> para equilibrar el intercambio.
+                        </span>
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={() => {
+                            setMontoIX(String(diferenciaSugerida));
+                            setMontoPesos("");
+                            setMontoUSD("");
+                            setPropuestaOpen(true);
+                          }}
+                        >
+                          <HandCoins className="w-4 h-4 mr-1" />
+                          Ofrecer diferencia
+                        </Button>
+                      </div>
+                    )}
                     {propuestaPropiaPendiente && !propuestaDelOtro && (
                       <div className="px-4 py-2 border-b border-border bg-gold/5 text-sm text-muted-foreground">
                         Esperando respuesta a tu propuesta ({propuestaPagoToResumenCorto(propuestaPropiaPendiente.propuesta, formatIX)}).
@@ -627,7 +674,7 @@ const Chat = () => {
                         </Button>
                       </div>
                     )}
-                    {soyReceptor && (
+                    {mostrarAprobarIntercambio && (
                       <div className="px-4 py-2 border-b border-border bg-gold/10 flex items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
                           Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> a quien hizo la propuesta (no por el chat).
@@ -691,7 +738,7 @@ const Chat = () => {
                           <DialogTitle>Propuesta de pago</DialogTitle>
                         </DialogHeader>
                         <p className="text-sm text-muted-foreground">
-                          Completá uno o más montos. Se enviará una sola propuesta con todo el acuerdo.
+                          Completá uno o más montos. Si tu producto vale menos, podés ofrecer la diferencia en IOX para equilibrar el intercambio.
                         </p>
                         <div className="space-y-3">
                           <div className="flex gap-2 items-center">

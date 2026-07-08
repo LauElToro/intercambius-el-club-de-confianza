@@ -184,8 +184,15 @@ const Coincidencias = () => {
         },
       });
     },
-    onSuccess: async (data) => {
-      toast({ title: "¡Mensaje enviado!", description: "Ya podés negociar el intercambio por chat." });
+    onSuccess: async (data, variables) => {
+      const diferencia = variables.itemDestino.precio - variables.miProducto.precio;
+      toast({
+        title: "¡Mensaje enviado!",
+        description:
+          diferencia > 0
+            ? `Tu producto vale menos. Desde el chat podés ofrecer la diferencia de ${formatIX(diferencia)} en IOX.`
+            : "Ya podés negociar el intercambio por chat.",
+      });
       await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },
     onError: (error: unknown) => {

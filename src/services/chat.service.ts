@@ -29,6 +29,7 @@ export interface ChatDetalle {
     registroCompletado?: boolean;
     acuerdoPendienteConfirmacion?: boolean;
     necesitaReenvioCodigo?: boolean;
+    codigoIntercambioEnviado?: boolean;
   };
   mensajes: Mensaje[];
 }
