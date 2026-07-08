@@ -32,7 +32,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
 import { CREDIT_LIMIT_DEFAULT, COMISION_IOX_PORCENTAJE } from "@/lib/constants";
 import { ApiError } from "@/lib/api";
-import { perfilPath } from "@/lib/perfil";
+import { perfilPath, nombrePublico } from "@/lib/perfil";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { UnifiedMapView } from "@/components/map/UnifiedMapView";
@@ -478,7 +478,7 @@ const ProductoDetalle = () => {
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{vendedor.nombre}</h3>
+                      <h3 className="font-semibold">{nombrePublico(vendedor)}</h3>
                       {vendedor.kycVerificado && <IdentidadVerificadaBadge iconClassName="h-5 w-5" />}
                     </div>
                     <div className="flex items-center gap-1 mb-2">

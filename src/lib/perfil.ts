@@ -5,13 +5,37 @@ export function perfilPath(user: { id: number; profileSlug?: string | null }): s
   return `/perfil/${user.id}`;
 }
 
-/** Nombre visible en perfil y publicaciones: tienda si hay, si no nombre de cuenta. */
-export function nombrePublico(user: {
-  nombre: string;
+type UsuarioNombre = {
+  nombre?: string | null;
   nombreTienda?: string | null;
-}): string {
+};
+
+/** Nombre de tienda por defecto cuando el usuario no configuró uno. */
+export function nombreTiendaPorDefecto(user: UsuarioNombre | null | undefined): string {
+  const nombre = user?.nombre?.trim();
+  return nombre || 'Mi tienda';
+}
+
+/** Valor efectivo de nombreTienda (nunca vacío si hay nombre de cuenta). */
+export function nombreTiendaEfectivo(user: UsuarioNombre | null | undefined): string {
+  const tienda = user?.nombreTienda?.trim();
+  if (tienda) return tienda;
+  return nombreTiendaPorDefecto(user);
+}
+
+/** Nombre visible en perfil y publicaciones: tienda si hay, si no nombre de cuenta. */
+export function nombrePublico(user: UsuarioNombre | null | undefined): string {
+  if (!user) return 'Usuario';
   const tienda = user.nombreTienda?.trim();
-  return tienda || user.nombre;
+  const nombre = user.nombre?.trim();
+  return tienda || nombre || 'Usuario';
+}
+
+/** Payload para persistir nombreTienda cuando falta (usa el nombre de cuenta). */
+export function nombreTiendaParaAsignar(user: UsuarioNombre | null | undefined): string | null {
+  if (user?.nombreTienda?.trim()) return null;
+  const def = nombreTiendaPorDefecto(user);
+  return def === 'Mi tienda' ? null : def;
 }
 
 /** Normaliza el slug que el usuario escribe (preview en el formulario). */

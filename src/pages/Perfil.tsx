@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { kycService } from "@/services/kyc.service";
 import { OfertaCreditoTerminos, getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
-import { nombrePublico, sanitizeProfileSlugInput } from "@/lib/perfil";
+import { nombrePublico, nombreTiendaParaAsignar, sanitizeProfileSlugInput } from "@/lib/perfil";
 
 const REDES_KEYS = ['instagram', 'facebook', 'twitter', 'linkedin', 'web'] as const;
 const REDES_ICONS: Record<string, typeof Instagram> = {
@@ -52,16 +52,18 @@ const Perfil = () => {
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  const esMiPerfil = user && usuario && user.id === usuario.id;
   const { formatIX } = useCurrencyVariant();
   const [pageProductos, setPageProductos] = useState(1);
   const PRODUCTOS_POR_PAGINA = 12;
+  const asignandoNombreTiendaRef = useRef(false);
 
   const { data: usuario, isLoading, error } = useQuery({
     queryKey: ['user', idOrSlug],
     queryFn: () => userService.getUser(idOrSlug!),
     enabled: !!idOrSlug,
   });
+
+  const esMiPerfil = Boolean(user && usuario && user.id === usuario.id);
 
   const { data: productosResponse } = useQuery({
     queryKey: ['marketItems', 'perfil', usuario?.id, pageProductos],
@@ -100,7 +102,7 @@ const Perfil = () => {
   const iniciarEdicion = useCallback(() => {
     setFormData({
       nombre: usuario?.nombre ?? '',
-      nombreTienda: usuario?.nombreTienda ?? '',
+      nombreTienda: usuario?.nombreTienda?.trim() || usuario?.nombre || '',
       profileSlug: usuario?.profileSlug ?? '',
       bio: usuario?.bio ?? '',
       ubicacion: usuario?.ubicacion ?? '',
@@ -193,6 +195,25 @@ const Perfil = () => {
     setPageProductos(1);
   }, [idOrSlug]);
 
+  /** Asigna nombre de tienda (= nombre de cuenta) a quien no lo tenga. */
+  useEffect(() => {
+    if (!esMiPerfil || !usuario || asignandoNombreTiendaRef.current) return;
+    const nombreTienda = nombreTiendaParaAsignar(usuario);
+    if (!nombreTienda) return;
+
+    asignandoNombreTiendaRef.current = true;
+    void userService
+      .updateUser({ nombreTienda })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['user', idOrSlug] });
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+        void refreshUser();
+      })
+      .catch(() => {
+        asignandoNombreTiendaRef.current = false;
+      });
+  }, [esMiPerfil, usuario, idOrSlug, queryClient, refreshUser]);
+
   const kycReturn = searchParams.get("kyc");
   useEffect(() => {
     if (!esMiPerfil || kycReturn !== "return") return;
@@ -248,16 +269,6 @@ const Perfil = () => {
     return () => window.clearTimeout(t);
   }, [usuario, esMiPerfil, searchParams, setSearchParams, iniciarEdicion]);
 
-  const displayData = editando ? formData : usuario;
-  const nombreMostrar = editando
-    ? (formData.nombreTienda?.trim() || formData.nombre || usuario?.nombre || '')
-    : nombrePublico(usuario!);
-  const bio = displayData?.bio ?? usuario?.bio ?? '';
-  const ubicacion = displayData?.ubicacion ?? usuario?.ubicacion ?? '';
-  const fotoPerfil = displayData?.fotoPerfil ?? usuario?.fotoPerfil ?? '';
-  const banner = displayData?.banner ?? usuario?.banner ?? '';
-  const redesSociales = displayData?.redesSociales ?? usuario?.redesSociales ?? {};
-
   if (isLoading || !usuario) {
     return (
       <Layout>
@@ -287,6 +298,16 @@ const Perfil = () => {
       </Layout>
     );
   }
+
+  const displayData = editando ? formData : usuario;
+  const nombreMostrar = editando
+    ? (formData.nombreTienda?.trim() || formData.nombre || usuario.nombre || '')
+    : nombrePublico(usuario);
+  const bio = displayData?.bio ?? usuario.bio ?? '';
+  const ubicacion = displayData?.ubicacion ?? usuario.ubicacion ?? '';
+  const fotoPerfil = displayData?.fotoPerfil ?? usuario.fotoPerfil ?? '';
+  const banner = displayData?.banner ?? usuario.banner ?? '';
+  const redesSociales = displayData?.redesSociales ?? usuario.redesSociales ?? {};
 
   const iniciales = nombreMostrar
     ?.split(" ")
