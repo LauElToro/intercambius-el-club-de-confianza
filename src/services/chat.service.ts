@@ -170,6 +170,8 @@ export const chatService = {
     tipo: 'iox' | 'pesos' | 'usd';
     monto: number;
     creditosAplicados: number;
+    saldoPagador: number;
+    saldoReceptor: number;
   }> {
     try {
       return await api.post(

@@ -551,7 +551,7 @@ const ProductoDetalle = () => {
                       variant="outline"
                       className="w-full"
                       size="lg"
-                      onClick={() => iniciarChatMutation.mutate()}
+                      onClick={() => iniciarChatMutation.mutate({})}
                       disabled={iniciarChatMutation.isPending}
                     >
                       Contactar al vendedor

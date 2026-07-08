@@ -222,8 +222,8 @@ const RegistrarIntercambio = () => {
                       className="bg-surface border-border focus:border-gold"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Te lo enviamos por email cuando la otra parte aceptó la propuesta. Solo quien hizo la propuesta de
-                      pago puede confirmar aquí.
+                      Te lo enviamos por email cuando la otra parte aceptó la propuesta. Solo el comprador (quien
+                      recibió el código) puede confirmar aquí.
                     </p>
                   </div>
 
