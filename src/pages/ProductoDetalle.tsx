@@ -37,6 +37,7 @@ import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { UnifiedMapView } from "@/components/map/UnifiedMapView";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
+import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
