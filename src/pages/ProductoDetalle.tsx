@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,19 +18,17 @@ import {
   User,
   Award,
   Loader2,
+  MessageCircle,
   CreditCard,
-  MessageCircle
 } from "lucide-react";
 import { marketService, MarketItem } from "@/services/market.service";
 import { favoritosService } from "@/services/favoritos.service";
 import { chatService } from "@/services/chat.service";
-import { buildPropuestaPagoMessage } from "@/lib/chat-propuesta";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { useToast } from "@/components/ui/use-toast";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
-import { ApiError } from "@/lib/api";
 import { perfilPath, nombrePublico } from "@/lib/perfil";
 import { KycRequiredDialog } from "@/components/kyc/KycRequiredDialog";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
@@ -46,7 +43,6 @@ const ProductoDetalle = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedMedia, setSelectedMedia] = useState(0);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [kycRequiredOpen, setKycRequiredOpen] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const geoRequested = useRef(false);
@@ -110,39 +106,6 @@ const ProductoDetalle = () => {
     },
   });
 
-  const comprarConCodigoMutation = useMutation({
-    mutationFn: async () => {
-      const { conversacionId } = await chatService.iniciarConversacion({ marketItemId: Number(id!) });
-      const payload = buildPropuestaPagoMessage(precio, null, null);
-      await chatService.enviarMensaje(conversacionId, payload);
-      return { conversacionId };
-    },
-    onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['chat'] });
-      queryClient.invalidateQueries({ queryKey: ['notificaciones'] });
-      toast({
-        title: "Propuesta enviada",
-        description: "El vendedor debe aprobar. Recibirás un código por email para confirmar la compra.",
-      });
-      setCheckoutOpen(false);
-      await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
-    },
-    onError: (error: any) => {
-      if (error instanceof ApiError && error.data?.code === "KYC_REQUIRED") {
-        setCheckoutOpen(false);
-        setKycRequiredOpen(true);
-        return;
-      }
-      const msg = error?.data?.error || error?.message || "No se pudo iniciar la compra";
-      const esLimite = /límite|limite|crédito|credito|insuficiente/i.test(String(msg));
-      toast({
-        title: esLimite ? "Límite de crédito" : "Error",
-        description: esLimite ? "No tenés suficiente crédito disponible. El límite negativo es " + formatIX(limite) + "." : msg,
-        variant: "destructive",
-      });
-    },
-  });
-
   const toggleFavMutation = useMutation({
     mutationFn: () => favoritosService.toggleFavorito(Number(id!)),
     onSuccess: () => {
@@ -158,9 +121,6 @@ const ProductoDetalle = () => {
   const saldo = Number(usuario?.saldo ?? 0) || 0;
   const limite = Number(usuario?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const precio = Number(item?.precio ?? 0) || 0;
-  const puedeGastar = saldo + limite;
-  const enLimiteDeuda = limite > 0 && saldo <= -limite; // Límite de crédito alcanzado: solo pago por fuera
-  const puedeComprar = !!item && !enLimiteDeuda && (saldo - precio >= -limite);
 
   if (isLoading) {
     return (
@@ -546,31 +506,6 @@ const ProductoDetalle = () => {
                     >
                       Contactar al vendedor
                     </Button>
-                    {disponible && enLimiteDeuda && (
-                      <p className="text-sm text-amber-600 dark:text-amber-400 font-medium text-center py-2">
-                        Llegaste al límite de crédito (-{formatIX(limite)}). Solo podés pagar por fuera de la página hasta que reduzcas tu deuda.
-                      </p>
-                    )}
-                    {disponible && !enLimiteDeuda && (() => {
-                      const tipos = (item.tipoPago || "ix").split(",").map((s) => s.trim());
-                      const aceptaIX = tipos.includes("ix") || tipos.includes("ix_pesos");
-                      return aceptaIX;
-                    })() && (
-                      <Button
-                        className="w-full bg-gold hover:bg-gold/90 text-primary-foreground"
-                        size="lg"
-                        onClick={() => {
-                          if (!usuario?.kycVerificado) {
-                            setKycRequiredOpen(true);
-                            return;
-                          }
-                          setCheckoutOpen(true);
-                        }}
-                      >
-                        <CreditCard className="w-5 h-5 mr-2" />
-                        {item.rubro === 'servicios' ? 'Contratar con IOX' : 'Comprar con IOX'}
-                      </Button>
-                    )}
                     {(() => {
                       const tipos = (item.tipoPago || "").split(",").map((s) => s.trim());
                       const soloConvenirPesos = (tipos.includes("convenir") || tipos.includes("pesos") || tipos.includes("usd")) && !tipos.includes("ix") && !tipos.includes("ix_pesos");
@@ -595,62 +530,6 @@ const ProductoDetalle = () => {
 
         {/* Checkout Dialog */}
         <KycRequiredDialog open={kycRequiredOpen} onOpenChange={setKycRequiredOpen} contexto="compra" />
-
-        <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Comprar con IOX</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{item.titulo}</span>
-                <span className="font-bold">{formatIX(precio)}</span>
-              </div>
-              <p className="text-sm text-muted-foreground rounded-md border border-gold/30 bg-gold/5 px-3 py-2">
-                Se enviará una propuesta al vendedor. Cuando la apruebe, recibirás un <strong>código por email</strong> para confirmar la compra en «Registrar intercambio». El saldo se mueve solo al ingresar el código.
-              </p>
-              <div className="bg-muted rounded-lg p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Tu saldo</span>
-                  <span>{formatIX(saldo)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Límite negativo</span>
-                  <span>-{formatIX(limite)}</span>
-                </div>
-                <div className="flex justify-between font-medium pt-2 border-t">
-                  <span>Podés gastar hasta</span>
-                  <span className="text-gold">{formatIX(puedeGastar)}</span>
-                </div>
-              </div>
-              {!puedeComprar && (
-                <p className="text-sm text-destructive">
-                  No tenés suficiente crédito. Tu saldo ({formatIX(saldo)}) menos el precio ({formatIX(precio)}) superaría el límite negativo (-{formatIX(limite)}).
-                </p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCheckoutOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="gold"
-                onClick={() => comprarConCodigoMutation.mutate()}
-                disabled={!puedeComprar || comprarConCodigoMutation.isPending}
-                className="min-w-[140px]"
-              >
-                {comprarConCodigoMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Enviando...
-                  </>
-                ) : (
-                  "Enviar propuesta de compra"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </Layout>
   );

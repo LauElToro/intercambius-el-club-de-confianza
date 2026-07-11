@@ -53,11 +53,69 @@ export function esMensajePropuestaPago(contenido: string): boolean {
 export function buildPropuestaPagoMessage(iox: number | null, pesos: number | null, usd: number | null): string {
   const payload = {
     _t: "propuesta_pago",
-    iox: iox && iox > 0 ? Math.floor(iox) : null,
-    pesos: pesos && pesos > 0 ? Math.floor(pesos) : null,
-    usd: usd && usd > 0 ? Math.floor(usd) : null,
+    iox: iox != null && iox >= 0 ? (iox > 0 ? Math.floor(iox) : 0) : null,
+    pesos: pesos != null && pesos >= 0 ? (pesos > 0 ? Math.floor(pesos) : 0) : null,
+    usd: usd != null && usd >= 0 ? (usd > 0 ? Math.floor(usd) : 0) : null,
   };
   return JSON.stringify(payload);
+}
+
+/** Mínimo IOX exigido (5 % del valor de referencia). */
+export function minimoIoxRequerido(valorReferencia: number): number {
+  if (valorReferencia <= 0) return 0;
+  return Math.ceil((valorReferencia * 5) / 100);
+}
+
+export function tienePropuestaIntercambioEnHilo(mensajes: MensajePropuesta[]): boolean {
+  return mensajes.some(
+    (m) =>
+      m.contenido.includes('"_t":"intercambio"') ||
+      (/quiero realizar un intercambio/i.test(m.contenido) &&
+        (/ver mi producto/i.test(m.contenido) || /imagen del producto/i.test(m.contenido)))
+  );
+}
+
+function parseIntercambioPreciosPorRol(
+  mensajes: MensajePropuesta[],
+  compradorId: number
+): { precioComprador: number; precioVendedor: number } | null {
+  const msg = mensajes.find((m) => m.contenido.includes('"_t":"intercambio"'));
+  if (!msg) return null;
+  try {
+    const p = JSON.parse(msg.contenido) as {
+      _t?: string;
+      miProducto?: { precio?: number };
+      tuProducto?: { precio?: number };
+    };
+    if (p._t !== "intercambio" || !p.miProducto || !p.tuProducto) return null;
+    const mi = Number(p.miProducto.precio ?? 0) || 0;
+    const tu = Number(p.tuProducto.precio ?? 0) || 0;
+    if (msg.senderId === compradorId) {
+      return { precioComprador: mi, precioVendedor: tu };
+    }
+    return { precioComprador: tu, precioVendedor: mi };
+  } catch {
+    return null;
+  }
+}
+
+/** Quién paga IOX al confirmar el acuerdo (alineado con backend). */
+export function resolverPagadorId(
+  compradorId: number,
+  vendedorId: number,
+  mensajes: MensajePropuesta[],
+  proposerId: number
+): number {
+  if (!tienePropuestaIntercambioEnHilo(mensajes)) {
+    return compradorId;
+  }
+  const precios = parseIntercambioPreciosPorRol(mensajes, compradorId);
+  if (!precios) return proposerId;
+  const proposerEsComprador = proposerId === compradorId;
+  const precioProposer = proposerEsComprador ? precios.precioComprador : precios.precioVendedor;
+  const precioOtro = proposerEsComprador ? precios.precioVendedor : precios.precioComprador;
+  if (precioProposer < precioOtro) return proposerId;
+  return proposerEsComprador ? vendedorId : compradorId;
 }
 
 export function propuestaPagoToDisplayText(p: PropuestaPago): string {
@@ -138,7 +196,7 @@ export function encontrarPropuestaPendientePropia(
     if (m.senderId !== myUserId) continue;
 
     const merged = mergePropuestasConsecutivas(mensajes, i, m.senderId);
-    if (!merged) break;
+    if (!merged) continue;
 
     for (let k = i + 1; k < mensajes.length; k++) {
       const next = mensajes[k];
@@ -178,7 +236,7 @@ export function encontrarPropuestaPendienteDelOtro(
     if (m.senderId === myUserId) continue;
 
     const merged = mergePropuestasConsecutivas(mensajes, i, m.senderId);
-    if (!merged) break;
+    if (!merged) continue;
 
     if (hayRespuestaPosteriorALaPropuesta(mensajes, i, m.senderId)) return null;
 

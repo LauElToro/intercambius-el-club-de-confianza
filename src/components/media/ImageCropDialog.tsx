@@ -62,11 +62,11 @@ export function ImageCropDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="relative h-64 w-full overflow-hidden rounded-lg bg-muted">
+        <div className="relative h-72 w-full min-h-[45vh] sm:h-80 overflow-hidden rounded-lg bg-muted">
           {previewUrl && (
             <Cropper
               image={previewUrl}

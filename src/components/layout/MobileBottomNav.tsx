@@ -4,6 +4,7 @@ import { ShoppingBag, Users, MessageCircle, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationAlerts } from "@/hooks/use-notification-alerts";
+import { useCoincidenciasAlert } from "@/hooks/use-coincidencias-alert";
 import { isNavItemActive } from "@/lib/nav-link-active";
 
 /** Barra de navegación inferior fija para mobile - acceso rápido a las 5 secciones principales */
@@ -23,6 +24,7 @@ export const MobileBottomNav = () => {
   }, []);
 
   const { noLeidas } = useNotificationAlerts();
+  const { hayCoincidencias } = useCoincidenciasAlert();
 
   if (!user) return null;
 
@@ -36,6 +38,7 @@ export const MobileBottomNav = () => {
           const Icon = item.icon;
           const isActive = isNavItemActive(item.to, location.pathname, location.search);
           const isChat = item.to === "/chat";
+          const isCoincidencias = item.to === "/coincidencias";
 
           return (
             <button
@@ -62,6 +65,9 @@ export const MobileBottomNav = () => {
                   <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[10px] font-bold text-primary-foreground">
                     {noLeidas > 9 ? "9+" : noLeidas}
                   </span>
+                )}
+                {isCoincidencias && hayCoincidencias && !isActive && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
                 )}
               </span>
               <span

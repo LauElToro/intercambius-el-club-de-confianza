@@ -15,11 +15,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { chatService, Conversacion, Mensaje } from "@/services/chat.service";
+import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
+import { getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
+import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
 import { Send, MessageCircle, ArrowLeft, Loader2, ShoppingBag, HandCoins, Check, CheckCircle2, ExternalLink, X } from "lucide-react";
 import {
   buildPropuestaPagoMessage,
@@ -30,6 +33,8 @@ import {
   encontrarPropuestaPendientePropia,
   propuestaPagoToResumenCorto,
   resumenMensajeParaPreview,
+  minimoIoxRequerido,
+  resolverPagadorId,
 } from "@/lib/chat-propuesta";
 
 const RUBROS_CHAT: Record<string, { label: string; icon: string }> = {
@@ -118,6 +123,13 @@ const Chat = () => {
   const [montoPesos, setMontoPesos] = useState("");
   const [montoUSD, setMontoUSD] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user,
+  });
+  const usuario = currentUser || user;
 
   const { data: conversaciones, isLoading: loadingLista } = useQuery({
     queryKey: ['chat'],
@@ -267,7 +279,6 @@ const Chat = () => {
     parseIntercambio(c) !== null || (/quiero realizar un intercambio/i.test(c) && (/ver mi producto/i.test(c) || /imagen del producto/i.test(c)));
   const primerMensajeIntercambio = msgs.find((m) => esPropuestaIntercambio(m.contenido));
   const soyReceptor = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId !== user?.id;
-  const soyEmisorIntercambio = !!primerMensajeIntercambio && primerMensajeIntercambio.senderId === user?.id;
 
   const propuestaDelOtro =
     user?.id != null
@@ -283,17 +294,20 @@ const Chat = () => {
     ? parseIntercambio(primerMensajeIntercambio.contenido)
     : null;
   const miPrecioEnIntercambio = intercambioParseado
-    ? (soyEmisorIntercambio ? intercambioParseado.miProducto.precio : intercambioParseado.tuProducto.precio)
+    ? (primerMensajeIntercambio!.senderId === user?.id
+        ? intercambioParseado.miProducto.precio
+        : intercambioParseado.tuProducto.precio)
     : undefined;
   const suPrecioEnIntercambio = intercambioParseado
-    ? (soyEmisorIntercambio ? intercambioParseado.tuProducto.precio : intercambioParseado.miProducto.precio)
+    ? (primerMensajeIntercambio!.senderId === user?.id
+        ? intercambioParseado.tuProducto.precio
+        : intercambioParseado.miProducto.precio)
     : undefined;
   const diferenciaSugerida =
     miPrecioEnIntercambio != null && suPrecioEnIntercambio != null && suPrecioEnIntercambio > miPrecioEnIntercambio
       ? Math.floor(suPrecioEnIntercambio - miPrecioEnIntercambio)
       : null;
   const puedoOfrecerDiferencia =
-    soyEmisorIntercambio &&
     diferenciaSugerida != null &&
     diferenciaSugerida > 0 &&
     !propuestaPropiaPendiente &&
@@ -303,25 +317,97 @@ const Chat = () => {
   const necesitaReenvioCodigo = chatDetalle?.conversacion.necesitaReenvioCodigo ?? false;
   const codigoIntercambioEnviado = chatDetalle?.conversacion.codigoIntercambioEnviado ?? false;
   const registroCompletado = chatDetalle?.conversacion.registroCompletado ?? false;
+
+  const hayMensajeCodigoEnviado = msgs.some((m) =>
+    /código de verificación enviado por email/i.test(m.contenido)
+  );
+  const codigoYaEnviado = codigoIntercambioEnviado || !!codigoEmailInfo || hayMensajeCodigoEnviado;
   const mostrarAprobarIntercambio =
-    soyReceptor && !codigoIntercambioEnviado && !registroCompletado && !codigoEmailInfo;
+    soyReceptor &&
+    !!primerMensajeIntercambio &&
+    !codigoYaEnviado &&
+    !registroCompletado &&
+    !propuestaDelOtro &&
+    !propuestaPropiaPendiente;
+
+  const conv = chatDetalle?.conversacion;
+  const valorReferenciaPropuesta = (() => {
+    let ref = conv?.marketItem?.precio ?? 0;
+    if (intercambioParseado) {
+      const mi = Number(intercambioParseado.miProducto.precio ?? 0) || 0;
+      const tu = Number(intercambioParseado.tuProducto.precio ?? 0) || 0;
+      ref = Math.max(mi, tu, ref);
+    }
+    return ref;
+  })();
+  const minIoxPropuesta = minimoIoxRequerido(valorReferenciaPropuesta);
+
+  const parseMontoCampo = (raw: string): number | null => {
+    if (!raw.trim()) return null;
+    const n = parseInt(raw, 10);
+    if (Number.isNaN(n) || n < 0) return null;
+    return n;
+  };
 
   const handleEnviarPropuesta = () => {
-    const iox = montoIX.trim() ? parseInt(montoIX, 10) : null;
-    const pesos = montoPesos.trim() ? parseInt(montoPesos, 10) : null;
-    const usd = montoUSD.trim() ? parseInt(montoUSD, 10) : null;
-    if (
-      (iox != null && (isNaN(iox) || iox <= 0)) ||
-      (pesos != null && (isNaN(pesos) || pesos <= 0)) ||
-      (usd != null && (isNaN(usd) || usd <= 0))
-    ) {
-      toast({ title: "Montos inválidos", description: "Completá al menos un monto mayor a 0.", variant: "destructive" });
+    const iox = parseMontoCampo(montoIX);
+    const pesos = parseMontoCampo(montoPesos);
+    const usd = parseMontoCampo(montoUSD);
+
+    if (montoIX.trim() && iox === null) {
+      toast({ title: "Montos inválidos", description: "IOX debe ser un número mayor o igual a 0.", variant: "destructive" });
       return;
     }
-    if (!iox && !pesos && !usd) {
-      toast({ title: "Propuesta vacía", description: "Completá al menos IOX, pesos o USD.", variant: "destructive" });
+    if (montoPesos.trim() && pesos === null) {
+      toast({ title: "Montos inválidos", description: "Pesos debe ser un número mayor o igual a 0.", variant: "destructive" });
       return;
     }
+    if (montoUSD.trim() && usd === null) {
+      toast({ title: "Montos inválidos", description: "USD debe ser un número mayor o igual a 0.", variant: "destructive" });
+      return;
+    }
+
+    const tienePositivo = (iox ?? 0) > 0 || (pesos ?? 0) > 0 || (usd ?? 0) > 0;
+    if (!tienePositivo) {
+      toast({ title: "Propuesta vacía", description: "Completá al menos un monto mayor a 0.", variant: "destructive" });
+      return;
+    }
+
+    const ioxEfectivo = iox ?? 0;
+    if (minIoxPropuesta > 0 && ioxEfectivo < minIoxPropuesta) {
+      toast({
+        title: "Mínimo de IOX",
+        description: `Toda operación debe incluir al menos 5% en IOX (mínimo ${formatIX(minIoxPropuesta)} para este intercambio).`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ioxEfectivo > 0 && user?.id && getCreditoAceptado(user.id) !== "aceptado") {
+      toast({
+        title: "Activá IOX primero",
+        description: "Debés aceptar los términos de crédito IOX antes de proponer pagos en IOX.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ioxEfectivo > 0 && conv && user?.id) {
+      const pagadorId = resolverPagadorId(conv.compradorId, conv.vendedorId, msgs, user.id);
+      if (pagadorId === user.id) {
+        const saldo = Number(usuario?.saldo ?? 0) || 0;
+        const limite = Number(usuario?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
+        if (saldo - ioxEfectivo < -limite) {
+          toast({
+            title: "Saldo insuficiente",
+            description: `No tenés crédito disponible para proponer ${formatIX(ioxEfectivo)}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     const payload = buildPropuestaPagoMessage(iox, pesos, usd);
     enviarMutation.mutate(payload, {
       onSuccess: () => {
@@ -621,7 +707,7 @@ const Chat = () => {
                       <div className="px-4 py-2 border-b border-border bg-blue-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
                           Tu producto vale menos ({formatIX(miPrecioEnIntercambio ?? 0)} vs {formatIX(suPrecioEnIntercambio ?? 0)}).
-                          Podés ofrecer la diferencia de <strong>{formatIX(diferenciaSugerida!)}</strong> para equilibrar el intercambio.
+                          Podés ofrecer la diferencia de <strong>{formatIX(diferenciaSugerida!)}</strong> en IOX (vos pagás la diferencia porque tu objeto vale menos).
                         </span>
                         <Button
                           variant="gold"
@@ -677,7 +763,7 @@ const Chat = () => {
                     {mostrarAprobarIntercambio && (
                       <div className="px-4 py-2 border-b border-border bg-gold/10 flex items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> a quien hizo la propuesta (no por el chat).
+                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> al comprador (no por el chat).
                         </span>
                         <Button
                           variant="gold"
@@ -738,15 +824,18 @@ const Chat = () => {
                           <DialogTitle>Propuesta de pago</DialogTitle>
                         </DialogHeader>
                         <p className="text-sm text-muted-foreground">
-                          Completá uno o más montos. Si tu producto vale menos, podés ofrecer la diferencia en IOX para equilibrar el intercambio.
+                          Completá uno o más montos (podés poner 0 en los que no uses). Si tu producto vale menos, ofrecé la diferencia en IOX.
+                          {minIoxPropuesta > 0 && (
+                            <> Mínimo de IOX: <strong>{formatIX(minIoxPropuesta)}</strong> (5% del valor).</>
+                          )}
                         </p>
                         <div className="space-y-3">
                           <div className="flex gap-2 items-center">
                             <Label className="w-14 shrink-0">IOX</Label>
                             <Input
                               type="number"
-                              min={1}
-                              placeholder="Ej: 500"
+                              min={0}
+                              placeholder="0"
                               value={montoIX}
                               onChange={(e) => setMontoIX(e.target.value)}
                             />
@@ -755,8 +844,8 @@ const Chat = () => {
                             <Label className="w-14 shrink-0">$</Label>
                             <Input
                               type="number"
-                              min={1}
-                              placeholder="Ej: 3000"
+                              min={0}
+                              placeholder="0"
                               value={montoPesos}
                               onChange={(e) => setMontoPesos(e.target.value)}
                             />
@@ -765,8 +854,8 @@ const Chat = () => {
                             <Label className="w-14 shrink-0">USD</Label>
                             <Input
                               type="number"
-                              min={1}
-                              placeholder="Ej: 20"
+                              min={0}
+                              placeholder="0"
                               value={montoUSD}
                               onChange={(e) => setMontoUSD(e.target.value)}
                             />

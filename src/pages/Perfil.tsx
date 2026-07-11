@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBadge";
 import { kycService } from "@/services/kyc.service";
 import { OfertaCreditoTerminos, getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
-import { nombrePublico, nombreTiendaParaAsignar, sanitizeProfileSlugInput } from "@/lib/perfil";
+import { LoQueBuscoEditor } from "@/components/coincidencias/LoQueBuscoEditor";
 
 const REDES_KEYS = ['instagram', 'facebook', 'twitter', 'linkedin', 'web'] as const;
 const REDES_ICONS: Record<string, typeof Instagram> = {
@@ -676,26 +676,34 @@ const Perfil = () => {
                         <p className="text-sm text-foreground">{usuario.necesita}</p>
                       </div>
                     )}
-                    {(usuario?.interesesQuiero?.length ?? 0) > 0 && (
+                    {(usuario?.interesesQuiero?.length ?? 0) > 0 || esMiPerfil ? (
                       <div className="mb-4 p-4 rounded-xl bg-gold/5 border border-gold/25">
                         <p className="text-xs font-semibold text-gold uppercase tracking-wide mb-2 flex items-center gap-2">
                           <Sparkles className="w-4 h-4" />
                           {esMiPerfil ? 'Lo que quiero' : 'Lo que quiere'}
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {usuario!.interesesQuiero!.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="font-normal bg-background/80">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
+                        {esMiPerfil ? (
+                          <LoQueBuscoEditor
+                            terminosActivos={usuario?.interesesQuiero ?? []}
+                            interesesQuiero={usuario?.interesesQuiero ?? []}
+                            necesita={usuario?.necesita}
+                          />
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {usuario!.interesesQuiero!.map((tag) => (
+                              <Badge key={tag} variant="secondary" className="font-normal bg-background/80">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground mt-2">
                           {esMiPerfil
                             ? 'Así priorizamos coincidencias con lo que te interesa.'
                             : 'Si tenés algo parecido, podés proponer un intercambio desde el detalle de tu publicación.'}
                         </p>
                       </div>
-                    )}
+                    ) : null}
                     {Object.keys(redesSociales).length > 0 && (
                       <div className="flex flex-wrap gap-3 mb-4">
                         {REDES_KEYS.map((key) => {

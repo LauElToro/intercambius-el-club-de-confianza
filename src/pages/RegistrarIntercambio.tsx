@@ -263,12 +263,34 @@ const RegistrarIntercambio = () => {
                   </div>
 
                   {propuestaDesdeChat && (
-                    <p className="text-sm text-muted-foreground">
-                      Acuerdo en el chat: {propuestaPagoToResumenCorto(propuestaDesdeChat, formatIX)}.
-                      {propuestaDesdeChat.iox
-                        ? " Al confirmar se aplican los IOX acordados."
-                        : " Sin movimiento de IOX en la cuenta (pago por fuera)."}
-                    </p>
+                    <>
+                      <pre className="text-xs bg-muted rounded-md p-2 overflow-x-auto border border-gold/20">
+                        {JSON.stringify({
+                          _t: "propuesta_pago",
+                          iox: propuestaDesdeChat.iox ?? null,
+                          pesos: propuestaDesdeChat.pesos ?? null,
+                          usd: propuestaDesdeChat.usd ?? null,
+                        })}
+                      </pre>
+                      <p className="text-sm text-muted-foreground">
+                        Acuerdo en el chat: {propuestaPagoToResumenCorto(propuestaDesdeChat, formatIX)}.
+                        {propuestaDesdeChat.iox
+                          ? " Al confirmar se aplican los IOX acordados."
+                          : " Sin movimiento de IOX en la cuenta (pago por fuera)."}
+                      </p>
+                      {conversacionId && (
+                        <Button
+                          type="button"
+                          variant="gold"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          onClick={() => navigate(`/chat/${conversacionId}`)}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Ver conversación
+                        </Button>
+                      )}
+                    </>
                   )}
 
                   <div className="space-y-2 sm:max-w-xs">

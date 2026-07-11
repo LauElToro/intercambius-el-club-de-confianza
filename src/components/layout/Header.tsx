@@ -40,6 +40,7 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { HeaderSaldo } from "@/components/layout/HeaderSaldo";
 import { OfertaCreditoTerminos, getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
+import { useCoincidenciasAlert } from "@/hooks/use-coincidencias-alert";
 import { useQueryClient } from "@tanstack/react-query";
 import { IX_PESOS_PER_USD } from "@/lib/currency";
 import { perfilPath } from "@/lib/perfil";
@@ -61,6 +62,7 @@ const Header = () => {
   const [showOfertaCredito, setShowOfertaCredito] = useState(false);
   const uid = usuario?.id ?? user?.id;
   const puedeActivarIOX = !!uid && getCreditoAceptado(uid) !== "aceptado";
+  const { hayCoincidencias } = useCoincidenciasAlert();
   const isHome = location.pathname === "/";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -163,7 +165,7 @@ const Header = () => {
             <Link
               to="/coincidencias"
               className={cn(
-                "flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-4",
+                "relative flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-4",
                 location.pathname.startsWith("/coincidencias")
                   ? "text-foreground bg-muted"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
@@ -171,6 +173,12 @@ const Header = () => {
             >
               <Users className="h-4 w-4" />
               Coincidencias
+              {hayCoincidencias && !location.pathname.startsWith("/coincidencias") && (
+                <span className="absolute -top-0.5 right-1 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                </span>
+              )}
             </Link>
           )}
         </nav>
@@ -211,13 +219,9 @@ const Header = () => {
           </Button>
 
           {/* Desktop CTA Button */}
-          {!isMobile && (() => {
-            const token = localStorage.getItem("intercambius_token");
-            const isAuthenticated = !!token;
-
-            if (isAuthenticated) {
-              return (
-                <DropdownMenu>
+          {!isMobile && (
+            user ? (
+              <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="default" className="hidden max-w-full shrink-0 gap-2 sm:flex">
                       <Avatar className="h-8 w-8">
@@ -280,9 +284,8 @@ const Header = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              );
-            } else {
-              return isHome ? (
+              ) : (
+              isHome ? (
                 <>
                   <Link to="/login">
                     <Button variant="ghost" size="default" className="hidden sm:flex">
@@ -301,9 +304,9 @@ const Header = () => {
                     Iniciar sesión
                   </Button>
                 </Link>
-              );
-            }
-          })()}
+              )
+            )
+          )}
 
           {/* Mobile Menu Button - touch target mínimo 44px */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -367,17 +370,28 @@ const Header = () => {
                     </button>
                   </div>
 
-                  {(() => {
-                    const token = localStorage.getItem("intercambius_token");
-                    if (!token) return null;
-                    
-                    return (
-                      <>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 mt-6 mb-2">
-                          Mi cuenta
-                        </p>
-                        <div className="space-y-1">
-                          {navItemsForProfileMenu.map((item) => {
+                  {user && (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 mt-6 mb-2">
+                        Mi cuenta
+                      </p>
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => handleNavClick("/coincidencias")}
+                          className={cn(
+                            "relative w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors min-h-[48px] touch-manipulation",
+                            location.pathname.startsWith("/coincidencias")
+                              ? "bg-gold/10 text-gold border border-gold/20"
+                              : "text-foreground hover:bg-muted active:bg-muted/80"
+                          )}
+                        >
+                          <Users className="h-5 w-5 shrink-0" />
+                          <span className="font-medium">Coincidencias</span>
+                          {hayCoincidencias && !location.pathname.startsWith("/coincidencias") && (
+                            <span className="ml-auto flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+                          )}
+                        </button>
+                        {navItemsForProfileMenu.map((item) => {
                             const Icon = item.icon;
                             const isActive = isNavItemActive(
                               item.to,
@@ -400,21 +414,14 @@ const Header = () => {
                                 <span className="font-medium">{item.label}</span>
                               </button>
                             );
-                          })}
-                        </div>
-                      </>
-                    );
-                  })()}
+                        })}
+                      </div>
+                    </>
+                  )}
 
                   <Separator className="my-4" />
 
-                  {/* CTA en mobile */}
-                  {(() => {
-                    const token = localStorage.getItem("intercambius_token");
-                    const isAuthenticated = !!token;
-
-                    if (isAuthenticated) {
-                      return (
+                  {user ? (
                         <div className="space-y-2">
                           <Button 
                             variant="ghost" 
@@ -425,9 +432,7 @@ const Header = () => {
                             <span className="font-medium">Cerrar sesión</span>
                           </Button>
                         </div>
-                      );
-                    } else {
-                      return (
+                  ) : (
                         <div className="space-y-2">
                           <button
                             onClick={() => handleNavClick("/login")}
@@ -444,9 +449,7 @@ const Header = () => {
                             <span>Sumarme</span>
                           </button>
                         </div>
-                      );
-                    }
-                  })()}
+                  )}
                 </nav>
 
                 {/* Footer: saldo, moneda, tema */}

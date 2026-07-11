@@ -52,4 +52,13 @@ describe("chat-propuesta", () => {
     expect(resumenMensajeParaPreview(json)).toContain("20000 IOX");
     expect(resumenMensajeParaPreview(json)).not.toContain('"_t"');
   });
+
+  it("propuesta con mensaje de texto intermedio sigue pendiente", () => {
+    const msgs = [
+      mk(1, 10, buildPropuestaPagoMessage(500, null, null)),
+      mk(2, 10, "ok, dame un momento"),
+      mk(3, 20, buildPropuestaPagoMessage(800, null, null)),
+    ];
+    expect(encontrarPropuestaPendienteDelOtro(msgs, 10)?.propuesta.iox).toBe(800);
+  });
 });

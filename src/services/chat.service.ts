@@ -23,6 +23,9 @@ export interface Mensaje {
 export interface ChatDetalle {
   conversacion: {
     id: number;
+    compradorId: number;
+    vendedorId: number;
+    soyComprador: boolean;
     otroUsuario: { id: number; nombre: string; kycVerificado?: boolean };
     marketItem?: { id: number; titulo: string; rubro: string; imagen: string; precio: number };
     puedeConfirmarRegistro?: boolean;

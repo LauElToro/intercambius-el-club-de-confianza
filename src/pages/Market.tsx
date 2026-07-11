@@ -97,7 +97,7 @@ const Market = () => {
   const [searchApplied, setSearchApplied] = useState("");
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"todos" | "productos" | "servicios">("todos");
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("todos");
-  const [distanciaMax, setDistanciaMax] = useState([25]);
+  const [distanciaMax, setDistanciaMax] = useState([120]);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -301,7 +301,7 @@ const Market = () => {
     setSearchApplied("");
     setTipoSeleccionado("todos");
     setRubroSeleccionado("todos");
-    setDistanciaMax([25]);
+    setDistanciaMax([120]);
     setPage(1);
     setUserLocation(null);
     setLocationError(null);
@@ -311,7 +311,7 @@ const Market = () => {
   };
 
   const tieneFiltrosActivos = searchApplied || tipoSeleccionado !== "todos" || rubroSeleccionado !== "todos" || 
-    userLocation !== null || distanciaMax[0] < 25 || precioMin[0] > 0 || precioMax[0] < 500000 ||
+    userLocation !== null || distanciaMax[0] < 100 || precioMin[0] > 0 || precioMax[0] < 500000 ||
     Object.values(filtrosRubro).some(v => v.length > 0);
 
   return (
