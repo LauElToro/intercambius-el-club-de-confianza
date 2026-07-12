@@ -122,6 +122,7 @@ const Chat = () => {
   const [montoIX, setMontoIX] = useState("");
   const [montoPesos, setMontoPesos] = useState("");
   const [montoUSD, setMontoUSD] = useState("");
+  const [cantidadCompra, setCantidadCompra] = useState("1");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: currentUser } = useQuery({
@@ -374,10 +375,17 @@ const Chat = () => {
     }
 
     const ioxEfectivo = iox ?? 0;
-    if (minIoxPropuesta > 0 && ioxEfectivo < minIoxPropuesta) {
+    const cantidad = Math.max(1, parseInt(cantidadCompra, 10) || 1);
+    if (cantidadCompra.trim() && (Number.isNaN(cantidad) || cantidad < 1)) {
+      toast({ title: "Cantidad inválida", description: "La cantidad debe ser al menos 1.", variant: "destructive" });
+      return;
+    }
+
+    const valorConCantidad = valorReferenciaPropuesta * cantidad;
+    if (minIoxPropuesta > 0 && ioxEfectivo < minimoIoxRequerido(valorConCantidad)) {
       toast({
         title: "Mínimo de IOX",
-        description: `Toda operación debe incluir al menos 5% en IOX (mínimo ${formatIX(minIoxPropuesta)} para este intercambio).`,
+        description: `Toda operación debe incluir al menos 5% en IOX (mínimo ${formatIX(minimoIoxRequerido(valorConCantidad))} para ${cantidad > 1 ? `${cantidad} unidades` : "este intercambio"}).`,
         variant: "destructive",
       });
       return;
@@ -408,13 +416,14 @@ const Chat = () => {
       }
     }
 
-    const payload = buildPropuestaPagoMessage(iox, pesos, usd);
+    const payload = buildPropuestaPagoMessage(iox, pesos, usd, cantidad);
     enviarMutation.mutate(payload, {
       onSuccess: () => {
         setPropuestaOpen(false);
         setMontoIX("");
         setMontoPesos("");
         setMontoUSD("");
+        setCantidadCompra("1");
       },
     });
   };
@@ -429,7 +438,7 @@ const Chat = () => {
           const data = await chatService.enviarCodigoIntercambio(Number(conversacionId));
           toast({
             title: "Código enviado",
-            description: `Se envió el código por email al comprador (${data.emailEnviadoA}). Solo esa persona puede confirmar el intercambio.`,
+            description: `Se envió el código por email a quien paga la diferencia (${data.emailEnviadoA}). Solo esa persona puede confirmar el intercambio.`,
           });
           setCodigoEmailInfo({ para: data.emailEnviadoA });
         } catch (e) {
@@ -763,7 +772,7 @@ const Chat = () => {
                     {mostrarAprobarIntercambio && (
                       <div className="px-4 py-2 border-b border-border bg-gold/10 flex items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> al comprador (no por el chat).
+                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> a quien paga la diferencia (no por el chat).
                         </span>
                         <Button
                           variant="gold"
@@ -779,7 +788,7 @@ const Chat = () => {
                     {codigoEmailInfo && (
                       <div className="px-4 py-2 border-b border-border bg-green-500/10 flex items-center justify-between gap-2">
                         <span className="text-sm">
-                          Código enviado por <strong>email</strong> al comprador ({codigoEmailInfo.para}). Solo quien compra debe revisar su casilla e ingresarlo en Registrar intercambio.
+                          Código enviado por <strong>email</strong> a quien paga ({codigoEmailInfo.para}). Solo esa persona debe revisar su casilla e ingresarlo en Registrar intercambio.
                         </span>
                         <Button variant="ghost" size="sm" onClick={() => setCodigoEmailInfo(null)}>Cerrar</Button>
                       </div>
@@ -830,6 +839,16 @@ const Chat = () => {
                           )}
                         </p>
                         <div className="space-y-3">
+                          <div className="flex gap-2 items-center">
+                            <Label className="w-14 shrink-0">Cant.</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="1"
+                              value={cantidadCompra}
+                              onChange={(e) => setCantidadCompra(e.target.value)}
+                            />
+                          </div>
                           <div className="flex gap-2 items-center">
                             <Label className="w-14 shrink-0">IOX</Label>
                             <Input

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Loader2, ZoomIn } from 'lucide-react';
+import { Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { blobToFile, getCroppedImageBlob } from '@/lib/cropImage';
 
 type Props = {
@@ -72,6 +72,7 @@ export function ImageCropDialog({
               image={previewUrl}
               crop={crop}
               zoom={zoom}
+              minZoom={0.5}
               aspect={aspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
@@ -80,14 +81,15 @@ export function ImageCropDialog({
           )}
         </div>
         <div className="flex items-center gap-3 px-1">
-          <ZoomIn className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <ZoomOut className="h-4 w-4 shrink-0 text-muted-foreground" />
           <Slider
-            min={1}
+            min={0.5}
             max={3}
             step={0.05}
             value={[zoom]}
             onValueChange={(v) => setZoom(v[0] ?? 1)}
           />
+          <ZoomIn className="h-4 w-4 shrink-0 text-muted-foreground" />
         </div>
         <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={processing}>

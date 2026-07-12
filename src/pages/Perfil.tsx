@@ -20,6 +20,7 @@ import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBa
 import { kycService } from "@/services/kyc.service";
 import { OfertaCreditoTerminos, getCreditoAceptado } from "@/components/credito/OfertaCreditoTerminos";
 import { LoQueBuscoEditor } from "@/components/coincidencias/LoQueBuscoEditor";
+import { nombrePublico, nombreTiendaParaAsignar, sanitizeProfileSlugInput } from "@/lib/perfil";
 
 const REDES_KEYS = ['instagram', 'facebook', 'twitter', 'linkedin', 'web'] as const;
 const REDES_ICONS: Record<string, typeof Instagram> = {

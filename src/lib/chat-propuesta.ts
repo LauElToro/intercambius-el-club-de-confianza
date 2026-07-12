@@ -5,6 +5,7 @@ export interface PropuestaPago {
   iox?: number;
   pesos?: number;
   usd?: number;
+  cantidad?: number;
 }
 
 export interface MensajePropuesta {
@@ -23,12 +24,14 @@ export function parsePropuestaPagoJson(contenido: string): PropuestaPago | null 
       iox?: number | null;
       pesos?: number | null;
       usd?: number | null;
+      cantidad?: number | null;
     };
     if (o._t !== "propuesta_pago") return null;
     const propuesta: PropuestaPago = {};
     if (o.iox != null && o.iox > 0) propuesta.iox = Math.floor(o.iox);
     if (o.pesos != null && o.pesos > 0) propuesta.pesos = Math.floor(o.pesos);
     if (o.usd != null && o.usd > 0) propuesta.usd = Math.floor(o.usd);
+    if (o.cantidad != null && o.cantidad > 0) propuesta.cantidad = Math.floor(o.cantidad);
     return propuesta.iox || propuesta.pesos || propuesta.usd ? propuesta : null;
   } catch {
     return null;
@@ -50,12 +53,19 @@ export function esMensajePropuestaPago(contenido: string): boolean {
   return parsePropuestaPagoJson(contenido) !== null || /propongo pagar/i.test(contenido);
 }
 
-export function buildPropuestaPagoMessage(iox: number | null, pesos: number | null, usd: number | null): string {
+export function buildPropuestaPagoMessage(
+  iox: number | null,
+  pesos: number | null,
+  usd: number | null,
+  cantidad: number = 1
+): string {
+  const qty = Math.max(1, Math.floor(cantidad) || 1);
   const payload = {
     _t: "propuesta_pago",
     iox: iox != null && iox >= 0 ? (iox > 0 ? Math.floor(iox) : 0) : null,
     pesos: pesos != null && pesos >= 0 ? (pesos > 0 ? Math.floor(pesos) : 0) : null,
     usd: usd != null && usd >= 0 ? (usd > 0 ? Math.floor(usd) : 0) : null,
+    cantidad: qty,
   };
   return JSON.stringify(payload);
 }
@@ -129,6 +139,8 @@ export function propuestaPagoToDisplayText(p: PropuestaPago): string {
 
 export function propuestaPagoToResumenCorto(p: PropuestaPago, formatIX: (n: number) => string): string {
   const parts: string[] = [];
+  const qty = p.cantidad && p.cantidad > 1 ? p.cantidad : null;
+  if (qty) parts.push(`${qty} u.`);
   if (p.iox) parts.push(formatIX(p.iox));
   if (p.pesos) parts.push(`$${p.pesos}`);
   if (p.usd) parts.push(`U$D ${p.usd}`);

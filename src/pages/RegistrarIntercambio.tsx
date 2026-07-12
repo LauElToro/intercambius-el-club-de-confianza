@@ -258,20 +258,12 @@ const RegistrarIntercambio = () => {
                     />
                     <p className="text-xs text-muted-foreground">
                       Te lo enviamos por email para este acuerdo en particular. Cada compra tiene su propio código de 6
-                      dígitos. Solo el comprador puede confirmar aquí.
+                      dígitos. Solo quien paga la diferencia puede confirmar aquí.
                     </p>
                   </div>
 
                   {propuestaDesdeChat && (
                     <>
-                      <pre className="text-xs bg-muted rounded-md p-2 overflow-x-auto border border-gold/20">
-                        {JSON.stringify({
-                          _t: "propuesta_pago",
-                          iox: propuestaDesdeChat.iox ?? null,
-                          pesos: propuestaDesdeChat.pesos ?? null,
-                          usd: propuestaDesdeChat.usd ?? null,
-                        })}
-                      </pre>
                       <p className="text-sm text-muted-foreground">
                         Acuerdo en el chat: {propuestaPagoToResumenCorto(propuestaDesdeChat, formatIX)}.
                         {propuestaDesdeChat.iox
