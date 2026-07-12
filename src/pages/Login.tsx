@@ -13,6 +13,7 @@ import { useMfaResendCooldown } from "@/hooks/use-mfa-resend-cooldown";
 import { GoogleLoginPanel } from "@/components/auth/GoogleLoginPanel";
 import { AuthGoogleSplitLayout } from "@/components/auth/AuthGoogleSplitLayout";
 import { isGoogleSignInEnabled } from "@/lib/google-oauth-config";
+import { sanitizeAuthErrorMessage } from "@/lib/auth-error-message";
 
 const Login = () => {
   const [searchParams] = useSearchParams();
@@ -34,7 +35,7 @@ const Login = () => {
   useEffect(() => {
     const msg = searchParams.get("google_error");
     if (msg) {
-      setGoogleError(decodeURIComponent(msg));
+      setGoogleError(sanitizeAuthErrorMessage(decodeURIComponent(msg)));
     }
   }, [searchParams]);
 

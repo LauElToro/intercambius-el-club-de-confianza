@@ -11,6 +11,7 @@ import {
   markGoogleAuthCodeUsed,
   type GoogleAuthPending,
 } from '@/lib/google-oauth-redirect';
+import { sanitizeAuthErrorMessage } from '@/lib/auth-error-message';
 
 function getReturnPath(pending: GoogleAuthPending | null): '/login' | '/registro' {
   const path = pending?.returnPath ?? '/login';
@@ -23,7 +24,7 @@ function redirectWithGoogleError(
   message: string,
 ): void {
   const returnPath = getReturnPath(pending);
-  navigate(`${returnPath}?google_error=${encodeURIComponent(message)}`, { replace: true });
+  navigate(`${returnPath}?google_error=${encodeURIComponent(sanitizeAuthErrorMessage(message))}`, { replace: true });
 }
 
 const GoogleAuthCallback = () => {

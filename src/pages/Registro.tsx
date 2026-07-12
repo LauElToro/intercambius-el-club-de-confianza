@@ -15,6 +15,7 @@ import { ReCaptchaField } from "@/components/auth/ReCaptchaField";
 import { GoogleRegisterPanel } from "@/components/auth/GoogleRegisterPanel";
 import { AuthGoogleSplitLayout } from "@/components/auth/AuthGoogleSplitLayout";
 import { isGoogleSignInEnabled } from "@/lib/google-oauth-config";
+import { sanitizeAuthErrorMessage } from "@/lib/auth-error-message";
 
 const Registro = () => {
   const { register } = useAuth();
@@ -48,7 +49,7 @@ const Registro = () => {
   useEffect(() => {
     const msg = searchParams.get("google_error");
     if (msg) {
-      setGoogleError(decodeURIComponent(msg));
+      setGoogleError(sanitizeAuthErrorMessage(decodeURIComponent(msg)));
     }
   }, [searchParams]);
 
