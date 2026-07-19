@@ -35,6 +35,10 @@ import {
   resumenMensajeParaPreview,
   minimoIoxRequerido,
   resolverPagadorId,
+  resolverModoOperacion,
+  valorReferenciaOperacion,
+  tienePropuestaIntercambioEnHilo,
+  type ModoOperacion,
 } from "@/lib/chat-propuesta";
 
 const RUBROS_CHAT: Record<string, { label: string; icon: string }> = {
@@ -123,6 +127,7 @@ const Chat = () => {
   const [montoPesos, setMontoPesos] = useState("");
   const [montoUSD, setMontoUSD] = useState("");
   const [cantidadCompra, setCantidadCompra] = useState("1");
+  const [modoOperacion, setModoOperacion] = useState<ModoOperacion>("compra");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: currentUser } = useQuery({
@@ -308,11 +313,6 @@ const Chat = () => {
     miPrecioEnIntercambio != null && suPrecioEnIntercambio != null && suPrecioEnIntercambio > miPrecioEnIntercambio
       ? Math.floor(suPrecioEnIntercambio - miPrecioEnIntercambio)
       : null;
-  const puedoOfrecerDiferencia =
-    diferenciaSugerida != null &&
-    diferenciaSugerida > 0 &&
-    !propuestaPropiaPendiente &&
-    !propuestaDelOtro;
 
   const puedeConfirmarRegistro = chatDetalle?.conversacion.puedeConfirmarRegistro ?? false;
   const necesitaReenvioCodigo = chatDetalle?.conversacion.necesitaReenvioCodigo ?? false;
@@ -323,6 +323,13 @@ const Chat = () => {
     /código de verificación enviado por email/i.test(m.contenido)
   );
   const codigoYaEnviado = codigoIntercambioEnviado || !!codigoEmailInfo || hayMensajeCodigoEnviado;
+  const puedoOfrecerDiferencia =
+    diferenciaSugerida != null &&
+    diferenciaSugerida > 0 &&
+    !propuestaPropiaPendiente &&
+    !propuestaDelOtro &&
+    !registroCompletado &&
+    !codigoYaEnviado;
   const mostrarAprobarIntercambio =
     soyReceptor &&
     !!primerMensajeIntercambio &&
@@ -332,16 +339,14 @@ const Chat = () => {
     !propuestaPropiaPendiente;
 
   const conv = chatDetalle?.conversacion;
-  const valorReferenciaPropuesta = (() => {
-    let ref = conv?.marketItem?.precio ?? 0;
-    if (intercambioParseado) {
-      const mi = Number(intercambioParseado.miProducto.precio ?? 0) || 0;
-      const tu = Number(intercambioParseado.tuProducto.precio ?? 0) || 0;
-      ref = Math.max(mi, tu, ref);
-    }
-    return ref;
-  })();
-  const minIoxPropuesta = minimoIoxRequerido(valorReferenciaPropuesta);
+  const hayIntercambioEnHilo = tienePropuestaIntercambioEnHilo(msgs);
+  const valorReferenciaPropuesta = valorReferenciaOperacion({
+    modo: modoOperacion,
+    precioMarketItem: conv?.marketItem?.precio ?? 0,
+    mensajes: msgs,
+  });
+  const cantidadActualPropuesta = Math.max(1, parseInt(cantidadCompra, 10) || 1);
+  const minIoxPropuesta = minimoIoxRequerido(valorReferenciaPropuesta * cantidadActualPropuesta);
 
   const parseMontoCampo = (raw: string): number | null => {
     if (!raw.trim()) return null;
@@ -401,7 +406,13 @@ const Chat = () => {
     }
 
     if (ioxEfectivo > 0 && conv && user?.id) {
-      const pagadorId = resolverPagadorId(conv.compradorId, conv.vendedorId, msgs, user.id);
+      const pagadorId = resolverPagadorId(
+        conv.compradorId,
+        conv.vendedorId,
+        msgs,
+        user.id,
+        modoOperacion
+      );
       if (pagadorId === user.id) {
         const saldo = Number(usuario?.saldo ?? 0) || 0;
         const limite = Number(usuario?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
@@ -416,7 +427,7 @@ const Chat = () => {
       }
     }
 
-    const payload = buildPropuestaPagoMessage(iox, pesos, usd, cantidad);
+    const payload = buildPropuestaPagoMessage(iox, pesos, usd, cantidad, modoOperacion);
     enviarMutation.mutate(payload, {
       onSuccess: () => {
         setPropuestaOpen(false);
@@ -424,6 +435,7 @@ const Chat = () => {
         setMontoPesos("");
         setMontoUSD("");
         setCantidadCompra("1");
+        setModoOperacion("compra");
       },
     });
   };
@@ -438,7 +450,7 @@ const Chat = () => {
           const data = await chatService.enviarCodigoIntercambio(Number(conversacionId));
           toast({
             title: "Código enviado",
-            description: `Se envió el código por email a quien paga la diferencia (${data.emailEnviadoA}). Solo esa persona puede confirmar el intercambio.`,
+            description: `Se envió el código por email a quien paga (${data.emailEnviadoA}). Solo esa persona puede confirmar la operación.`,
           });
           setCodigoEmailInfo({ para: data.emailEnviadoA });
         } catch (e) {
@@ -691,15 +703,24 @@ const Chat = () => {
                             <X className="w-4 h-4 mr-1" />
                             Rechazar
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPropuestaOpen(true)}
-                            disabled={enviarMutation.isPending}
-                          >
-                            <HandCoins className="w-4 h-4 mr-1" />
-                            Otra propuesta
-                          </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const qty = propuestaDelOtro.propuesta.cantidad ?? 1;
+                            setCantidadCompra(String(qty));
+                            const modoPrev = resolverModoOperacion(propuestaDelOtro.propuesta, msgs);
+                            setModoOperacion(modoPrev);
+                            setMontoIX("");
+                            setMontoPesos("");
+                            setMontoUSD("");
+                            setPropuestaOpen(true);
+                          }}
+                          disabled={enviarMutation.isPending}
+                        >
+                          <HandCoins className="w-4 h-4 mr-1" />
+                          Otra propuesta
+                        </Button>
                           <Button
                             variant="gold"
                             size="sm"
@@ -715,16 +736,19 @@ const Chat = () => {
                     {puedoOfrecerDiferencia && (
                       <div className="px-4 py-2 border-b border-border bg-blue-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Tu producto vale menos ({formatIX(miPrecioEnIntercambio ?? 0)} vs {formatIX(suPrecioEnIntercambio ?? 0)}).
-                          Podés ofrecer la diferencia de <strong>{formatIX(diferenciaSugerida!)}</strong> en IOX (vos pagás la diferencia porque tu objeto vale menos).
+                          Si van a <strong>permutar</strong> (canje), tu producto vale menos ({formatIX(miPrecioEnIntercambio ?? 0)} vs {formatIX(suPrecioEnIntercambio ?? 0)}).
+                          Podés ofrecer la diferencia de <strong>{formatIX(diferenciaSugerida!)}</strong> en IOX.
+                          Si solo querés <strong>comprar</strong> o vender sin canje, usá «Propuesta» y elegí Compra.
                         </span>
                         <Button
                           variant="gold"
                           size="sm"
                           onClick={() => {
+                            setModoOperacion("permuta");
                             setMontoIX(String(diferenciaSugerida));
                             setMontoPesos("");
                             setMontoUSD("");
+                            setCantidadCompra("1");
                             setPropuestaOpen(true);
                           }}
                         >
@@ -772,7 +796,7 @@ const Chat = () => {
                     {mostrarAprobarIntercambio && (
                       <div className="px-4 py-2 border-b border-border bg-gold/10 flex items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> a quien paga la diferencia (no por el chat).
+                          Te ofrecieron un intercambio. Si ya coordinaron, enviá el código: llega por <strong>email</strong> a quien paga (no por el chat).
                         </span>
                         <Button
                           variant="gold"
@@ -805,7 +829,19 @@ const Chat = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setPropuestaOpen(true)}
+                          onClick={() => {
+                            const qty =
+                              propuestaDelOtro?.propuesta.cantidad ??
+                              propuestaPropiaPendiente?.propuesta.cantidad ??
+                              1;
+                            setCantidadCompra(String(qty));
+                            if (propuestaDelOtro) {
+                              setModoOperacion(resolverModoOperacion(propuestaDelOtro.propuesta, msgs));
+                            } else {
+                              setModoOperacion("compra");
+                            }
+                            setPropuestaOpen(true);
+                          }}
                           title="Proponer pago (IOX, pesos o USD)"
                           disabled={!!propuestaPropiaPendiente}
                         >
@@ -832,10 +868,44 @@ const Chat = () => {
                         <DialogHeader>
                           <DialogTitle>Propuesta de pago</DialogTitle>
                         </DialogHeader>
+                        {hayIntercambioEnHilo && (
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={modoOperacion === "compra" ? "gold" : "outline"}
+                              onClick={() => setModoOperacion("compra")}
+                              className="flex-1"
+                            >
+                              Compra
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={modoOperacion === "permuta" ? "gold" : "outline"}
+                              onClick={() => setModoOperacion("permuta")}
+                              className="flex-1"
+                            >
+                              Permuta / canje
+                            </Button>
+                          </div>
+                        )}
                         <p className="text-sm text-muted-foreground">
-                          Completá uno o más montos (podés poner 0 en los que no uses). Si tu producto vale menos, ofrecé la diferencia en IOX.
+                          Completá uno o más montos (podés poner 0 en los que no uses).
+                          {modoOperacion === "permuta" ? (
+                            <> Si tu producto vale menos, ofrecé la diferencia en IOX.</>
+                          ) : (
+                            <> Indicá cuánto pagás por el producto (sin canje).</>
+                          )}
                           {minIoxPropuesta > 0 && (
-                            <> Mínimo de IOX: <strong>{formatIX(minIoxPropuesta)}</strong> (5% del valor).</>
+                            <>
+                              {" "}
+                              Mínimo de IOX: <strong>{formatIX(minIoxPropuesta)}</strong>{" "}
+                              {modoOperacion === "permuta"
+                                ? "(5% de la diferencia)"
+                                : "(5% del valor del producto)"}
+                              .
+                            </>
                           )}
                         </p>
                         <div className="space-y-3">
@@ -904,7 +974,7 @@ const Chat = () => {
                           <DialogTitle>Aprobar intercambio</DialogTitle>
                         </DialogHeader>
                         <p className="text-sm text-muted-foreground">
-                          Se generará un código de 6 dígitos y se <strong>enviará por email</strong> a quien hizo la propuesta de intercambio. Esa persona debe ingresarlo en &quot;Registrar intercambio&quot;. El código <strong>no</strong> se publica en el chat.
+                          Se generará un código de 6 dígitos y se <strong>enviará por email</strong> a quien paga. Esa persona debe ingresarlo en &quot;Registrar intercambio&quot;. El código <strong>no</strong> se publica en el chat.
                         </p>
                         <p className="text-sm rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-foreground">
                           Solo entregá este tipo de código cuando te encuentres con la otra parte y/o recibas el producto.

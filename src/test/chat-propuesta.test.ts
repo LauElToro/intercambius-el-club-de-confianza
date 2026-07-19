@@ -5,7 +5,10 @@ import {
   buildRechazoTexto,
   encontrarPropuestaPendienteDelOtro,
   mensajeEsRechazoPropuesta,
+  parsePropuestaPagoJson,
+  propuestaPagoToResumenCorto,
   resumenMensajeParaPreview,
+  valorReferenciaOperacion,
 } from "@/lib/chat-propuesta";
 
 const mk = (id: number, senderId: number, contenido: string) => ({
@@ -60,5 +63,38 @@ describe("chat-propuesta", () => {
       mk(3, 20, buildPropuestaPagoMessage(800, null, null)),
     ];
     expect(encontrarPropuestaPendienteDelOtro(msgs, 10)?.propuesta.iox).toBe(800);
+  });
+
+  it("incluye cantidad y modo en la propuesta JSON", () => {
+    const json = buildPropuestaPagoMessage(1000, null, null, 3, "compra");
+    const parsed = parsePropuestaPagoJson(json);
+    expect(parsed?.cantidad).toBe(3);
+    expect(parsed?.modo).toBe("compra");
+    expect(parsed?.iox).toBe(1000);
+  });
+
+  it("resumen corto siempre muestra unidades", () => {
+    const p = parsePropuestaPagoJson(buildPropuestaPagoMessage(450, 134, 1, 2, "compra"))!;
+    expect(propuestaPagoToResumenCorto(p, (n) => `${n} IOX`)).toContain("2 u.");
+  });
+
+  it("valor referencia compra = precio producto; permuta = diferencia", () => {
+    const msgs = [
+      mk(
+        1,
+        10,
+        JSON.stringify({
+          _t: "intercambio",
+          miProducto: { precio: 1000, url: "/producto/1" },
+          tuProducto: { precio: 3000, url: "/producto/2" },
+        })
+      ),
+    ];
+    expect(
+      valorReferenciaOperacion({ modo: "compra", precioMarketItem: 1000, mensajes: msgs })
+    ).toBe(1000);
+    expect(
+      valorReferenciaOperacion({ modo: "permuta", precioMarketItem: 1000, mensajes: msgs })
+    ).toBe(2000);
   });
 });

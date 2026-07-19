@@ -190,8 +190,8 @@ const Coincidencias = () => {
         title: "¡Mensaje enviado!",
         description:
           diferencia > 0
-            ? `Tu producto vale menos. Desde el chat podés ofrecer la diferencia de ${formatIX(diferencia)} en IOX.`
-            : "Ya podés negociar el intercambio por chat.",
+            ? `Ya podés negociar por chat. Si van a permutar, la diferencia sería ${formatIX(diferencia)} en IOX; si solo querés comprar, elegí «Compra» en la propuesta.`
+            : "Ya podés negociar: en el chat elegí Compra o Permuta según lo que quieran hacer.",
       });
       await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },

@@ -1,11 +1,15 @@
 /** Propuesta de pago unificada (IOX + pesos + USD en un solo mensaje JSON). */
 export const PROPUESTA_PAGO_PREFIX = '{"_t":"propuesta_pago"';
 
+export type ModoOperacion = "compra" | "permuta";
+
 export interface PropuestaPago {
   iox?: number;
   pesos?: number;
   usd?: number;
   cantidad?: number;
+  /** compra = pagar el producto; permuta = canje con diferencia. */
+  modo?: ModoOperacion;
 }
 
 export interface MensajePropuesta {
@@ -13,6 +17,11 @@ export interface MensajePropuesta {
   senderId: number;
   contenido: string;
   createdAt: string;
+}
+
+export function parseModoOperacion(raw: unknown): ModoOperacion | undefined {
+  if (raw === "compra" || raw === "permuta") return raw;
+  return undefined;
 }
 
 export function parsePropuestaPagoJson(contenido: string): PropuestaPago | null {
@@ -25,6 +34,7 @@ export function parsePropuestaPagoJson(contenido: string): PropuestaPago | null 
       pesos?: number | null;
       usd?: number | null;
       cantidad?: number | null;
+      modo?: string | null;
     };
     if (o._t !== "propuesta_pago") return null;
     const propuesta: PropuestaPago = {};
@@ -32,6 +42,8 @@ export function parsePropuestaPagoJson(contenido: string): PropuestaPago | null 
     if (o.pesos != null && o.pesos > 0) propuesta.pesos = Math.floor(o.pesos);
     if (o.usd != null && o.usd > 0) propuesta.usd = Math.floor(o.usd);
     if (o.cantidad != null && o.cantidad > 0) propuesta.cantidad = Math.floor(o.cantidad);
+    const modo = parseModoOperacion(o.modo);
+    if (modo) propuesta.modo = modo;
     return propuesta.iox || propuesta.pesos || propuesta.usd ? propuesta : null;
   } catch {
     return null;
@@ -57,7 +69,8 @@ export function buildPropuestaPagoMessage(
   iox: number | null,
   pesos: number | null,
   usd: number | null,
-  cantidad: number = 1
+  cantidad: number = 1,
+  modo: ModoOperacion = "compra"
 ): string {
   const qty = Math.max(1, Math.floor(cantidad) || 1);
   const payload = {
@@ -66,6 +79,7 @@ export function buildPropuestaPagoMessage(
     pesos: pesos != null && pesos >= 0 ? (pesos > 0 ? Math.floor(pesos) : 0) : null,
     usd: usd != null && usd >= 0 ? (usd > 0 ? Math.floor(usd) : 0) : null,
     cantidad: qty,
+    modo,
   };
   return JSON.stringify(payload);
 }
@@ -83,6 +97,16 @@ export function tienePropuestaIntercambioEnHilo(mensajes: MensajePropuesta[]): b
       (/quiero realizar un intercambio/i.test(m.contenido) &&
         (/ver mi producto/i.test(m.contenido) || /imagen del producto/i.test(m.contenido)))
   );
+}
+
+/** Sin modo explícito + hilo con cards de coincidencia → legacy permuta; si no, compra. */
+export function resolverModoOperacion(
+  propuesta: { modo?: ModoOperacion } | null | undefined,
+  mensajes: MensajePropuesta[]
+): ModoOperacion {
+  if (propuesta?.modo === "compra" || propuesta?.modo === "permuta") return propuesta.modo;
+  if (tienePropuestaIntercambioEnHilo(mensajes)) return "permuta";
+  return "compra";
 }
 
 function parseIntercambioPreciosPorRol(
@@ -109,14 +133,61 @@ function parseIntercambioPreciosPorRol(
   }
 }
 
-/** Quién paga IOX al confirmar el acuerdo (alineado con backend). */
+function parseIntercambioPreciosAbs(
+  mensajes: MensajePropuesta[]
+): { a: number; b: number } | null {
+  const msg = mensajes.find((m) => m.contenido.includes('"_t":"intercambio"'));
+  if (!msg) return null;
+  try {
+    const p = JSON.parse(msg.contenido) as {
+      _t?: string;
+      miProducto?: { precio?: number };
+      tuProducto?: { precio?: number };
+    };
+    if (p._t !== "intercambio" || !p.miProducto || !p.tuProducto) return null;
+    return {
+      a: Number(p.miProducto.precio ?? 0) || 0,
+      b: Number(p.tuProducto.precio ?? 0) || 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Base del 5% IOX: compra = precio producto; permuta = |diferencia|.
+ */
+export function valorReferenciaOperacion(params: {
+  modo: ModoOperacion;
+  precioMarketItem: number;
+  mensajes: MensajePropuesta[];
+}): number {
+  const { modo, precioMarketItem, mensajes } = params;
+  if (modo === "permuta") {
+    const precios = parseIntercambioPreciosAbs(mensajes);
+    if (precios) {
+      const diff = Math.abs(precios.a - precios.b);
+      if (diff > 0) return diff;
+    }
+  }
+  return Math.max(0, precioMarketItem);
+}
+
+/**
+ * Quién paga IOX / recibe el código.
+ * - Compra: siempre el comprador.
+ * - Permuta: quien tiene el producto de menor valor.
+ */
 export function resolverPagadorId(
   compradorId: number,
   vendedorId: number,
   mensajes: MensajePropuesta[],
-  proposerId: number
+  proposerId: number,
+  modo?: ModoOperacion
 ): number {
-  if (!tienePropuestaIntercambioEnHilo(mensajes)) {
+  const modoResuelto = modo ?? resolverModoOperacion({ modo }, mensajes);
+
+  if (modoResuelto === "compra" || !tienePropuestaIntercambioEnHilo(mensajes)) {
     return compradorId;
   }
   const precios = parseIntercambioPreciosPorRol(mensajes, compradorId);
@@ -130,17 +201,20 @@ export function resolverPagadorId(
 
 export function propuestaPagoToDisplayText(p: PropuestaPago): string {
   const parts: string[] = [];
-  if (p.iox) parts.push(`${p.iox} IOX de diferencia`);
+  const esPermuta = p.modo === "permuta";
+  if (p.iox) parts.push(esPermuta ? `${p.iox} IOX de diferencia` : `${p.iox} IOX`);
   if (p.pesos) parts.push(`${p.pesos} pesos (por fuera)`);
   if (p.usd) parts.push(`${p.usd} USD (por fuera)`);
   if (parts.length === 0) return "";
-  return `Propongo cerrar el intercambio con: ${parts.join(", ")}. Ambos debemos aprobar el acuerdo.`;
+  const qty = p.cantidad && p.cantidad > 1 ? ` (${p.cantidad} unidades)` : "";
+  const verbo = esPermuta ? "cerrar el intercambio" : "cerrar la compra";
+  return `Propongo ${verbo} con: ${parts.join(", ")}${qty}. Ambos debemos aprobar el acuerdo.`;
 }
 
 export function propuestaPagoToResumenCorto(p: PropuestaPago, formatIX: (n: number) => string): string {
   const parts: string[] = [];
-  const qty = p.cantidad && p.cantidad > 1 ? p.cantidad : null;
-  if (qty) parts.push(`${qty} u.`);
+  const qty = p.cantidad && p.cantidad > 0 ? p.cantidad : 1;
+  parts.push(`${qty} u.`);
   if (p.iox) parts.push(formatIX(p.iox));
   if (p.pesos) parts.push(`$${p.pesos}`);
   if (p.usd) parts.push(`U$D ${p.usd}`);
@@ -164,6 +238,8 @@ function mergePropuestas(a: PropuestaPago, b: PropuestaPago): PropuestaPago {
     ...(b.iox ? { iox: b.iox } : a.iox ? { iox: a.iox } : {}),
     ...(b.pesos ? { pesos: b.pesos } : a.pesos ? { pesos: a.pesos } : {}),
     ...(b.usd ? { usd: b.usd } : a.usd ? { usd: a.usd } : {}),
+    ...(b.cantidad ? { cantidad: b.cantidad } : a.cantidad ? { cantidad: a.cantidad } : {}),
+    ...(b.modo ? { modo: b.modo } : a.modo ? { modo: a.modo } : {}),
   };
 }
 
@@ -259,6 +335,7 @@ export function encontrarPropuestaPendienteDelOtro(
 
 export function buildAceptacionTexto(p: PropuestaPago): string {
   const parts: string[] = [];
+  if (p.cantidad && p.cantidad > 1) parts.push(`${p.cantidad} u.`);
   if (p.iox) parts.push(`${p.iox} IOX`);
   if (p.pesos) parts.push(`${p.pesos} pesos (por fuera)`);
   if (p.usd) parts.push(`${p.usd} USD (por fuera)`);
