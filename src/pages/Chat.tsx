@@ -347,6 +347,10 @@ const Chat = () => {
   });
   const cantidadActualPropuesta = Math.max(1, parseInt(cantidadCompra, 10) || 1);
   const minIoxPropuesta = minimoIoxRequerido(valorReferenciaPropuesta * cantidadActualPropuesta);
+  const stockDisponible =
+    conv?.marketItem && conv.marketItem.rubro !== "servicios"
+      ? conv.marketItem.stock ?? null
+      : null;
 
   const parseMontoCampo = (raw: string): number | null => {
     if (!raw.trim()) return null;
@@ -383,6 +387,17 @@ const Chat = () => {
     const cantidad = Math.max(1, parseInt(cantidadCompra, 10) || 1);
     if (cantidadCompra.trim() && (Number.isNaN(cantidad) || cantidad < 1)) {
       toast({ title: "Cantidad inválida", description: "La cantidad debe ser al menos 1.", variant: "destructive" });
+      return;
+    }
+    if (stockDisponible != null && cantidad > stockDisponible) {
+      toast({
+        title: "Sin stock suficiente",
+        description:
+          stockDisponible <= 0
+            ? "Este producto no tiene unidades disponibles."
+            : `Solo hay ${stockDisponible} ${stockDisponible === 1 ? "unidad" : "unidades"} disponibles.`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -914,11 +929,19 @@ const Chat = () => {
                             <Input
                               type="number"
                               min={1}
+                              max={stockDisponible != null && stockDisponible > 0 ? stockDisponible : undefined}
                               placeholder="1"
                               value={cantidadCompra}
                               onChange={(e) => setCantidadCompra(e.target.value)}
                             />
                           </div>
+                          {stockDisponible != null && (
+                            <p className="text-xs text-muted-foreground -mt-1 pl-[3.75rem]">
+                              {stockDisponible <= 0
+                                ? "Sin stock disponible."
+                                : `Disponibles: ${stockDisponible} ${stockDisponible === 1 ? "unidad" : "unidades"}.`}
+                            </p>
+                          )}
                           <div className="flex gap-2 items-center">
                             <Label className="w-14 shrink-0">IOX</Label>
                             <Input

@@ -214,7 +214,7 @@ export function propuestaPagoToDisplayText(p: PropuestaPago): string {
 export function propuestaPagoToResumenCorto(p: PropuestaPago, formatIX: (n: number) => string): string {
   const parts: string[] = [];
   const qty = p.cantidad && p.cantidad > 0 ? p.cantidad : 1;
-  parts.push(`${qty} u.`);
+  parts.push(`${qty} ${qty === 1 ? "unidad" : "unidades"}`);
   if (p.iox) parts.push(formatIX(p.iox));
   if (p.pesos) parts.push(`$${p.pesos}`);
   if (p.usd) parts.push(`U$D ${p.usd}`);
@@ -335,7 +335,9 @@ export function encontrarPropuestaPendienteDelOtro(
 
 export function buildAceptacionTexto(p: PropuestaPago): string {
   const parts: string[] = [];
-  if (p.cantidad && p.cantidad > 1) parts.push(`${p.cantidad} u.`);
+  if (p.cantidad && p.cantidad > 1) {
+    parts.push(`${p.cantidad} ${p.cantidad === 1 ? "unidad" : "unidades"}`);
+  }
   if (p.iox) parts.push(`${p.iox} IOX`);
   if (p.pesos) parts.push(`${p.pesos} pesos (por fuera)`);
   if (p.usd) parts.push(`${p.usd} USD (por fuera)`);

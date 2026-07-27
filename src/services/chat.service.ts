@@ -27,7 +27,14 @@ export interface ChatDetalle {
     vendedorId: number;
     soyComprador: boolean;
     otroUsuario: { id: number; nombre: string; kycVerificado?: boolean };
-    marketItem?: { id: number; titulo: string; rubro: string; imagen: string; precio: number };
+    marketItem?: {
+      id: number;
+      titulo: string;
+      rubro: string;
+      imagen: string;
+      precio: number;
+      stock?: number | null;
+    };
     puedeConfirmarRegistro?: boolean;
     registroCompletado?: boolean;
     acuerdoPendienteConfirmacion?: boolean;

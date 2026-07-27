@@ -18,10 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Paperclip, X } from "lucide-react";
 import { contactService, CategoriaContacto } from "@/services/contact.service";
-import { CONTACT_EMAIL } from "@/lib/constants";
+import { CONTACT_EMAIL, COMPLAINTS_EMAIL } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/lib/api";
 
@@ -37,6 +36,10 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 const ACCEPT_TYPES =
   "image/jpeg,image/png,image/gif,image/webp,application/pdf,text/plain,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+function inboxVisibleParaCategoria(categoria: CategoriaContacto): string {
+  return categoria === "queja" || categoria === "sugerencia" ? COMPLAINTS_EMAIL : CONTACT_EMAIL;
+}
 
 type Props = {
   open: boolean;
@@ -56,6 +59,8 @@ export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategor
   const [mensaje, setMensaje] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+
+  const inboxVisible = inboxVisibleParaCategoria(categoria);
 
   useEffect(() => {
     if (!open) return;
@@ -163,16 +168,16 @@ export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategor
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle>Contactanos</DialogTitle>
           <DialogDescription>
             Quejas, sugerencias o consultas. Podés adjuntar capturas o documentos (PDF, imágenes, texto o Word).
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          <ScrollArea className="max-h-[min(60vh,520px)] px-6">
-            <div className="space-y-4 pr-3 pb-4">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 [-webkit-overflow-scrolling:touch]">
+            <div className="space-y-4 pb-4">
               <div className="space-y-2">
                 <Label htmlFor="contact-email">Tu email *</Label>
                 <Input
@@ -218,15 +223,15 @@ export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategor
                 <Textarea
                   id="contact-mensaje"
                   required
-                  rows={6}
+                  rows={5}
                   value={mensaje}
                   onChange={(e) => setMensaje(e.target.value)}
                   placeholder="Contanos en detalle..."
-                  className="resize-y min-h-[120px]"
+                  className="resize-y min-h-[100px]"
                 />
                 <p className="text-xs text-muted-foreground">Mínimo 10 caracteres.</p>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 pb-2">
                 <Label htmlFor="contact-files-input">Archivos adjuntos (opcional)</Label>
                 <input
                   id="contact-files-input"
@@ -281,11 +286,11 @@ export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategor
                 )}
               </div>
             </div>
-          </ScrollArea>
-          <DialogFooter className="px-6 py-4 border-t border-border flex-col sm:flex-row gap-2 shrink-0">
+          </div>
+          <DialogFooter className="px-6 py-4 border-t border-border flex-col sm:flex-row gap-2 shrink-0 bg-background">
             <p className="text-xs text-muted-foreground mr-auto w-full sm:w-auto text-left">
               También podés escribir a{" "}
-              <span className="text-foreground font-medium">{CONTACT_EMAIL}</span>
+              <span className="text-foreground font-medium">{inboxVisible}</span>
             </p>
             <div className="flex gap-2 w-full sm:w-auto justify-end">
               <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={sending}>

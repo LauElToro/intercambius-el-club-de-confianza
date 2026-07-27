@@ -75,7 +75,7 @@ describe("chat-propuesta", () => {
 
   it("resumen corto siempre muestra unidades", () => {
     const p = parsePropuestaPagoJson(buildPropuestaPagoMessage(450, 134, 1, 2, "compra"))!;
-    expect(propuestaPagoToResumenCorto(p, (n) => `${n} IOX`)).toContain("2 u.");
+    expect(propuestaPagoToResumenCorto(p, (n) => `${n} IOX`)).toContain("2 unidades");
   });
 
   it("valor referencia compra = precio producto; permuta = diferencia", () => {
