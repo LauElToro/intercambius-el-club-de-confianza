@@ -1,5 +1,35 @@
 export type Area = { x: number; y: number; width: number; height: number };
 
+export type CropZoomLimits = {
+  /** Zoom que llena el encuadre (objectFit cover). */
+  fitZoom: number;
+  /** Zoom mínimo para ver la imagen completa dentro del recorte. */
+  minZoom: number;
+  maxZoom: number;
+};
+
+/** Calcula límites de zoom según proporción imagen vs. área de recorte (4:3, etc.). */
+export function computeCropZoomLimits(
+  naturalWidth: number,
+  naturalHeight: number,
+  aspect: number,
+): CropZoomLimits {
+  const mediaAspect = naturalWidth / naturalHeight;
+  const cropAspect = aspect;
+  const fitZoom = 1;
+
+  const minZoom =
+    mediaAspect > cropAspect
+      ? cropAspect / mediaAspect
+      : mediaAspect / cropAspect;
+
+  return {
+    fitZoom,
+    minZoom: Math.max(0.15, Math.min(minZoom * 0.98, fitZoom)),
+    maxZoom: Math.max(3, fitZoom * 3),
+  };
+}
+
 function createImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();

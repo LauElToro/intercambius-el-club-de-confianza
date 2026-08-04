@@ -64,6 +64,7 @@ const EditarProducto = () => {
   const [cropOpen, setCropOpen] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [cropBatchTotal, setCropBatchTotal] = useState(0);
 
   const tiposValidos = ["ix", "convenir", "pesos", "usd", "ix_pesos"] as const;
 
@@ -176,6 +177,7 @@ const EditarProducto = () => {
   const processCropQueue = (queue: File[]) => {
     if (queue.length === 0) return;
     const [next, ...rest] = queue;
+    setCropBatchTotal(queue.length);
     setCropQueue(rest);
     setCropFile(next);
     setCropOpen(true);
@@ -676,6 +678,8 @@ const EditarProducto = () => {
         onCropped={handleCroppedImage}
         aspect={4 / 3}
         title="Encuadrar foto del producto"
+        remainingInQueue={cropQueue.length}
+        batchTotal={cropBatchTotal}
       />
     </Layout>
   );
