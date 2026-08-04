@@ -98,7 +98,10 @@ const Header = () => {
   };
 
   const navItemsForProfileMenu = navItems.filter(
-    (item) => item.to !== "/market" && item.to !== "/referidos",
+    (item) =>
+      item.to !== "/market" &&
+      item.to !== "/referidos" &&
+      item.to !== "/coincidencias",
   );
 
   if (!mounted) {
