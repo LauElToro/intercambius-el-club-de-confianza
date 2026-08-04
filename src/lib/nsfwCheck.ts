@@ -18,6 +18,41 @@ function getModel(): Promise<nsfwjs.NSFWJS> {
 /** Clases consideradas inapropiadas */
 const NSFW_CLASSES = ["Porn", "Hentai", "Sexy"] as const;
 const NSFW_THRESHOLD = 0.8;
+const MAX_CLASSIFY_SIDE = 512;
+
+function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const blobUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(blobUrl);
+      reject(new Error("No se pudo cargar la imagen"));
+    };
+    img.src = blobUrl;
+  });
+}
+
+/** Escala la imagen para clasificación estable (evita fallos con fotos muy grandes o chicas). */
+function canvasForClassification(img: HTMLImageElement): HTMLCanvasElement {
+  const { naturalWidth: w, naturalHeight: h } = img;
+  if (w <= 0 || h <= 0) {
+    throw new Error("La imagen no tiene dimensiones válidas");
+  }
+
+  const scale = Math.min(1, MAX_CLASSIFY_SIDE / Math.max(w, h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No se pudo preparar la imagen para verificación");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
 
 /**
  * Clasifica una imagen y devuelve true si se considera contenido inapropiado.
@@ -26,32 +61,16 @@ const NSFW_THRESHOLD = 0.8;
  */
 export async function isImageNsfw(file: File): Promise<boolean> {
   if (!file.type.startsWith("image/")) return false;
+  if (file.size === 0) throw new Error("Archivo de imagen vacío");
 
   const model = await getModel();
-  const img = new Image();
-  img.crossOrigin = "anonymous";
+  const img = await loadImageFromFile(file);
+  const canvas = canvasForClassification(img);
+  const predictions = await model.classify(canvas);
 
-  return new Promise((resolve, reject) => {
-    const blobUrl = URL.createObjectURL(file);
-    img.onload = async () => {
-      try {
-        const predictions = await model.classify(img);
-        URL.revokeObjectURL(blobUrl);
+  const nsfwScore = predictions
+    .filter((p) => NSFW_CLASSES.includes(p.className as (typeof NSFW_CLASSES)[number]))
+    .reduce((sum, p) => sum + p.probability, 0);
 
-        const nsfwScore = predictions
-          .filter((p) => NSFW_CLASSES.includes(p.className as (typeof NSFW_CLASSES)[number]))
-          .reduce((sum, p) => sum + p.probability, 0);
-
-        resolve(nsfwScore >= NSFW_THRESHOLD);
-      } catch (err) {
-        URL.revokeObjectURL(blobUrl);
-        reject(err);
-      }
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(blobUrl);
-      reject(new Error("No se pudo cargar la imagen"));
-    };
-    img.src = blobUrl;
-  });
+  return nsfwScore >= NSFW_THRESHOLD;
 }

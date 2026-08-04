@@ -131,23 +131,23 @@ const EditarProducto = () => {
     },
   });
 
-  const addMediaFile = async (file: File, type: "image" | "video") => {
+  const addMediaFile = async (file: File, type: "image" | "video"): Promise<boolean> => {
     const hasVideo = formData.medias.some((m) => m.type === "video");
     const imgCount = formData.medias.filter((m) => m.type === "image").length;
     if (type === "video") {
       if (hasVideo) {
         toast({ title: "Máximo 1 video", variant: "destructive" });
-        return;
+        return false;
       }
       if (imgCount >= 5) {
         toast({ title: "Con video: máx 5 imágenes", variant: "destructive" });
-        return;
+        return false;
       }
     } else {
-      if (hasVideo && imgCount >= 5) return;
+      if (hasVideo && imgCount >= 5) return false;
       if (!hasVideo && imgCount >= 6) {
         toast({ title: "Máximo 6 imágenes", variant: "destructive" });
-        return;
+        return false;
       }
       try {
         const nsfw = await isImageNsfw(file);
@@ -157,7 +157,7 @@ const EditarProducto = () => {
             description: "La imagen no cumple con las políticas de contenido de Intercambius.",
             variant: "destructive",
           });
-          return;
+          return false;
         }
       } catch {
         toast({
@@ -165,13 +165,14 @@ const EditarProducto = () => {
           description: "No se pudo procesar. Probá con otra imagen.",
           variant: "destructive",
         });
-        return;
+        return false;
       }
     }
     setFormData((prev) => ({
       ...prev,
       medias: [...prev.medias, { file, preview: URL.createObjectURL(file), type }],
     }));
+    return true;
   };
 
   const processCropQueue = (queue: File[]) => {
@@ -184,7 +185,8 @@ const EditarProducto = () => {
   };
 
   const handleCroppedImage = (file: File) => {
-    void addMediaFile(file, "image").then(() => {
+    void addMediaFile(file, "image").then((ok) => {
+      if (!ok) return;
       setCropQueue((q) => {
         if (q.length > 0) {
           const [next, ...rest] = q;

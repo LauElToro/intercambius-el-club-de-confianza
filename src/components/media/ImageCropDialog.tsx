@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Loader2, Maximize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   blobToFile,
   computeCropZoomLimits,
@@ -59,6 +60,7 @@ export function ImageCropDialog({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!file) {
@@ -122,6 +124,12 @@ export function ImageCropDialog({
     try {
       const blob = await getCroppedImageBlob(previewUrl, croppedAreaPixels);
       onCropped(blobToFile(blob, file.name));
+    } catch {
+      toast({
+        title: 'Error al recortar',
+        description: 'No se pudo procesar la imagen. Probá ajustar el encuadre o usar otra foto.',
+        variant: 'destructive',
+      });
     } finally {
       setProcessing(false);
     }

@@ -34,10 +34,20 @@ function createImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.addEventListener('load', () => resolve(img));
-    img.addEventListener('error', (e) => reject(e));
-    img.crossOrigin = 'anonymous';
+    img.addEventListener('error', () => reject(new Error('No se pudo cargar la imagen')));
+    if (!url.startsWith('blob:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.src = url;
   });
+}
+
+function clampCrop(area: Area, imageWidth: number, imageHeight: number): Area {
+  const x = Math.max(0, Math.min(Math.round(area.x), imageWidth - 1));
+  const y = Math.max(0, Math.min(Math.round(area.y), imageHeight - 1));
+  const width = Math.max(1, Math.min(Math.round(area.width), imageWidth - x));
+  const height = Math.max(1, Math.min(Math.round(area.height), imageHeight - y));
+  return { x, y, width, height };
 }
 
 /** Recorta según área de react-easy-crop y devuelve Blob JPEG. */
@@ -47,36 +57,58 @@ export async function getCroppedImageBlob(
   rotation = 0,
 ): Promise<Blob> {
   const image = await createImage(imageSrc);
+  const crop = clampCrop(pixelCrop, image.naturalWidth, image.naturalHeight);
+
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No se pudo crear el canvas');
 
-  const maxSize = Math.max(image.width, image.height);
-  const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
+  if (rotation === 0) {
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    ctx.drawImage(
+      image,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      0,
+      0,
+      crop.width,
+      crop.height,
+    );
+  } else {
+    const maxSize = Math.max(image.naturalWidth, image.naturalHeight);
+    const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
 
-  canvas.width = safeArea;
-  canvas.height = safeArea;
+    canvas.width = safeArea;
+    canvas.height = safeArea;
 
-  ctx.translate(safeArea / 2, safeArea / 2);
-  ctx.rotate((rotation * Math.PI) / 180);
-  ctx.translate(-safeArea / 2, -safeArea / 2);
-  ctx.drawImage(image, (safeArea - image.width) / 2, (safeArea - image.height) / 2);
+    ctx.translate(safeArea / 2, safeArea / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-safeArea / 2, -safeArea / 2);
+    ctx.drawImage(
+      image,
+      (safeArea - image.naturalWidth) / 2,
+      (safeArea - image.naturalHeight) / 2,
+    );
 
-  const data = ctx.getImageData(0, 0, safeArea, safeArea);
+    const data = ctx.getImageData(0, 0, safeArea, safeArea);
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
 
-  ctx.putImageData(
-    data,
-    Math.round(0 - safeArea / 2 + image.width / 2 - pixelCrop.x),
-    Math.round(0 - safeArea / 2 + image.height / 2 - pixelCrop.y),
-  );
+    ctx.putImageData(
+      data,
+      Math.round(0 - safeArea / 2 + image.naturalWidth / 2 - crop.x),
+      Math.round(0 - safeArea / 2 + image.naturalHeight / 2 - crop.y),
+    );
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
-        if (!blob) {
+        if (!blob || blob.size === 0) {
           reject(new Error('No se pudo generar la imagen recortada'));
           return;
         }
