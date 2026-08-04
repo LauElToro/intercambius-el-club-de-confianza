@@ -66,6 +66,13 @@ const Perfil = () => {
 
   const esMiPerfil = Boolean(user && usuario && user.id === usuario.id);
 
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: esMiPerfil,
+  });
+  const creditoUser = currentUser ?? user;
+
   const { data: productosResponse } = useQuery({
     queryKey: ['marketItems', 'perfil', usuario?.id, pageProductos],
     queryFn: () => marketService.getItems({
@@ -350,12 +357,12 @@ const Perfil = () => {
           )}
         </div>
 
-        {esMiPerfil && !editando && user?.id && getCreditoAceptado(user.id) !== "aceptado" && (
+        {esMiPerfil && !editando && user?.id && getCreditoAceptado(user.id, creditoUser) !== "aceptado" && (
           <div className="mb-4 rounded-xl border border-gold/40 bg-gold/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-foreground">Crédito IOX</p>
               <p className="text-sm text-muted-foreground">
-                {getCreditoAceptado(user.id) === "rechazado"
+                {getCreditoAceptado(user.id, creditoUser) === "rechazado"
                   ? "Elegiste operar solo con dinero tradicional. Podés activar IOX cuando quieras."
                   : "Activá el crédito IOX para comprar e intercambiar dentro de la plataforma."}
               </p>

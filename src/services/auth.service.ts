@@ -62,6 +62,9 @@ export interface User {
   /** Palabras clave de productos que le interesan (prioridad en coincidencias). */
   interesesQuiero?: string[];
   precioOferta?: number;
+  /** Términos IOX: true = aceptó, false = rechazó, null/undefined = no respondió. */
+  aceptaTerminosCredito?: boolean | null;
+  creditoOfertaAplicado?: boolean;
 }
 
 export const authService = {

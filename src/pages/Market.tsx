@@ -36,6 +36,7 @@ import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { busquedasService } from "@/services/busquedas.service";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { DEFAULT_MAP_CENTER } from "@/lib/geo";
+import { geoService } from "@/services/geo.service";
 import { LocationSearchField } from "@/components/location/LocationSearchField";
 import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
 

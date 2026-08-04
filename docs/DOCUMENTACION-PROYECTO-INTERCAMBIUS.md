@@ -9,17 +9,27 @@ Documentación técnica de lo implementado: Mail, Dashboard Admin, Métricas, Us
 
 ### Configuración
 
-- **Motor**: Nodemailer con SMTP.
-- **Variables de entorno** (backend `.env`):
+- **Motor**: Nodemailer con SMTP contra **Google Workspace** (`@intercambius.com.ar`).
+- **Gmail / Workspace (recomendado): OAuth 2.0** — sin contraseña de aplicación. Definí en el backend:
+  - `SMTP_USER`: cuenta Workspace (`noreply@intercambius.com.ar`), autorizada en Google Cloud.
+  - `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`, `GMAIL_OAUTH_REFRESH_TOKEN`.
+  - Opcional: `GMAIL_OAUTH_REDIRECT_URI` (solo para el script de token; default `http://127.0.0.1:8787`). Debe coincidir con una URI autorizada en la credencial OAuth de Google Cloud.
+  - **Alcance OAuth** usado al generar el refresh token: `https://mail.google.com/` (envío por SMTP de Gmail).
+  - **Script**: desde `backend/`, con `GMAIL_OAUTH_CLIENT_ID` y `GMAIL_OAUTH_CLIENT_SECRET` en `.env`, ejecutá `npm run gmail-oauth-token`, autorizá con la cuenta de servicio de Workspace y pegá el `code` para imprimir `GMAIL_OAUTH_REFRESH_TOKEN`.
+- **SMTP tradicional** (legado): `SMTP_USER` + `SMTP_PASS` (contraseña de aplicación del usuario de servicio).
+- **Variables comunes** (backend `.env` / Vercel):
   - `SMTP_HOST` (default: `smtp.gmail.com`)
   - `SMTP_PORT` (default: `587`)
-  - `SMTP_SECURE` (`true` para 465)
-  - `SMTP_USER` y `SMTP_PASS` (ej. cuenta Gmail; para Gmail puede usarse “Contraseña de aplicación”).
-  - `SMTP_FROM`: remitente mostrado (opcional; si no está, se usa `SMTP_USER` o `"Intercambius" <noreply@intercambius.com>`).
+  - `SMTP_SECURE` (`true` para 465; si el puerto es `465`, se fuerza TLS implícito)
+  - `SMTP_FROM`: remitente mostrado (recomendado: `"Intercambius" <noreply@intercambius.com.ar>`).
+  - `CONTACT_INBOX_EMAIL`: consultas del formulario (default: `contacto@intercambius.com.ar`; debe existir en Workspace).
+  - `RECLAMOS_INBOX_EMAIL`: quejas/sugerencias (default: `reclamos@intercambius.com.ar`; debe existir en Workspace).
   - `FRONTEND_URL`: URL base del front (para enlaces en los emails).
   - `LOGO_URL`: URL del logo en los correos (default: `{FRONTEND_URL}/logo-intercambius.png`).
 
-Si `SMTP_USER` no está definido, no se envía correo; solo se registra en consola (útil en desarrollo).
+**Remitente:** `noreply@`. **Formulario:** consultas → `contacto@`, quejas → `reclamos@` (alias/usuarios en Workspace). Detalle en `docs/GMAIL-WORKSPACE-ENROUTAMIENTO.md`.
+
+Si no hay configuración válida (`SMTP_USER` + OAuth completo, o `SMTP_USER` + `SMTP_PASS`), no se envía correo; solo se registra en consola (útil en desarrollo).
 
 ### Plantilla unificada
 
@@ -146,7 +156,7 @@ Para cada destinatario se llama a `emailService.sendNewsletter(email, nombre, su
 
 ### Auth y flujos
 
-- **Login**: paso 1 email/contraseña; paso 2 código MFA (6 dígitos por email). Si no hay SMTP, el código se puede ver en logs del backend (solo desarrollo).
+- **Login**: paso 1 email/contraseña; paso 2 código MFA (6 dígitos por email). Si no hay correo configurado (OAuth o SMTP_PASS), el código se puede ver en logs del backend (solo desarrollo).
 - **Olvidé contraseña**: página que pide email → backend envía enlace por correo.
 - **Restablecer contraseña**: página con token en URL; dos campos de contraseña (validación de coincidencia) y envío al backend.
 - **Registro**: formulario con validaciones; tras registro se envía email de bienvenida.

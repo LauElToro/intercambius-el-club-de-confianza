@@ -2,6 +2,15 @@ import api, { ApiError } from '@/lib/api';
 import { User } from './auth.service';
 import { nombreTiendaParaAsignar } from '@/lib/perfil';
 
+export type TerminosCreditoResponse = {
+  aceptaTerminosCredito: boolean;
+  creditoAplicado: boolean;
+  credito?: number;
+  saldo?: number;
+  limite?: number;
+  user: User | null;
+};
+
 async function asegurarNombreTienda(user: User): Promise<User> {
   const nombreTienda = nombreTiendaParaAsignar(user);
   if (!nombreTienda) return user;
@@ -48,8 +57,18 @@ export const userService = {
     }
   },
 
-  /** @deprecated Usar getUser */
   async getUserById(id: number): Promise<User> {
     return this.getUser(id);
+  },
+
+  async setTerminosCredito(acepta: boolean): Promise<TerminosCreditoResponse> {
+    try {
+      return await api.post<TerminosCreditoResponse>('/api/users/me/terminos-credito', { acepta });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError('Error al guardar términos IOX', 500);
+    }
   },
 };

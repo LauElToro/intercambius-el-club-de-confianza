@@ -5,7 +5,9 @@ import Header from "./Header";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfertaCreditoTerminos, hasRespondidoOfertaCredito } from "@/components/credito/OfertaCreditoTerminos";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { userService } from "@/services/user.service";
+import { syncTerminosCreditoFromLocalStorage } from "@/lib/credito-terminos-sync";
 import { CONTACT_EMAIL } from "@/lib/constants";
 import type { CategoriaContacto } from "@/services/contact.service";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +23,12 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => userService.getCurrentUser(),
+    enabled: !!user?.id,
+  });
+  const profileUser = currentUser ?? user;
   const [showOfertaCredito, setShowOfertaCredito] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [contactCategoria, setContactCategoria] = useState<CategoriaContacto>("consulta");
@@ -46,10 +54,19 @@ const Layout = ({ children, showHeader = true }: LayoutProps) => {
   };
 
   useEffect(() => {
-    if (user?.id && !hasRespondidoOfertaCredito(user.id)) {
+    if (!user?.id) return;
+    void syncTerminosCreditoFromLocalStorage(user.id, profileUser).then((synced) => {
+      if (synced) {
+        void queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      }
+    });
+  }, [user?.id, profileUser?.aceptaTerminosCredito, queryClient]);
+
+  useEffect(() => {
+    if (user?.id && !hasRespondidoOfertaCredito(user.id, profileUser)) {
       setShowOfertaCredito(true);
     }
-  }, [user?.id]);
+  }, [user?.id, profileUser?.aceptaTerminosCredito]);
 
   return (
     <div className="min-h-screen bg-background">

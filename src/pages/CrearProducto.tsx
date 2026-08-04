@@ -82,6 +82,7 @@ const CrearProducto = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['marketItems'] });
+      void queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       toast({
         title: "¡Producto creado!",
         description: "Tu producto/servicio ya está disponible en el market.",

@@ -11,6 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { CREDITO_OFERTA_INGRESO, COMISION_IOX_PORCENTAJE, INTERCAMBIUS_EMAIL } from "@/lib/constants";
+import { userService } from "@/services/user.service";
+import type { User } from "@/services/auth.service";
+import { useToast } from "@/hooks/use-toast";
 
 const STORAGE_KEY_PREFIX = "intercambius_credito_aceptado_";
 const STORAGE_PIONEROS_PREFIX = "intercambius_bienvenida_pioneros_";
@@ -72,6 +75,7 @@ export const OfertaCreditoTerminos = ({
   const [seisMesesOpen, setSeisMesesOpen] = useState(false);
   const [pionerosOpen, setPionerosOpen] = useState(false);
   const { formatIX } = useCurrencyVariant();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (userId && hasRespondidoOfertaCredito(userId) && !hasVistoBienvenidaPioneros(userId)) {
@@ -86,23 +90,43 @@ export const OfertaCreditoTerminos = ({
     }
   };
 
-  const handleAceptar = () => {
+  const handleAceptar = async () => {
     setAceptando(true);
     try {
-      localStorage.setItem(`${STORAGE_KEY_PREFIX}${userId}`, "aceptado");
+      const result = await userService.setTerminosCredito(true);
+      setCreditoAceptadoLocal(userId, "aceptado");
       onAceptar?.();
+      if (result.creditoAplicado && result.credito) {
+        toast({
+          title: "Crédito IOX activado",
+          description: `Tenés ${formatIX(result.credito)} disponibles para comprar en la plataforma.`,
+        });
+      }
       abrirPionerosSiCorresponde();
+    } catch (e) {
+      toast({
+        title: "No se pudo guardar",
+        description: e instanceof Error ? e.message : "Intentá de nuevo en unos segundos.",
+        variant: "destructive",
+      });
     } finally {
       setAceptando(false);
     }
   };
 
-  const handleRechazar = () => {
+  const handleRechazar = async () => {
     setRechazando(true);
     try {
-      localStorage.setItem(`${STORAGE_KEY_PREFIX}${userId}`, "rechazado");
+      await userService.setTerminosCredito(false);
+      setCreditoAceptadoLocal(userId, "rechazado");
       onRechazar?.();
       abrirPionerosSiCorresponde();
+    } catch (e) {
+      toast({
+        title: "No se pudo guardar",
+        description: e instanceof Error ? e.message : "Intentá de nuevo en unos segundos.",
+        variant: "destructive",
+      });
     } finally {
       setRechazando(false);
     }
@@ -305,7 +329,7 @@ export const OfertaCreditoTerminos = ({
   );
 };
 
-export const getCreditoAceptado = (userId: number): "aceptado" | "rechazado" | null => {
+export const getCreditoAceptadoLocal = (userId: number): "aceptado" | "rechazado" | null => {
   try {
     const v = localStorage.getItem(`${STORAGE_KEY_PREFIX}${userId}`);
     if (v === "aceptado" || v === "rechazado") return v;
@@ -315,8 +339,28 @@ export const getCreditoAceptado = (userId: number): "aceptado" | "rechazado" | n
   }
 };
 
-export const hasRespondidoOfertaCredito = (userId: number): boolean =>
-  getCreditoAceptado(userId) !== null;
+export const setCreditoAceptadoLocal = (userId: number, value: "aceptado" | "rechazado"): void => {
+  try {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${userId}`, value);
+  } catch {
+    /* ignore */
+  }
+};
+
+/** Preferir respuesta del backend; localStorage como respaldo de migración. */
+export const getCreditoAceptado = (
+  userId: number,
+  user?: Pick<User, "aceptaTerminosCredito"> | null,
+): "aceptado" | "rechazado" | null => {
+  if (user?.aceptaTerminosCredito === true) return "aceptado";
+  if (user?.aceptaTerminosCredito === false) return "rechazado";
+  return getCreditoAceptadoLocal(userId);
+};
+
+export const hasRespondidoOfertaCredito = (
+  userId: number,
+  user?: Pick<User, "aceptaTerminosCredito"> | null,
+): boolean => getCreditoAceptado(userId, user) !== null;
 
 export const hasVistoBienvenidaPioneros = (userId: number): boolean => {
   try {

@@ -411,7 +411,7 @@ const Chat = () => {
       return;
     }
 
-    if (ioxEfectivo > 0 && user?.id && getCreditoAceptado(user.id) !== "aceptado") {
+    if (ioxEfectivo > 0 && user?.id && getCreditoAceptado(user.id, usuario) !== "aceptado") {
       toast({
         title: "Activá IOX primero",
         description: "Debés aceptar los términos de crédito IOX antes de proponer pagos en IOX.",

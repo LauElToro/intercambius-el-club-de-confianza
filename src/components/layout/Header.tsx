@@ -61,7 +61,7 @@ const Header = () => {
   const queryClient = useQueryClient();
   const [showOfertaCredito, setShowOfertaCredito] = useState(false);
   const uid = usuario?.id ?? user?.id;
-  const puedeActivarIOX = !!uid && getCreditoAceptado(uid) !== "aceptado";
+  const puedeActivarIOX = !!uid && getCreditoAceptado(uid, usuario) !== "aceptado";
   const { hayCoincidencias } = useCoincidenciasAlert();
   const isHome = location.pathname === "/";
   const { theme, setTheme } = useTheme();
