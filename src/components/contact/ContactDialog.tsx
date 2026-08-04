@@ -61,6 +61,7 @@ export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategor
   const [sending, setSending] = useState(false);
 
   const inboxVisible = inboxVisibleParaCategoria(categoria);
+  const esReclamo = categoria === "queja" || categoria === "sugerencia";
 
   useEffect(() => {
     if (!open) return;
@@ -170,9 +171,11 @@ export function ContactDialog({ open, onOpenChange, defaultEmail, defaultCategor
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-          <DialogTitle>Contactanos</DialogTitle>
+          <DialogTitle>{esReclamo ? "Quejas y sugerencias" : "Contactanos"}</DialogTitle>
           <DialogDescription>
-            Quejas, sugerencias o consultas. Podés adjuntar capturas o documentos (PDF, imágenes, texto o Word).
+            {esReclamo
+              ? "Tu mensaje llega a reclamos. Podés adjuntar capturas o documentos (PDF, imágenes, texto o Word)."
+              : "Consultas generales. Podés adjuntar capturas o documentos (PDF, imágenes, texto o Word)."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1 overflow-hidden">

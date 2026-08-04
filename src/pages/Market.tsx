@@ -37,7 +37,7 @@ import { busquedasService } from "@/services/busquedas.service";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { DEFAULT_MAP_CENTER } from "@/lib/geo";
 import { LocationSearchField } from "@/components/location/LocationSearchField";
-import { geoService } from "@/services/geo.service";
+import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
 
 // Tipos de rubros y sus filtros específicos
 const RUBROS = {
@@ -101,8 +101,8 @@ const Market = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [precioMin, setPrecioMin] = useState([0]);
-  const [precioMax, setPrecioMax] = useState([500000]);
+  const [precioMinInput, setPrecioMinInput] = useState("");
+  const [precioMaxInput, setPrecioMaxInput] = useState("");
   const [filtrosRubro, setFiltrosRubro] = useState<Record<string, string[]>>({});
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
   const [favoritosLocal, setFavoritosLocal] = useState<number[]>([]);
@@ -126,6 +126,9 @@ const Market = () => {
   });
 
   const sinLimiteDistancia = distanciaMax[0] >= 100;
+  const precioMinNum = parsePrecioFromInput(precioMinInput);
+  const precioMaxNum = parsePrecioFromInput(precioMaxInput);
+  const sinLimitePrecio = !precioMaxInput.trim();
 
   // Registrar búsqueda cuando cambian filtros (debounced, solo si cookies aceptadas)
   const recordRef = useRef<NodeJS.Timeout | null>(null);
@@ -139,23 +142,23 @@ const Market = () => {
         filtros: {
           tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
           rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado : undefined,
-          precioMin: precioMin[0],
-          precioMax: precioMax[0],
+          precioMin: precioMinNum > 0 ? precioMinNum : undefined,
+          precioMax: !sinLimitePrecio ? precioMaxNum : undefined,
           distanciaMax: userLocation ? distanciaMax[0] : undefined,
         },
       });
     }, 800);
     return () => { recordRef.current && clearTimeout(recordRef.current); };
-  }, [searchApplied, tipoSeleccionado, rubroSeleccionado, precioMin[0], precioMax[0], distanciaMax[0], userLocation, puedeRegistrarBusquedas, user]);
+  }, [searchApplied, tipoSeleccionado, rubroSeleccionado, precioMinNum, precioMaxNum, sinLimitePrecio, distanciaMax[0], userLocation, puedeRegistrarBusquedas, user]);
 
   // Obtener items del backend (paginado, filtro de distancia y búsqueda en servidor)
   const { data: marketResponse, isLoading, error } = useQuery({
-    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], sinLimiteDistancia, searchApplied, page],
+    queryKey: ['marketItems', rubroSeleccionado, tipoSeleccionado, precioMinNum, precioMaxNum, sinLimitePrecio, userLocation, distanciaMax[0], sinLimiteDistancia, searchApplied, page],
     queryFn: () => marketService.getItems({
       rubro: rubroSeleccionado !== 'todos' ? rubroSeleccionado as any : undefined,
       tipo: tipoSeleccionado !== 'todos' ? tipoSeleccionado : undefined,
-      precioMin: precioMin[0],
-      precioMax: precioMax[0],
+      precioMin: precioMinNum > 0 ? precioMinNum : undefined,
+      precioMax: !sinLimitePrecio ? precioMaxNum : undefined,
       search: searchApplied.trim() || undefined,
       userLat: userLocation?.lat,
       userLng: userLocation?.lng,
@@ -173,7 +176,7 @@ const Market = () => {
   // Reset a página 1 cuando cambian filtros
   useEffect(() => {
     setPage(1);
-  }, [rubroSeleccionado, tipoSeleccionado, precioMin[0], precioMax[0], userLocation, distanciaMax[0], searchApplied]);
+  }, [rubroSeleccionado, tipoSeleccionado, precioMinNum, precioMaxNum, userLocation, distanciaMax[0], searchApplied]);
 
   // Por defecto usar la ubicación del perfil del usuario
   const appliedProfileLocation = useRef(false);
@@ -305,13 +308,13 @@ const Market = () => {
     setPage(1);
     setUserLocation(null);
     setLocationError(null);
-    setPrecioMin([0]);
-    setPrecioMax([500000]);
+    setPrecioMinInput("");
+    setPrecioMaxInput("");
     setFiltrosRubro({});
   };
 
   const tieneFiltrosActivos = searchApplied || tipoSeleccionado !== "todos" || rubroSeleccionado !== "todos" || 
-    userLocation !== null || distanciaMax[0] < 100 || precioMin[0] > 0 || precioMax[0] < 500000 ||
+    userLocation !== null || distanciaMax[0] < 100 || precioMinNum > 0 || !sinLimitePrecio ||
     Object.values(filtrosRubro).some(v => v.length > 0);
 
   return (
@@ -558,36 +561,47 @@ const Market = () => {
                     {/* Precio */}
                     <div>
                       <label className="text-sm font-medium mb-2 block">Precio (IOX)</label>
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">Mínimo</label>
-                          <Slider
-                            value={precioMin}
-                            onValueChange={setPrecioMin}
-                            max={precioMax[0] - 10}
-                            min={0}
-                            step={10}
-                            className="w-full"
+                          <label htmlFor="precio-min" className="text-xs text-muted-foreground mb-1 block">Desde</label>
+                          <Input
+                            id="precio-min"
+                            type="text"
+                            inputMode="numeric"
+                            value={formatPrecioForInput(precioMinInput)}
+                            onChange={(e) => {
+                              setPrecioMinInput(e.target.value.replace(/\D/g, ''));
+                            }}
+                            onBlur={() => {
+                              if (!sinLimitePrecio && precioMinNum > precioMaxNum) {
+                                setPrecioMinInput(String(precioMaxNum));
+                              }
+                            }}
+                            placeholder="0"
                           />
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {formatIX(precioMin[0])}
-                          </div>
                         </div>
                         <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">Máximo</label>
-                          <Slider
-                            value={precioMax}
-                            onValueChange={setPrecioMax}
-                            max={500000}
-                            min={precioMin[0] + 10}
-                            step={1000}
-                            className="w-full"
+                          <label htmlFor="precio-max" className="text-xs text-muted-foreground mb-1 block">Hasta</label>
+                          <Input
+                            id="precio-max"
+                            type="text"
+                            inputMode="numeric"
+                            value={formatPrecioForInput(precioMaxInput)}
+                            onChange={(e) => {
+                              setPrecioMaxInput(e.target.value.replace(/\D/g, ''));
+                            }}
+                            onBlur={() => {
+                              if (precioMaxInput.trim() && precioMaxNum < precioMinNum) {
+                                setPrecioMaxInput(String(precioMinNum));
+                              }
+                            }}
+                            placeholder="Sin límite"
                           />
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {formatIX(precioMax[0])}
-                          </div>
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Dejá «Hasta» vacío para ver publicaciones de cualquier precio.
+                      </p>
                     </div>
 
                     {/* Filtros específicos del rubro */}
