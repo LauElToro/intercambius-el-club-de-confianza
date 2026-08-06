@@ -80,7 +80,7 @@ function ProductoCardChat({
           <img
             src={imagen || 'https://via.placeholder.com/300x200'}
             alt={titulo}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200'; }}
           />
           {rubroInfo && (

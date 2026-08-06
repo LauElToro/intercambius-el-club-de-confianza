@@ -4,6 +4,9 @@
  */
 export const MAX_BLOB_UPLOAD_BYTES = 4 * 1024 * 1024;
 
+/** Proporción de fotos de producto (debe coincidir con ImageCropDialog en Crear/Editar). */
+export const PRODUCT_IMAGE_ASPECT = 4 / 3;
+
 /** Límite de crédito negativo por defecto (en IOX). Quien llega al límite solo puede pagar por fuera de la página. */
 export const CREDIT_LIMIT_DEFAULT = 50_000;
 

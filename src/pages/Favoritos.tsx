@@ -87,11 +87,11 @@ const Favoritos = () => {
                 className="overflow-hidden hover:border-gold/50 transition-colors group"
               >
                 <Link to={`/producto/${item.id}`}>
-                  <div className="aspect-video bg-muted relative">
+                  <div className="aspect-[4/3] bg-muted relative">
                     <img
                       src={item.imagen || (item.images?.[0]?.url) || "https://via.placeholder.com/300x200"}
                       alt={item.titulo}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                     />
                     <Button
                       variant="secondary"

@@ -710,11 +710,11 @@ const Market = () => {
                   className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer border-border hover:border-gold/30"
                   onClick={() => navigate(`/producto/${item.id}`)}
                 >
-                  <div className="relative group">
+                  <div className="relative group aspect-[4/3] bg-muted overflow-hidden">
                     <img
                       src={item.imagen}
                       alt={item.titulo}
-                      className="w-full h-48 object-cover transition-transform duration-200 group-hover:scale-105"
+                      className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-105"
                     />
                     <Button
                       variant="ghost"

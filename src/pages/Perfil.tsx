@@ -784,11 +784,11 @@ const Perfil = () => {
                 {productos.map((item) => (
                   <Link key={item.id} to={`/producto/${item.id}`}>
                     <Card className="overflow-hidden hover:border-gold/50 hover:shadow-md transition-all cursor-pointer group h-full">
-                      <div className="relative aspect-video bg-muted overflow-hidden">
+                      <div className="relative aspect-[4/3] bg-muted overflow-hidden">
                         <img
                           src={item.imagen || "https://via.placeholder.com/300x200"}
                           alt={item.titulo}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                         />
                         {item.rubro && (
                           <Badge className="absolute top-2 left-2 text-xs" variant="secondary">

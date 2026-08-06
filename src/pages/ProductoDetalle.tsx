@@ -169,12 +169,12 @@ const ProductoDetalle = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Galería */}
             <Card>
-              <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-muted">
                 {medias.length > 0 ? (
                   medias[selectedMedia]?.mediaType === 'video' ? (
                     <video
                       src={medias[selectedMedia].url}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                       controls
                       playsInline
                     />
@@ -182,11 +182,11 @@ const ProductoDetalle = () => {
                     <img
                       src={medias[selectedMedia]?.url || item.imagen}
                       alt={item.titulo}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   )
                 ) : (
-                  <img src={item.imagen} alt={item.titulo} className="w-full h-full object-cover" />
+                  <img src={item.imagen} alt={item.titulo} className="w-full h-full object-contain" />
                 )}
                 {medias.length > 1 && (
                   <>
@@ -228,14 +228,14 @@ const ProductoDetalle = () => {
                     <button
                       key={i}
                       onClick={() => setSelectedMedia(i)}
-                      className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 ${
+                      className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 bg-muted ${
                         i === selectedMedia ? "border-gold" : "border-transparent"
                       }`}
                     >
                       {m.mediaType === 'video' ? (
-                        <video src={m.url} className="w-full h-full object-cover" muted />
+                        <video src={m.url} className="w-full h-full object-contain" muted />
                       ) : (
-                        <img src={m.url} alt="" className="w-full h-full object-cover" />
+                        <img src={m.url} alt="" className="w-full h-full object-contain" />
                       )}
                     </button>
                   ))}

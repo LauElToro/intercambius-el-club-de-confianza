@@ -188,11 +188,11 @@ const MisPublicaciones = () => {
                 className="overflow-hidden hover:border-gold/30 transition-colors group"
               >
                 <Link to={`/producto/${item.id}`} className="block">
-                  <div className="aspect-video bg-muted">
+                  <div className="aspect-[4/3] bg-muted">
                     <img
                       src={item.imagen || "https://via.placeholder.com/300x200"}
                       alt={item.titulo}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
                     />
                   </div>
                 </Link>
