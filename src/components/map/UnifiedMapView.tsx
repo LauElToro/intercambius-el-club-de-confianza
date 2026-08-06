@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { shouldUseGoogleMaps } from '@/lib/google-maps';
 import { useGoogleMapsLoader } from '@/hooks/use-google-maps';
 import { useGoogleMapsFailure } from '@/hooks/use-google-maps-failure';
@@ -41,6 +41,15 @@ function GoogleMapsBranch(props: MapViewProps) {
   // Evita removeChild cuando Google ya mutó el DOM.
   const [leafletReady, setLeafletReady] = useState(false);
 
+  const handleLoadTimeout = useCallback(() => {
+    reportFailure();
+    setLoadTimedOut(true);
+  }, [reportFailure]);
+
+  const handleRenderError = useCallback(() => {
+    reportFailure();
+  }, [reportFailure]);
+
   useEffect(() => {
     if (!shouldFallback) {
       setLeafletReady(false);
@@ -69,6 +78,7 @@ function GoogleMapsBranch(props: MapViewProps) {
 
   return (
     <MapRenderErrorBoundary
+      onError={handleRenderError}
       fallback={
         <DeferredMapMount height={props.height}>
           <LeafletMapView key="leaflet-error-fallback" {...props} />
@@ -76,16 +86,11 @@ function GoogleMapsBranch(props: MapViewProps) {
       }
     >
       <DeferredMapMount height={props.height}>
-        <GoogleMapView
-          {...props}
-          onLoadTimeout={() => {
-            reportFailure();
-            setLoadTimedOut(true);
-          }}
-        />
+        <GoogleMapView {...props} onLoadTimeout={handleLoadTimeout} />
       </DeferredMapMount>
     </MapRenderErrorBoundary>
   );
 }
 
-export type { MapViewProps, MapMarker } from './GoogleMapView';
+export type { MapViewProps } from './MapView';
+export type { MapMarker } from './GoogleMapView';

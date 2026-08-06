@@ -35,7 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCookieConsent } from "@/contexts/CookieConsentContext";
 import { busquedasService } from "@/services/busquedas.service";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
-import { DEFAULT_MAP_CENTER } from "@/lib/geo";
+import { DEFAULT_MAP_CENTER, isValidCoord } from "@/lib/geo";
 import { geoService } from "@/services/geo.service";
 import { LocationSearchField } from "@/components/location/LocationSearchField";
 import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
@@ -490,11 +490,11 @@ const Market = () => {
                                     });
                                   }}
                                   markers={items
-                                    .filter((i) => i.lat != null && i.lng != null)
+                                    .filter((i) => isValidCoord(i.lat, i.lng))
                                     .slice(0, 30)
                                     .map((i) => ({
-                                      lat: i.lat!,
-                                      lng: i.lng!,
+                                      lat: i.lat as number,
+                                      lng: i.lng as number,
                                       title: i.titulo,
                                     }))}
                                 />

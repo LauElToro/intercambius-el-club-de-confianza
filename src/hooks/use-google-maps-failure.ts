@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isGoogleMapsDisabledInSession, markGoogleMapsUnavailable } from '@/lib/google-maps';
 
 const GOOGLE_MAP_ERROR_PATTERNS = [
@@ -64,11 +64,11 @@ export function useGoogleMapsFailure(onFailure?: () => void) {
   const onFailureRef = useRef(onFailure);
   onFailureRef.current = onFailure;
 
-  const reportFailure = () => {
+  const reportFailure = useCallback(() => {
     markGoogleMapsUnavailable();
     setFailed(true);
     onFailureRef.current?.();
-  };
+  }, []);
 
   useEffect(() => {
     const listener = () => {

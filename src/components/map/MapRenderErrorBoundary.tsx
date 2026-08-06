@@ -3,6 +3,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 interface Props {
   children: ReactNode;
   fallback: ReactNode;
+  /** Se llama al capturar un error de render (p. ej. para marcar Google Maps no disponible). */
+  onError?: (error: Error) => void;
 }
 
 interface State {
@@ -22,6 +24,7 @@ export class MapRenderErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.warn('[MapRenderErrorBoundary]', error.message, info.componentStack);
+    this.props.onError?.(error);
     if (this.fallbackTimer != null) {
       window.clearTimeout(this.fallbackTimer);
     }

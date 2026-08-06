@@ -18,7 +18,7 @@ import { LocationPicker } from "@/components/location/LocationPicker";
 import { FICHAS_TECNICAS } from "@/lib/fichas-tecnicas";
 import { formatPrecioForInput, parsePrecioFromInput } from "@/lib/currency";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
-import { isImageNsfw } from "@/lib/nsfwCheck";
+import { isImageNsfw, preloadNsfwModel } from "@/lib/nsfwCheck";
 import { userService } from "@/services/user.service";
 import { MAX_BLOB_UPLOAD_BYTES } from "@/lib/constants";
 import { ImageCropDialog } from "@/components/media/ImageCropDialog";
@@ -155,6 +155,7 @@ const CrearProducto = () => {
 
   const processCropQueue = (queue: File[]) => {
     if (queue.length === 0) return;
+    preloadNsfwModel();
     const [next, ...rest] = queue;
     setCropBatchTotal(queue.length);
     setCropQueue(rest);

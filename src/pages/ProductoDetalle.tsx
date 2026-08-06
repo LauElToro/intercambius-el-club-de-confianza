@@ -35,6 +35,7 @@ import { IdentidadVerificadaBadge } from "@/components/kyc/IdentidadVerificadaBa
 import { UnifiedMapView } from "@/components/map/UnifiedMapView";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
+import { isValidCoord } from "@/lib/geo";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -317,7 +318,7 @@ const ProductoDetalle = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {item.lat != null && item.lng != null && (
+                {isValidCoord(item.lat, item.lng) && (
                   <UnifiedMapView
                     center={{ lat: item.lat, lng: item.lng }}
                     radiusKm={0}
@@ -396,19 +397,21 @@ const ProductoDetalle = () => {
                 <Separator />
 
                 {/* Detalles específicos */}
-                <div>
-                  <h3 className="font-semibold mb-3">Detalles</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    {Object.entries(item.detalles).map(([key, value]) => (
-                      <div key={key}>
-                        <span className="text-sm text-muted-foreground capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}:
-                        </span>
-                        <p className="font-medium text-foreground">{value as string}</p>
-                      </div>
-                    ))}
+                {item.detalles && Object.keys(item.detalles).length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Detalles</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(item.detalles).map(([key, value]) => (
+                        <div key={key}>
+                          <span className="text-sm text-muted-foreground capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}:
+                          </span>
+                          <p className="font-medium text-foreground">{value as string}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>

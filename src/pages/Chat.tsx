@@ -531,7 +531,7 @@ const Chat = () => {
                       <div className="relative shrink-0">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback className="bg-gold/20 text-gold">
-                            {c.otroUsuario.nombre?.slice(0, 2).toUpperCase() ?? '?'}
+                            {c.otroUsuario?.nombre?.slice(0, 2).toUpperCase() ?? '?'}
                           </AvatarFallback>
                         </Avatar>
                         {(c.mensajesNoLeidos ?? 0) > 0 && Number(conversacionId) !== c.id && (
@@ -542,8 +542,8 @@ const Chat = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`truncate flex items-center gap-1 min-w-0 ${(c.mensajesNoLeidos ?? 0) > 0 ? 'font-semibold' : 'font-medium'}`}>
-                          <span className="truncate">{c.otroUsuario.nombre}</span>
-                          {c.otroUsuario.kycVerificado && <IdentidadVerificadaBadge iconClassName="h-3.5 w-3.5 shrink-0" />}
+                          <span className="truncate">{c.otroUsuario?.nombre ?? 'Usuario'}</span>
+                          {c.otroUsuario?.kycVerificado && <IdentidadVerificadaBadge iconClassName="h-3.5 w-3.5 shrink-0" />}
                         </p>
                         {c.marketItem && (
                           <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
@@ -587,13 +587,13 @@ const Chat = () => {
                       </Button>
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-gold/20 text-gold">
-                          {chatDetalle.conversacion.otroUsuario.nombre?.slice(0, 2).toUpperCase() ?? '?'}
+                          {chatDetalle.conversacion.otroUsuario?.nombre?.slice(0, 2).toUpperCase() ?? '?'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-base truncate flex items-center gap-1.5 min-w-0">
-                          <span className="truncate">{chatDetalle.conversacion.otroUsuario.nombre}</span>
-                          {chatDetalle.conversacion.otroUsuario.kycVerificado && (
+                          <span className="truncate">{chatDetalle.conversacion.otroUsuario?.nombre ?? 'Usuario'}</span>
+                          {chatDetalle.conversacion.otroUsuario?.kycVerificado && (
                             <IdentidadVerificadaBadge iconClassName="h-4 w-4 shrink-0" />
                           )}
                         </CardTitle>
@@ -612,7 +612,7 @@ const Chat = () => {
                         const mensajes = chatDetalle.mensajes;
                         let ultimaFecha: string | null = null;
                         return mensajes.map((m: Mensaje) => {
-                          const fechaMsg = m.createdAt.split('T')[0];
+                          const fechaMsg = (m.createdAt ?? '').split('T')[0] || 'sin-fecha';
                           const mostrarSeparador = ultimaFecha !== fechaMsg;
                           if (mostrarSeparador) ultimaFecha = fechaMsg;
                           return (
