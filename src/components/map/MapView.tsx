@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { MapContainer, TileLayer, Circle, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -40,10 +40,12 @@ export const MapView = ({
   zoom,
 }: MapViewProps) => {
   const mapZoom = zoom ?? zoomForRadiusKm(radiusKm);
+  const mapKey = useId();
 
   return (
     <div className={`rounded-lg overflow-hidden border border-border ${className}`} style={{ height }}>
       <MapContainer
+        key={mapKey}
         center={[center.lat, center.lng]}
         zoom={mapZoom}
         style={{ height: '100%', width: '100%' }}

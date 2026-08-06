@@ -464,57 +464,60 @@ const Market = () => {
                             <DialogHeader>
                               <DialogTitle>Elegir zona de búsqueda</DialogTitle>
                             </DialogHeader>
-                            <div className="space-y-3 min-w-0">
-                              <LocationSearchField
-                                value={busquedaUbicacion}
-                                onValueChange={setBusquedaUbicacion}
-                                onLocationSelect={({ lat, lng, address }) => {
-                                  setUserLocation({ lat, lng });
-                                  setBusquedaUbicacion(address);
-                                  setLocationError(null);
-                                }}
-                                onError={setLocationError}
-                                placeholder="Buscar dirección, barrio o ciudad..."
-                              />
-                              <UnifiedMapView
-                                center={userLocation ?? DEFAULT_MAP_CENTER}
-                                radiusKm={distanciaMax[0] >= 100 ? 25 : distanciaMax[0]}
-                                height={220}
-                                draggableCenter
-                                onCenterChange={(lat, lng) => {
-                                  setUserLocation({ lat, lng });
-                                  void geoService.reverseGeocode(lat, lng).then((result) => {
-                                    if (result?.address) setBusquedaUbicacion(result.address);
-                                  });
-                                }}
-                                markers={items
-                                  .filter((i) => i.lat != null && i.lng != null)
-                                  .slice(0, 30)
-                                  .map((i) => ({
-                                    lat: i.lat!,
-                                    lng: i.lng!,
-                                    title: i.titulo,
-                                  }))}
-                              />
-                              {busquedaUbicacion && (
-                                <p className="text-sm text-muted-foreground break-words">
-                                  <MapPin className="w-4 h-4 inline mr-1 shrink-0" />
-                                  {busquedaUbicacion}
+                            {/* Desmontar el mapa al cerrar evita removeChild con Google/Leaflet + portal */}
+                            {elegirUbicacionOpen && (
+                              <div className="space-y-3 min-w-0">
+                                <LocationSearchField
+                                  value={busquedaUbicacion}
+                                  onValueChange={setBusquedaUbicacion}
+                                  onLocationSelect={({ lat, lng, address }) => {
+                                    setUserLocation({ lat, lng });
+                                    setBusquedaUbicacion(address);
+                                    setLocationError(null);
+                                  }}
+                                  onError={setLocationError}
+                                  placeholder="Buscar dirección, barrio o ciudad..."
+                                />
+                                <UnifiedMapView
+                                  center={userLocation ?? DEFAULT_MAP_CENTER}
+                                  radiusKm={distanciaMax[0] >= 100 ? 25 : distanciaMax[0]}
+                                  height={220}
+                                  draggableCenter
+                                  onCenterChange={(lat, lng) => {
+                                    setUserLocation({ lat, lng });
+                                    void geoService.reverseGeocode(lat, lng).then((result) => {
+                                      if (result?.address) setBusquedaUbicacion(result.address);
+                                    });
+                                  }}
+                                  markers={items
+                                    .filter((i) => i.lat != null && i.lng != null)
+                                    .slice(0, 30)
+                                    .map((i) => ({
+                                      lat: i.lat!,
+                                      lng: i.lng!,
+                                      title: i.titulo,
+                                    }))}
+                                />
+                                {busquedaUbicacion && (
+                                  <p className="text-sm text-muted-foreground break-words">
+                                    <MapPin className="w-4 h-4 inline mr-1 shrink-0" />
+                                    {busquedaUbicacion}
+                                  </p>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="gold"
+                                  className="w-full"
+                                  onClick={() => setElegirUbicacionOpen(false)}
+                                  disabled={!userLocation}
+                                >
+                                  Usar esta zona
+                                </Button>
+                                <p className="text-xs text-muted-foreground">
+                                  Se mostrarán publicaciones dentro del radio elegido. Podés buscar cualquier dirección o mover el pin en el mapa.
                                 </p>
-                              )}
-                              <Button
-                                type="button"
-                                variant="gold"
-                                className="w-full"
-                                onClick={() => setElegirUbicacionOpen(false)}
-                                disabled={!userLocation}
-                              >
-                                Usar esta zona
-                              </Button>
-                              <p className="text-xs text-muted-foreground">
-                                Se mostrarán publicaciones dentro del radio elegido. Podés buscar cualquier dirección o mover el pin en el mapa.
-                              </p>
-                            </div>
+                              </div>
+                            )}
                           </DialogContent>
                         </Dialog>
                       </div>

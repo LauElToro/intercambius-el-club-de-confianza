@@ -224,7 +224,7 @@ export const LocationPicker = ({
           />
         </div>
 
-        <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); }}>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button type="button" variant="outline" size="icon" aria-label="Abrir mapa">
               <MapPin className="w-4 h-4" />
@@ -237,13 +237,16 @@ export const LocationPicker = ({
                 Buscá cualquier dirección, tocá el mapa o arrastrá el pin. Necesitamos coordenadas para calcular distancias.
               </p>
             </DialogHeader>
-            <LocationPickerDialogBody
-              value={value}
-              onChange={onChange}
-              radius={radius}
-              onRadiusChange={onRadiusChange}
-              onClose={() => setIsOpen(false)}
-            />
+            {/* Desmontar el mapa al cerrar evita removeChild con Google/Leaflet + portal */}
+            {isOpen && (
+              <LocationPickerDialogBody
+                value={value}
+                onChange={onChange}
+                radius={radius}
+                onRadiusChange={onRadiusChange}
+                onClose={() => setIsOpen(false)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

@@ -10,22 +10,71 @@ interface Props {
 interface State {
   hasError: boolean;
   message?: string;
+  autoRecovering?: boolean;
+}
+
+const MAX_DOM_RECOVERIES = 2;
+
+function isDomRemoveChildError(error: Error): boolean {
+  const msg = error?.message ?? "";
+  return (
+    error?.name === "NotFoundError" ||
+    /removeChild/i.test(msg) ||
+    /nodo que se va a eliminar no es hijo/i.test(msg) ||
+    /node to be removed is not a child/i.test(msg)
+  );
 }
 
 export class RouteErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
+  private recoverTimer: number | null = null;
+  private domRecoveries = 0;
 
   static getDerivedStateFromError(error: Error): State {
+    // Errores de DOM por mapas/portales: recovery silencioso en lugar de pantalla permanente
+    if (isDomRemoveChildError(error)) {
+      return { hasError: true, autoRecovering: true, message: error.message };
+    }
     return { hasError: true, message: error.message };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[RouteErrorBoundary]", error, info.componentStack);
+
+    if (!isDomRemoveChildError(error)) return;
+
+    this.domRecoveries += 1;
+    if (this.domRecoveries > MAX_DOM_RECOVERIES) {
+      this.setState({ autoRecovering: false });
+      return;
+    }
+
+    if (this.recoverTimer != null) window.clearTimeout(this.recoverTimer);
+    this.recoverTimer = window.setTimeout(() => {
+      this.setState({ hasError: false, message: undefined, autoRecovering: false });
+      this.recoverTimer = null;
+      // Tras un rato sin fallos, permitir recuperar de nuevo
+      window.setTimeout(() => {
+        this.domRecoveries = Math.max(0, this.domRecoveries - 1);
+      }, 5000);
+    }, 50);
+  }
+
+  componentWillUnmount() {
+    if (this.recoverTimer != null) window.clearTimeout(this.recoverTimer);
   }
 
   render() {
     if (!this.state.hasError) {
       return this.props.children;
+    }
+
+    if (this.state.autoRecovering) {
+      return (
+        <div className="min-h-[40vh] bg-background flex items-center justify-center p-6">
+          <p className="text-sm text-muted-foreground">Reintentando…</p>
+        </div>
+      );
     }
 
     return (
