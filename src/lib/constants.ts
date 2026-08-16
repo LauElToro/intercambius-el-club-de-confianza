@@ -10,7 +10,7 @@ export const PRODUCT_IMAGE_ASPECT = 4 / 3;
 /** Límite de crédito negativo por defecto (en IOX). Quien llega al límite solo puede pagar por fuera de la página. */
 export const CREDIT_LIMIT_DEFAULT = 50_000;
 
-/** Crédito que se ofrece al ingresar al portal si acepta términos y condiciones. Queda como saldo negativo (-50k). */
+/** Tope de línea de crédito al publicar (si acepta términos IOX). El saldo no baja hasta una compra. */
 export const CREDITO_OFERTA_INGRESO = 50_000;
 
 /** Logo de marca en Vercel Blob (misma imagen que cabecera de mails). */

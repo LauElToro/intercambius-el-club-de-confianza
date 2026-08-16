@@ -339,8 +339,9 @@ const DisenoEconomico = () => {
             <h3 className="mb-3 text-lg font-semibold text-foreground">Sistema de crédito inicial</h3>
             <p className="mb-4">
               Cada usuario puede acceder a crédito. Límite base de referencia: hasta{" "}
-              <strong className="text-foreground">{fmt(CREDITO_OFERTA_INGRESO)} IOX</strong> de saldo negativo. La
-              moneda se crea cuando hay transacción real.
+              <strong className="text-foreground">{fmt(CREDITO_OFERTA_INGRESO)} IOX</strong>. Publicar habilita la
+              línea de crédito; el saldo no baja hasta que hay una compra. La moneda se crea cuando hay transacción
+              real.
             </p>
             <p className="mb-2 font-medium text-foreground">Asignación según oferta (ejemplo)</p>
             <ul className="mb-4 list-disc space-y-1 pl-5 text-sm">

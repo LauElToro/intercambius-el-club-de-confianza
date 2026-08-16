@@ -177,7 +177,7 @@ export const OfertaCreditoTerminos = ({
                     El crédito en IOX es a <strong className="text-foreground">tasa 0%</strong>, sin interés y a devolver cuando puedas dentro del sistema.
                   </li>
                   <li>
-                    Tu saldo podrá ser negativo, pero el crédito no es automático: se habilita <strong className="text-foreground">únicamente cuando publicás un producto o servicio</strong>.
+                    El crédito no es automático: se habilita <strong className="text-foreground">únicamente cuando publicás un producto o servicio</strong>. Publicar no deja tu saldo en negativo: baja recién cuando comprás.
                   </li>
                   <li>
                     El monto disponible depende de tu publicación:

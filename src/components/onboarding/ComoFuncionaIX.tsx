@@ -37,7 +37,7 @@ export const ComoFuncionaIX = () => {
             <strong className="text-foreground">IOX</strong> (créditos de intercambio): cuando dás algo, recibís IOX; cuando recibís algo, gastás IOX. Al ingresar al portal se te ofrece hasta {ixOferta} IOX de crédito: si aceptás los términos, podés activar esa línea al publicar; si no aceptás, quedás en 0 y podés operar con dinero tradicional. No estás obligado a usar IOX.
           </p>
           <p>
-            En cada intercambio, si el comprador tiene IOX disponible, una parte del pago (<strong className="text-foreground">{COMISION_IOX_PORCENTAJE}%</strong>) puede realizarse en IOX; si el comprador no tiene IOX, el pago puede ser 100% en dinero tradicional. Si activás crédito, podés endeudarte hasta -{ixOferta} IOX según tu publicación y el tope; al llegar al límite solo podés pagar por fuera de la página hasta reducir tu deuda.
+            En cada intercambio, si el comprador tiene IOX disponible, una parte del pago (<strong className="text-foreground">{COMISION_IOX_PORCENTAJE}%</strong>) puede realizarse en IOX; si el comprador no tiene IOX, el pago puede ser 100% en dinero tradicional. Si activás crédito al publicar, podés comprar hasta -{ixOferta} IOX según tu publicación y el tope; el saldo solo baja cuando hay una compra. Al llegar al límite solo podés pagar por fuera de la página hasta reducir tu deuda.
           </p>
           <p>
             Si tras {MESES_REGULARIZACION_DEUDA} meses mantenés deuda elevada (ej. -{ixOferta} IOX), puede activarse regularización: publicar y vender, colaborar con una ONG, eventos del proyecto u otras formas acordadas.
