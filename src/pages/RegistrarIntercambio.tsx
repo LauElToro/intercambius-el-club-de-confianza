@@ -8,11 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, CheckCircle2, Loader2, MessageCircle, Receipt, Repeat } from "lucide-react";
 import { chatService } from "@/services/chat.service";
+import { marketService } from "@/services/market.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
 import type { PropuestaPago } from "@/lib/chat-propuesta";
-import { propuestaPagoToResumenCorto } from "@/lib/chat-propuesta";
+import {
+  ladosDesdeIntercambio,
+  otroMarketItemIdDesdeIntercambio,
+  primerPayloadIntercambio,
+  propuestaPagoToResumenCorto,
+  resolverModoOperacion,
+} from "@/lib/chat-propuesta";
+import { descripcionRegistroOperacion, unidadCantidad } from "@/lib/publicacion";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 
 type StateFromChat = {
@@ -72,20 +80,75 @@ const RegistrarIntercambio = () => {
   const conversacionId = pendienteActual?.conversacionId ?? null;
   const propuestaDesdeChat = pendienteActual?.propuesta ?? stateFromChat.propuesta;
 
+  const { data: chatParaRegistro } = useQuery({
+    queryKey: ["chat", conversacionId],
+    queryFn: () => chatService.getMensajes(conversacionId!),
+    enabled: conversacionId != null && conversacionId > 0,
+  });
+
+  const marketItemIdParaUnidad =
+    pendienteActual?.marketItem?.id ?? chatParaRegistro?.conversacion.marketItem?.id ?? null;
+  const { data: itemDestinoCompleto } = useQuery({
+    queryKey: ["marketItem", marketItemIdParaUnidad],
+    queryFn: () => marketService.getItemById(marketItemIdParaUnidad!),
+    enabled:
+      marketItemIdParaUnidad != null &&
+      chatParaRegistro?.conversacion.marketItem?.rubro === "servicios",
+  });
+
+  const payloadIntercambio = primerPayloadIntercambio(chatParaRegistro?.mensajes ?? []);
+  const marketItemIdConv =
+    pendienteActual?.marketItem?.id ?? chatParaRegistro?.conversacion.marketItem?.id ?? null;
+  const lados = payloadIntercambio
+    ? ladosDesdeIntercambio(payloadIntercambio, marketItemIdConv)
+    : null;
+  const modoRegistro = resolverModoOperacion(propuestaDesdeChat, chatParaRegistro?.mensajes ?? []);
+  const unidadDestino = unidadCantidad({
+    rubro:
+      lados?.destino.rubro ??
+      chatParaRegistro?.conversacion.marketItem?.rubro ??
+      itemDestinoCompleto?.rubro,
+    detalles: itemDestinoCompleto?.detalles,
+    unidadServicio: lados?.destino.unidadServicio,
+  });
+  const otroMarketItemId = payloadIntercambio
+    ? otroMarketItemIdDesdeIntercambio(payloadIntercambio, marketItemIdConv)
+    : null;
+
+  const descripcionSugerida = useMemo(() => {
+    const tituloDestino = lados?.destino.titulo ?? pendienteActual?.marketItem?.titulo;
+    if (!tituloDestino) return "";
+    return descripcionRegistroOperacion({
+      modo: modoRegistro,
+      tituloDestino,
+      tituloOfrecido: lados?.ofrecido.titulo,
+      rubroDestino: lados?.destino.rubro ?? chatParaRegistro?.conversacion.marketItem?.rubro,
+      rubroOfrecido: lados?.ofrecido.rubro,
+      cantidad: propuestaDesdeChat?.cantidad,
+      unidad: unidadDestino,
+    });
+  }, [
+    lados,
+    modoRegistro,
+    pendienteActual?.marketItem?.titulo,
+    propuestaDesdeChat?.cantidad,
+    unidadDestino,
+    chatParaRegistro?.conversacion.marketItem?.rubro,
+  ]);
+
   const [formData, setFormData] = useState({
     descripcion: "",
     fecha: new Date().toISOString().split("T")[0],
     codigoVerificacion: "",
   });
+  const [descripcionEditada, setDescripcionEditada] = useState(false);
 
   useEffect(() => {
-    if (pendienteActual?.marketItem?.titulo && !formData.descripcion) {
-      setFormData((prev) => ({
-        ...prev,
-        descripcion: `Intercambio acordado en chat: ${pendienteActual.marketItem!.titulo}`,
-      }));
-    }
-  }, [pendienteActual?.marketItem?.titulo, formData.descripcion]);
+    if (descripcionEditada || !descripcionSugerida) return;
+    setFormData((prev) =>
+      prev.descripcion === descripcionSugerida ? prev : { ...prev, descripcion: descripcionSugerida }
+    );
+  }, [descripcionSugerida, descripcionEditada]);
 
   const codigoMutation = useMutation({
     mutationFn: () =>
@@ -93,6 +156,7 @@ const RegistrarIntercambio = () => {
         codigo: formData.codigoVerificacion.replace(/\D/g, ""),
         descripcion: formData.descripcion.trim(),
         fecha: formData.fecha,
+        ...(otroMarketItemId != null ? { otroMarketItemId } : {}),
       }),
     onSuccess: async (data) => {
       await refreshUser();
@@ -236,9 +300,12 @@ const RegistrarIntercambio = () => {
                     <Textarea
                       id="descripcion"
                       name="descripcion"
-                      placeholder="Ej: Diferencia en IOX por trueque con lo acordado en el chat; entrega presencial de…"
+                      placeholder="Ej: Canje de servicios: clases de guitarra ↔ reparación de PC"
                       value={formData.descripcion}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        setDescripcionEditada(true);
+                        handleChange(e);
+                      }}
                       required
                       className="bg-surface border-border focus:border-gold min-h-[100px]"
                     />
@@ -257,7 +324,7 @@ const RegistrarIntercambio = () => {
                       className="bg-surface border-border focus:border-gold"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Te lo enviamos por email para este acuerdo en particular. Cada compra tiene su propio código de 6
+                      Te lo enviamos por email para este acuerdo en particular. Cada operación tiene su propio código de 6
                       dígitos. Solo quien paga la diferencia puede confirmar aquí.
                     </p>
                   </div>
@@ -265,7 +332,7 @@ const RegistrarIntercambio = () => {
                   {propuestaDesdeChat && (
                     <>
                       <p className="text-sm text-muted-foreground">
-                        Acuerdo en el chat: {propuestaPagoToResumenCorto(propuestaDesdeChat, formatIX)}.
+                        Acuerdo en el chat: {propuestaPagoToResumenCorto(propuestaDesdeChat, formatIX, unidadDestino)}.
                         {propuestaDesdeChat.iox
                           ? " Al confirmar se aplican los IOX acordados."
                           : " Sin movimiento de IOX en la cuenta (pago por fuera)."}

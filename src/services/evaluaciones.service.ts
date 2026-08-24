@@ -17,7 +17,14 @@ export interface EvaluacionContexto {
     rubro: string;
     imagen: string;
   } | null;
+  otroMarketItem?: {
+    id: number;
+    titulo: string;
+    rubro: string;
+    imagen: string;
+  } | null;
   rubro: string;
+  modo?: "compra" | "permuta";
   esServicio: boolean;
   labels: { item: string; atencion: string };
 }

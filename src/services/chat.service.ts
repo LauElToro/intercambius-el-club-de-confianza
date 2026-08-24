@@ -1,5 +1,5 @@
 import api, { ApiError } from '@/lib/api';
-import type { PropuestaPago } from '@/lib/chat-propuesta';
+import type { ItemIntercambioCard, PropuestaPago } from '@/lib/chat-propuesta';
 
 export interface Conversacion {
   id: number;
@@ -34,6 +34,7 @@ export interface ChatDetalle {
       imagen: string;
       precio: number;
       stock?: number | null;
+      detalles?: Record<string, string> | null;
     };
     puedeConfirmarRegistro?: boolean;
     registroCompletado?: boolean;
@@ -95,8 +96,8 @@ export const chatService = {
   async iniciarIntercambio(opts: {
     marketItemId: number;
     miNombre: string;
-    miProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string };
-    tuProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string };
+    miProducto: ItemIntercambioCard;
+    tuProducto: ItemIntercambioCard;
   }): Promise<{ conversacionId: number }> {
     const { conversacionId } = await this.iniciarConversacion({ marketItemId: opts.marketItemId });
     const payload = {
@@ -177,7 +178,7 @@ export const chatService = {
   /** Validar código y registrar el intercambio acordado en el chat (IOX o acuerdo por fuera). */
   async registroIntercambioConCodigo(
     conversacionId: number,
-    body: { codigo: string; descripcion: string; fecha?: string }
+    body: { codigo: string; descripcion: string; fecha?: string; otroMarketItemId?: number }
   ): Promise<{
     intercambioId: number;
     tipo: 'iox' | 'pesos' | 'usd';

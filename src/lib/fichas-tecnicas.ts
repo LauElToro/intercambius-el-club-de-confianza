@@ -41,6 +41,11 @@ export const FICHAS_TECNICAS = {
       type: "text",
       placeholder: "Ej: 2 horas, 1 día, etc.",
     },
+    unidadServicio: {
+      label: "Unidad de oferta",
+      type: "select",
+      options: ["Por hora", "Por sesión", "Por trabajo"],
+    },
   },
   alimentos: {
     tipo: {

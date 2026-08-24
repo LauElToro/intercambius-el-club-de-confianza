@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Receipt, ShoppingBag, MessageCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, Receipt, MessageCircle, ExternalLink } from "lucide-react";
 import { intercambiosService, Intercambio } from "@/services/intercambios.service";
 import { chatService } from "@/services/chat.service";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,8 @@ import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { userService } from "@/services/user.service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
+import { CabeceraMovimientoIntercambio } from "@/components/intercambios/CabeceraMovimientoIntercambio";
+import { esCanjeRegistrado } from "@/lib/publicacion";
 
 function formatFecha(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es-AR', {
@@ -93,10 +95,10 @@ const Historial = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                Aún no tenés movimientos registrados. Los intercambios se registran automáticamente cuando pagás un producto con IOX desde el checkout.
+                Aún no tenés movimientos registrados. Los intercambios se confirman cuando ambas partes aprueban el acuerdo en el chat y se ingresa el código.
               </p>
               <Button variant="gold" onClick={() => navigate("/market")}>
-                Explorar productos
+                Explorar publicaciones
               </Button>
             </CardContent>
           </Card>
@@ -110,31 +112,23 @@ const Historial = () => {
                 const conQuien = otraPersona(i);
                 const marketItemId = i.marketItemId;
                 const item = i.marketItem;
-                const imgUrl = item?.imagenPrincipal || item?.imagen || (item?.imagenes?.[0] as any)?.url;
+                const otro = i.otroMarketItem;
+                const esCanje = esCanjeRegistrado(i);
                 return (
                   <Card key={i.id} className="hover:border-gold/30 transition-colors overflow-hidden">
                     <CardContent className="p-0">
                       <div className="flex flex-col sm:flex-row">
                         <div className="flex sm:flex-row gap-3 sm:flex-1 p-4">
-                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg flex-shrink-0 bg-secondary overflow-hidden">
-                            {imgUrl ? (
-                              <img
-                                src={imgUrl}
-                                alt={item?.titulo || "Producto"}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-base">
-                              {item?.titulo || i.descripcion}
-                            </h3>
-                            {item?.descripcion && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <CabeceraMovimientoIntercambio
+                              item={item}
+                              otro={otro}
+                              descripcion={i.descripcion}
+                              modo={i.modo}
+                              otroMarketItemId={i.otroMarketItemId}
+                            />
+                            {!esCanje && item?.descripcion && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
                                 {item.descripcion}
                               </p>
                             )}

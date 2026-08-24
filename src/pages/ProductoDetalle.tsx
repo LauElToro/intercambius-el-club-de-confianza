@@ -36,6 +36,7 @@ import { UnifiedMapView } from "@/components/map/UnifiedMapView";
 import { resolveUbicacionToCoords } from "@/lib/ubicaciones";
 import { prefetchChatDetalleYNavigate } from "@/lib/chat-navigation";
 import { isValidCoord } from "@/lib/geo";
+import { esServicio, unidadCantidad } from "@/lib/publicacion";
 
 const ProductoDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -150,6 +151,16 @@ const ProductoDetalle = () => {
   const hayStockPublico =
     item.rubro === "servicios" ? true : (item.stock ?? 0) > 0;
   const disponible = item.disponible !== false && hayStockPublico;
+  const unidad = unidadCantidad(item);
+  const esItemServicio = esServicio(item.rubro);
+  const precioConUnidad = (
+    <>
+      {formatIX(item.precio)}
+      {esItemServicio && unidad.por ? (
+        <span className="ml-1 text-base font-normal text-muted-foreground">{unidad.por}</span>
+      ) : null}
+    </>
+  );
 
   return (
     <Layout>
@@ -264,9 +275,9 @@ const ProductoDetalle = () => {
                           Stock: {item.stock}
                         </Badge>
                       )}
-                      {item.precio != null && (
+                        {item.precio != null && (
                         <span className="hidden text-3xl font-bold gold-text lg:inline">
-                          {formatIX(item.precio)}
+                          {precioConUnidad}
                         </span>
                       )}
                     </div>
@@ -301,7 +312,7 @@ const ProductoDetalle = () => {
                   </div>
                   {item.precio != null && (
                     <p className="text-3xl font-bold leading-tight gold-text lg:hidden">
-                      {formatIX(item.precio)}
+                      {precioConUnidad}
                     </p>
                   )}
                   <CardTitle className="text-2xl leading-snug">{item.titulo}</CardTitle>
@@ -379,7 +390,8 @@ const ProductoDetalle = () => {
                           <p className="text-muted-foreground text-sm">
                             {aceptaIX && (
                               <>
-                                Precio en IOX: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>.
+                                Precio en IOX: <span className="font-semibold text-foreground">{formatIX(item.precio ?? 0)}</span>
+                                {esItemServicio && unidad.por ? ` ${unidad.por}` : ""}.
                                 {aceptaPesos && " También acepta pesos por fuera."}
                                 {!aceptaPesos && " Se transfieren al confirmar el intercambio."}
                               </>
@@ -507,7 +519,7 @@ const ProductoDetalle = () => {
                       onClick={() => iniciarChatMutation.mutate({})}
                       disabled={iniciarChatMutation.isPending}
                     >
-                      Contactar al vendedor
+                      Contactar al {esItemServicio ? "prestador" : "vendedor"}
                     </Button>
                     {(() => {
                       const tipos = (item.tipoPago || "").split(",").map((s) => s.trim());

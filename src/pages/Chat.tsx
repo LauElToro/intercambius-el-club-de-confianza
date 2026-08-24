@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { chatService, Conversacion, Mensaje } from "@/services/chat.service";
+import { marketService } from "@/services/market.service";
 import { userService } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
@@ -38,8 +39,19 @@ import {
   resolverModoOperacion,
   valorReferenciaOperacion,
   tienePropuestaIntercambioEnHilo,
+  parseIntercambioCards,
+  ladosDesdeIntercambio,
   type ModoOperacion,
 } from "@/lib/chat-propuesta";
+import {
+  esServicio,
+  etiquetaCantidad,
+  labelCampoCantidad,
+  labelCanje,
+  labelModoCompra,
+  labelsCardsCanje,
+  unidadCantidad,
+} from "@/lib/publicacion";
 
 const RUBROS_CHAT: Record<string, { label: string; icon: string }> = {
   servicios: { label: "Servicios", icon: "🔧" },
@@ -169,6 +181,15 @@ const Chat = () => {
     retryDelay: (i) => Math.min(600 * 2 ** i, 4000),
   });
 
+  const marketItemIdChat = chatDetalle?.conversacion.marketItem?.id;
+  const { data: itemDestinoCompleto } = useQuery({
+    queryKey: ["marketItem", marketItemIdChat],
+    queryFn: () => marketService.getItemById(marketItemIdChat!),
+    enabled:
+      marketItemIdChat != null &&
+      chatDetalle?.conversacion.marketItem?.rubro === "servicios",
+  });
+
   const prevMsgCountRef = useRef(0);
   useEffect(() => {
     if (!chatDetalle?.mensajes || !conversacionIdOk) return;
@@ -271,16 +292,7 @@ const Chat = () => {
   });
 
   const msgs = chatDetalle?.mensajes ?? [];
-  // Detectar propuesta de intercambio: formato JSON con cards (un solo mensaje)
-  const parseIntercambio = (c: string): { saludo: string; miProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string }; tuProducto: { titulo: string; descripcion?: string; imagen?: string; url?: string; precio?: number; rubro?: string } } | null => {
-    try {
-      if (c.startsWith(chatService.INTERCAMBIO_PREFIX)) {
-        const parsed = JSON.parse(c);
-        if (parsed._t === 'intercambio' && parsed.miProducto && parsed.tuProducto) return parsed;
-      }
-    } catch (_) {}
-    return null;
-  };
+  const parseIntercambio = parseIntercambioCards;
   const esPropuestaIntercambio = (c: string) =>
     parseIntercambio(c) !== null || (/quiero realizar un intercambio/i.test(c) && (/ver mi producto/i.test(c) || /imagen del producto/i.test(c)));
   const primerMensajeIntercambio = msgs.find((m) => esPropuestaIntercambio(m.contenido));
@@ -351,6 +363,19 @@ const Chat = () => {
     conv?.marketItem && conv.marketItem.rubro !== "servicios"
       ? conv.marketItem.stock ?? null
       : null;
+  const ladosIntercambio = intercambioParseado
+    ? ladosDesdeIntercambio(intercambioParseado, conv?.marketItem?.id)
+    : null;
+  const unidadDestino = unidadCantidad({
+    rubro: conv?.marketItem?.rubro ?? ladosIntercambio?.destino.rubro,
+    detalles: itemDestinoCompleto?.detalles ?? conv?.marketItem?.detalles,
+    unidadServicio: ladosIntercambio?.destino.unidadServicio,
+  });
+  const copyPropuestaOpts = {
+    unidad: unidadDestino,
+    rubroDestino: conv?.marketItem?.rubro ?? ladosIntercambio?.destino.rubro ?? null,
+  };
+  const rubroDestino = copyPropuestaOpts.rubroDestino;
 
   const parseMontoCampo = (raw: string): number | null => {
     if (!raw.trim()) return null;
@@ -394,7 +419,7 @@ const Chat = () => {
         title: "Sin stock suficiente",
         description:
           stockDisponible <= 0
-            ? "Este producto no tiene unidades disponibles."
+            ? "Esta publicación no tiene unidades disponibles."
             : `Solo hay ${stockDisponible} ${stockDisponible === 1 ? "unidad" : "unidades"} disponibles.`,
         variant: "destructive",
       });
@@ -405,7 +430,7 @@ const Chat = () => {
     if (minIoxPropuesta > 0 && ioxEfectivo < minimoIoxRequerido(valorConCantidad)) {
       toast({
         title: "Mínimo de IOX",
-        description: `Toda operación debe incluir al menos 5% en IOX (mínimo ${formatIX(minimoIoxRequerido(valorConCantidad))} para ${cantidad > 1 ? `${cantidad} unidades` : "este intercambio"}).`,
+        description: `Toda operación debe incluir al menos 5% en IOX (mínimo ${formatIX(minimoIoxRequerido(valorConCantidad))} para ${cantidad > 1 ? etiquetaCantidad(cantidad, unidadDestino) : "este intercambio"}).`,
         variant: "destructive",
       });
       return;
@@ -450,7 +475,7 @@ const Chat = () => {
         setMontoPesos("");
         setMontoUSD("");
         setCantidadCompra("1");
-        setModoOperacion("compra");
+        setModoOperacion(hayIntercambioEnHilo ? "permuta" : "compra");
       },
     });
   };
@@ -458,7 +483,7 @@ const Chat = () => {
   const handleAceptarMonto = async () => {
     if (!propuestaDelOtro || !conversacionId) return;
     const { propuesta } = propuestaDelOtro;
-    const texto = buildAceptacionTexto(propuesta);
+    const texto = buildAceptacionTexto(propuesta, unidadDestino);
     enviarMutation.mutate(texto, {
       onSuccess: async () => {
         try {
@@ -635,7 +660,7 @@ const Chat = () => {
                                         <div className="p-4 space-y-4">
                                           <p className="text-sm font-medium">{intercambio.saludo}</p>
                                           <div>
-                                            <p className="text-sm text-muted-foreground mb-2">Quiero intercambiar mi producto/servicio:</p>
+                                            <p className="text-sm text-muted-foreground mb-2">{labelsCardsCanje(intercambio.miProducto.rubro, intercambio.tuProducto.rubro).ofrezco}</p>
                                             <ProductoCardChat
                                               titulo={intercambio.miProducto.titulo}
                                               descripcion={intercambio.miProducto.descripcion}
@@ -648,7 +673,7 @@ const Chat = () => {
                                             />
                                           </div>
                                           <div>
-                                            <p className="text-sm text-muted-foreground mb-2">Por tu producto/servicio:</p>
+                                            <p className="text-sm text-muted-foreground mb-2">{labelsCardsCanje(intercambio.miProducto.rubro, intercambio.tuProducto.rubro).aCambio}</p>
                                             <ProductoCardChat
                                               titulo={intercambio.tuProducto.titulo}
                                               descripcion={intercambio.tuProducto.descripcion}
@@ -667,7 +692,7 @@ const Chat = () => {
                                       </div>
                                     );
                                   }
-                                  const textoPropuesta = contenidoParaMostrar(m.contenido);
+                                  const textoPropuesta = contenidoParaMostrar(m.contenido, copyPropuestaOpts);
                                   if (textoPropuesta) {
                                     return (
                                       <div
@@ -706,7 +731,7 @@ const Chat = () => {
                     {propuestaDelOtro && (
                       <div className="px-4 py-2 border-b border-border bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Te propusieron: {propuestaPagoToResumenCorto(propuestaDelOtro.propuesta, formatIX)}. Ambos deben aprobar.
+                          Te propusieron: {propuestaPagoToResumenCorto(propuestaDelOtro.propuesta, formatIX, unidadDestino)}. Ambos deben aprobar.
                         </span>
                         <div className="flex flex-wrap gap-2 shrink-0">
                           <Button
@@ -751,9 +776,9 @@ const Chat = () => {
                     {puedoOfrecerDiferencia && (
                       <div className="px-4 py-2 border-b border-border bg-blue-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="text-sm text-muted-foreground">
-                          Si van a <strong>permutar</strong> (canje), tu producto vale menos ({formatIX(miPrecioEnIntercambio ?? 0)} vs {formatIX(suPrecioEnIntercambio ?? 0)}).
+                          Si van a <strong>canjear</strong>, lo que ofrecés vale menos ({formatIX(miPrecioEnIntercambio ?? 0)} vs {formatIX(suPrecioEnIntercambio ?? 0)}).
                           Podés ofrecer la diferencia de <strong>{formatIX(diferenciaSugerida!)}</strong> en IOX.
-                          Si solo querés <strong>comprar</strong> o vender sin canje, usá «Propuesta» y elegí Compra.
+                          Si solo querés <strong>{esServicio(rubroDestino) ? "contratar" : "comprar"}</strong> sin canje, usá «Propuesta» y elegí {labelModoCompra(rubroDestino)}.
                         </span>
                         <Button
                           variant="gold"
@@ -774,7 +799,7 @@ const Chat = () => {
                     )}
                     {propuestaPropiaPendiente && !propuestaDelOtro && (
                       <div className="px-4 py-2 border-b border-border bg-gold/5 text-sm text-muted-foreground">
-                        Esperando respuesta a tu propuesta ({propuestaPagoToResumenCorto(propuestaPropiaPendiente.propuesta, formatIX)}).
+                        Esperando respuesta a tu propuesta ({propuestaPagoToResumenCorto(propuestaPropiaPendiente.propuesta, formatIX, unidadDestino)}).
                       </div>
                     )}
                     {necesitaReenvioCodigo && (
@@ -853,7 +878,7 @@ const Chat = () => {
                             if (propuestaDelOtro) {
                               setModoOperacion(resolverModoOperacion(propuestaDelOtro.propuesta, msgs));
                             } else {
-                              setModoOperacion("compra");
+                              setModoOperacion(hayIntercambioEnHilo ? "permuta" : "compra");
                             }
                             setPropuestaOpen(true);
                           }}
@@ -892,7 +917,7 @@ const Chat = () => {
                               onClick={() => setModoOperacion("compra")}
                               className="flex-1"
                             >
-                              Compra
+                              {labelModoCompra(rubroDestino)}
                             </Button>
                             <Button
                               type="button"
@@ -901,14 +926,19 @@ const Chat = () => {
                               onClick={() => setModoOperacion("permuta")}
                               className="flex-1"
                             >
-                              Permuta / canje
+                              {labelCanje(
+                                intercambioParseado?.miProducto.rubro,
+                                intercambioParseado?.tuProducto.rubro
+                              )}
                             </Button>
                           </div>
                         )}
                         <p className="text-sm text-muted-foreground">
                           Completá uno o más montos (podés poner 0 en los que no uses).
                           {modoOperacion === "permuta" ? (
-                            <> Si tu producto vale menos, ofrecé la diferencia en IOX.</>
+                            <> Si lo que ofrecés vale menos, ofrecé la diferencia en IOX.</>
+                          ) : esServicio(rubroDestino) ? (
+                            <> Indicá cuánto pagás por el servicio (sin canje).</>
                           ) : (
                             <> Indicá cuánto pagás por el producto (sin canje).</>
                           )}
@@ -918,14 +948,16 @@ const Chat = () => {
                               Mínimo de IOX: <strong>{formatIX(minIoxPropuesta)}</strong>{" "}
                               {modoOperacion === "permuta"
                                 ? "(5% de la diferencia)"
-                                : "(5% del valor del producto)"}
+                                : esServicio(rubroDestino)
+                                  ? "(5% del valor del servicio)"
+                                  : "(5% del valor del producto)"}
                               .
                             </>
                           )}
                         </p>
                         <div className="space-y-3">
                           <div className="flex gap-2 items-center">
-                            <Label className="w-14 shrink-0">Cant.</Label>
+                            <Label className="w-16 shrink-0">{labelCampoCantidad(unidadDestino)}</Label>
                             <Input
                               type="number"
                               min={1}
@@ -935,8 +967,13 @@ const Chat = () => {
                               onChange={(e) => setCantidadCompra(e.target.value)}
                             />
                           </div>
+                          {esServicio(rubroDestino) && unidadDestino.por && (
+                            <p className="text-xs text-muted-foreground -mt-1 pl-[4.25rem]">
+                              Precio de referencia {unidadDestino.por}.
+                            </p>
+                          )}
                           {stockDisponible != null && (
-                            <p className="text-xs text-muted-foreground -mt-1 pl-[3.75rem]">
+                            <p className="text-xs text-muted-foreground -mt-1 pl-[4.25rem]">
                               {stockDisponible <= 0
                                 ? "Sin stock disponible."
                                 : `Disponibles: ${stockDisponible} ${stockDisponible === 1 ? "unidad" : "unidades"}.`}
@@ -1000,7 +1037,7 @@ const Chat = () => {
                           Se generará un código de 6 dígitos y se <strong>enviará por email</strong> a quien paga. Esa persona debe ingresarlo en &quot;Registrar intercambio&quot;. El código <strong>no</strong> se publica en el chat.
                         </p>
                         <p className="text-sm rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-foreground">
-                          Solo entregá este tipo de código cuando te encuentres con la otra parte y/o recibas el producto.
+                          Solo entregá este tipo de código cuando te encuentres con la otra parte y/o recibas lo acordado.
                         </p>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setAprobarIntercambioOpen(false)}>Cancelar</Button>
@@ -1045,7 +1082,7 @@ const Chat = () => {
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
                 <MessageCircle className="w-16 h-16 mb-4 opacity-50" />
                 <p className="text-center text-muted-foreground">
-                  Seleccioná una conversación de la lista o buscá productos en Intercambius / Market para contactar.
+                  Seleccioná una conversación de la lista o buscá publicaciones en Intercambius / Market para contactar.
                 </p>
               </div>
             )}

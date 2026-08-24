@@ -28,6 +28,7 @@ import {
 } from "@/lib/fuzzy-interest-match";
 import { buildTerminosInteres } from "@/lib/intereses-terminos";
 import { LoQueBuscoEditor } from "@/components/coincidencias/LoQueBuscoEditor";
+import { esCanjeServicios, esServicio, unidadServicioDesdeDetalles } from "@/lib/publicacion";
 
 const ITEMS_POR_PAGINA = 6;
 /** Pool del market para evaluar coincidencia ~70 % en cliente (typos / plurales / palabras sueltas). */
@@ -167,31 +168,40 @@ const Coincidencias = () => {
         marketItemId: itemDestino.id,
         miNombre: currentUser?.nombre || 'Intercambius',
         miProducto: {
+          id: miProducto.id,
           titulo: miProducto.titulo,
           descripcion: miProducto.descripcion,
           imagen: miProducto.images?.[0]?.url || miProducto.imagen,
           url: miProducto.id ? `${baseUrl}/producto/${miProducto.id}` : undefined,
           precio: miProducto.precio,
           rubro: miProducto.rubro,
+          unidadServicio: unidadServicioDesdeDetalles(miProducto.detalles),
         },
         tuProducto: {
+          id: itemDestino.id,
           titulo: itemDestino.titulo,
           descripcion: itemDestino.descripcion,
           imagen: itemDestino.images?.[0]?.url || itemDestino.imagen,
           url: itemDestino.id ? `${baseUrl}/producto/${itemDestino.id}` : undefined,
           precio: itemDestino.precio,
           rubro: itemDestino.rubro,
+          unidadServicio: unidadServicioDesdeDetalles(itemDestino.detalles),
         },
       });
     },
     onSuccess: async (data, variables) => {
       const diferencia = variables.itemDestino.precio - variables.miProducto.precio;
+      const canjeServicios = esCanjeServicios(variables.miProducto.rubro, variables.itemDestino.rubro);
       toast({
         title: "¡Mensaje enviado!",
         description:
           diferencia > 0
-            ? `Ya podés negociar por chat. Si van a permutar, la diferencia sería ${formatIX(diferencia)} en IOX; si solo querés comprar, elegí «Compra» en la propuesta.`
-            : "Ya podés negociar: en el chat elegí Compra o Permuta según lo que quieran hacer.",
+            ? canjeServicios
+              ? `Ya podés negociar el canje de servicios. Si hay diferencia de valor, serían ${formatIX(diferencia)} en IOX.`
+              : `Ya podés negociar por chat. Si van a canjear, la diferencia sería ${formatIX(diferencia)} en IOX; si solo querés ${esServicio(variables.itemDestino.rubro) ? "contratar" : "comprar"}, elegí «${esServicio(variables.itemDestino.rubro) ? "Contratar" : "Compra"}» en la propuesta.`
+            : canjeServicios
+              ? "Ya podés negociar el canje de servicios en el chat."
+              : `Ya podés negociar: en el chat elegí ${esServicio(variables.itemDestino.rubro) ? "Contratar" : "Compra"} o canje según lo que quieran hacer.`,
       });
       await prefetchChatDetalleYNavigate(queryClient, navigate, data.conversacionId);
     },
@@ -304,7 +314,7 @@ const Coincidencias = () => {
           <div className="xl:w-1/2 flex flex-col">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Package className="w-5 h-5 text-gold" />
-              Mis productos o servicios
+              Mis publicaciones
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
               Elegí cuál ofrecés a cambio para proponer un intercambio
@@ -312,7 +322,7 @@ const Coincidencias = () => {
             {misProductos.length === 0 ? (
               <div className="flex-1 bg-card rounded-xl border border-border p-8 text-center">
                 <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">Aún no tenés productos publicados</p>
+                <p className="text-muted-foreground mb-4">Aún no tenés publicaciones</p>
                 <Button variant="gold" onClick={() => navigate("/mis-publicaciones")}>
                   Ir a Mis publicaciones
                 </Button>
@@ -398,7 +408,7 @@ const Coincidencias = () => {
             <div className="text-right min-w-0">
               <p className="text-sm text-muted-foreground mb-1">Tu oferta</p>
               <p className="text-lg font-semibold gold-text truncate">
-                {miProductoSeleccionado ? miProductoSeleccionado.titulo : "Seleccioná un producto"}
+                {miProductoSeleccionado ? miProductoSeleccionado.titulo : "Seleccioná qué ofrecés"}
               </p>
             </div>
           </div>
@@ -448,7 +458,7 @@ const Coincidencias = () => {
                     <div className="relative group shrink-0">
                       <img
                         src={item.images?.[0]?.url || item.imagen || 'https://via.placeholder.com/300x200'}
-                        alt={item.titulo || 'Producto'}
+                        alt={item.titulo || "Publicación"}
                         className="w-full h-40 object-cover transition-transform duration-200 group-hover:scale-105"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200';
@@ -512,7 +522,7 @@ const Coincidencias = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!miProductoSeleccionado) {
-                            toast({ title: "Seleccioná tu producto", description: "Elegí qué ofrecés a cambio en el panel de la izquierda.", variant: "destructive" });
+                            toast({ title: "Seleccioná qué ofrecés", description: "Elegí tu publicación a cambio en el panel de la izquierda.", variant: "destructive" });
                             return;
                           }
                           if (!currentUser?.kycVerificado) {
@@ -554,7 +564,7 @@ const Coincidencias = () => {
               <span className="text-sm text-muted-foreground">
                 Página {paginaInteresClamped} de {totalPaginas}
                 <span className="ml-1">
-                  ({listaCoincidencias.length} productos)
+                  ({listaCoincidencias.length} publicaciones)
                 </span>
               </span>
               <Button
@@ -582,7 +592,7 @@ const Coincidencias = () => {
               {sinTablaIntereses
                 ? "Sumá palabras arriba (ej. pantalón, zapatillas). Buscamos ~70 % de similitud en título o descripción."
                 : misProductos.length === 0
-                  ? "Ampliá las palabras de arriba o creá un producto en Mis publicaciones para proponer intercambios."
+                  ? "Ampliá las palabras de arriba o creá una publicación en Mis publicaciones para proponer intercambios."
                   : "Ampliá las palabras de arriba o explorá el Market para ver más publicaciones."}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
@@ -593,7 +603,7 @@ const Coincidencias = () => {
               )}
               {misProductos.length === 0 && (
                 <Button variant="secondary" onClick={() => navigate("/crear-producto")}>
-                  Crear mi primer producto
+                  Crear mi primera publicación
                 </Button>
               )}
             </div>

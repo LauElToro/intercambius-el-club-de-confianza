@@ -4,12 +4,18 @@ import {
   buildPropuestaPagoMessage,
   buildRechazoTexto,
   encontrarPropuestaPendienteDelOtro,
+  itemIdDesdeCard,
   mensajeEsRechazoPropuesta,
+  otroMarketItemIdDesdeIntercambio,
+  parseIntercambioCards,
   parsePropuestaPagoJson,
+  propuestaPagoToDisplayText,
   propuestaPagoToResumenCorto,
+  resolverModoOperacion,
   resumenMensajeParaPreview,
   valorReferenciaOperacion,
 } from "@/lib/chat-propuesta";
+import { unidadCantidad } from "@/lib/publicacion";
 
 const mk = (id: number, senderId: number, contenido: string) => ({
   id,
@@ -96,5 +102,51 @@ describe("chat-propuesta", () => {
     expect(
       valorReferenciaOperacion({ modo: "permuta", precioMarketItem: 1000, mensajes: msgs })
     ).toBe(2000);
+  });
+
+  it("resumen corto usa sesiones cuando se pasa unidad de servicio", () => {
+    const p = parsePropuestaPagoJson(buildPropuestaPagoMessage(450, null, null, 2, "compra"))!;
+    const unidad = unidadCantidad({ rubro: "servicios", unidadServicio: "Por sesión" });
+    expect(propuestaPagoToResumenCorto(p, (n) => `${n} IOX`, unidad)).toContain("2 sesiones");
+  });
+
+  it("copy de propuesta: contratar vs canje", () => {
+    const compra = parsePropuestaPagoJson(buildPropuestaPagoMessage(100, null, null, 1, "compra"))!;
+    expect(propuestaPagoToDisplayText(compra, { rubroDestino: "servicios" })).toContain("contratación");
+    const permuta = parsePropuestaPagoJson(buildPropuestaPagoMessage(100, null, null, 1, "permuta"))!;
+    expect(propuestaPagoToDisplayText(permuta)).toContain("canje");
+  });
+
+  it("parsea ids y unidadServicio del mensaje de intercambio", () => {
+    const json = JSON.stringify({
+      _t: "intercambio",
+      miProducto: { id: 11, titulo: "Clases", rubro: "servicios", unidadServicio: "Por hora", url: "/producto/11" },
+      tuProducto: { id: 22, titulo: "Limpieza", rubro: "servicios", url: "/producto/22" },
+    });
+    const parsed = parseIntercambioCards(json);
+    expect(parsed?.miProducto.id).toBe(11);
+    expect(itemIdDesdeCard(parsed!.tuProducto)).toBe(22);
+    expect(otroMarketItemIdDesdeIntercambio(parsed!, 22)).toBe(11);
+  });
+
+  it("parsea intercambio con espacios en el JSON", () => {
+    const pretty = `{ "_t": "intercambio", "miProducto": { "id": 1, "titulo": "A" }, "tuProducto": { "id": 2, "titulo": "B" } }`;
+    expect(parseIntercambioCards(pretty)?.miProducto.id).toBe(1);
+  });
+
+  it("default permuta cuando hay cards de coincidencia", () => {
+    const msgs = [
+      mk(
+        1,
+        10,
+        JSON.stringify({
+          _t: "intercambio",
+          miProducto: { precio: 1000, rubro: "servicios" },
+          tuProducto: { precio: 3000, rubro: "servicios" },
+        })
+      ),
+    ];
+    expect(resolverModoOperacion({}, msgs)).toBe("permuta");
+    expect(resolverModoOperacion({ modo: "compra" }, msgs)).toBe("compra");
   });
 });

@@ -1,7 +1,88 @@
+import {
+  esServicio,
+  etiquetaCantidad,
+  type UnidadEtiqueta,
+} from "@/lib/publicacion";
+
 /** Propuesta de pago unificada (IOX + pesos + USD en un solo mensaje JSON). */
 export const PROPUESTA_PAGO_PREFIX = '{"_t":"propuesta_pago"';
 
 export type ModoOperacion = "compra" | "permuta";
+
+export interface ItemIntercambioCard {
+  id?: number;
+  titulo: string;
+  descripcion?: string;
+  imagen?: string;
+  url?: string;
+  precio?: number;
+  rubro?: string;
+  unidadServicio?: string;
+}
+
+export interface PayloadIntercambio {
+  _t: "intercambio";
+  saludo?: string;
+  miProducto: ItemIntercambioCard;
+  tuProducto: ItemIntercambioCard;
+}
+
+const UNIDAD_DEFAULT: UnidadEtiqueta = {
+  clave: "unidad",
+  singular: "unidad",
+  plural: "unidades",
+  por: "",
+};
+
+export function parseIntercambioCards(contenido: string): PayloadIntercambio | null {
+  const t = contenido.trim();
+  if (!t.startsWith("{")) return null;
+  try {
+    const p = JSON.parse(t) as Partial<PayloadIntercambio> & { _t?: string };
+    if (p._t !== "intercambio" || !p.miProducto || !p.tuProducto) return null;
+    return {
+      _t: "intercambio",
+      saludo: p.saludo,
+      miProducto: p.miProducto,
+      tuProducto: p.tuProducto,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function itemIdDesdeCard(card: ItemIntercambioCard): number | null {
+  if (card.id != null && Number(card.id) > 0) return Number(card.id);
+  const m = card.url?.match(/\/producto\/(\d+)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export function ladosDesdeIntercambio(
+  payload: PayloadIntercambio,
+  marketItemIdConversacion?: number | null
+): { ofrecido: ItemIntercambioCard; destino: ItemIntercambioCard } {
+  const miId = itemIdDesdeCard(payload.miProducto);
+  const tuId = itemIdDesdeCard(payload.tuProducto);
+  if (marketItemIdConversacion) {
+    if (tuId === marketItemIdConversacion) {
+      return { ofrecido: payload.miProducto, destino: payload.tuProducto };
+    }
+    if (miId === marketItemIdConversacion) {
+      return { ofrecido: payload.tuProducto, destino: payload.miProducto };
+    }
+  }
+  return { ofrecido: payload.miProducto, destino: payload.tuProducto };
+}
+
+export function otroMarketItemIdDesdeIntercambio(
+  payload: PayloadIntercambio,
+  marketItemIdConversacion?: number | null
+): number | null {
+  const { ofrecido } = ladosDesdeIntercambio(payload, marketItemIdConversacion);
+  return itemIdDesdeCard(ofrecido);
+}
 
 export interface PropuestaPago {
   iox?: number;
@@ -113,45 +194,39 @@ function parseIntercambioPreciosPorRol(
   mensajes: MensajePropuesta[],
   compradorId: number
 ): { precioComprador: number; precioVendedor: number } | null {
-  const msg = mensajes.find((m) => m.contenido.includes('"_t":"intercambio"'));
+  const msg = mensajes.find((m) => parseIntercambioCards(m.contenido));
   if (!msg) return null;
-  try {
-    const p = JSON.parse(msg.contenido) as {
-      _t?: string;
-      miProducto?: { precio?: number };
-      tuProducto?: { precio?: number };
-    };
-    if (p._t !== "intercambio" || !p.miProducto || !p.tuProducto) return null;
-    const mi = Number(p.miProducto.precio ?? 0) || 0;
-    const tu = Number(p.tuProducto.precio ?? 0) || 0;
-    if (msg.senderId === compradorId) {
-      return { precioComprador: mi, precioVendedor: tu };
-    }
-    return { precioComprador: tu, precioVendedor: mi };
-  } catch {
-    return null;
+  const p = parseIntercambioCards(msg.contenido);
+  if (!p) return null;
+  const mi = Number(p.miProducto.precio ?? 0) || 0;
+  const tu = Number(p.tuProducto.precio ?? 0) || 0;
+  if (msg.senderId === compradorId) {
+    return { precioComprador: mi, precioVendedor: tu };
   }
+  return { precioComprador: tu, precioVendedor: mi };
 }
 
 function parseIntercambioPreciosAbs(
   mensajes: MensajePropuesta[]
 ): { a: number; b: number } | null {
-  const msg = mensajes.find((m) => m.contenido.includes('"_t":"intercambio"'));
+  const msg = mensajes.find((m) => parseIntercambioCards(m.contenido));
   if (!msg) return null;
-  try {
-    const p = JSON.parse(msg.contenido) as {
-      _t?: string;
-      miProducto?: { precio?: number };
-      tuProducto?: { precio?: number };
-    };
-    if (p._t !== "intercambio" || !p.miProducto || !p.tuProducto) return null;
-    return {
-      a: Number(p.miProducto.precio ?? 0) || 0,
-      b: Number(p.tuProducto.precio ?? 0) || 0,
-    };
-  } catch {
-    return null;
+  const p = parseIntercambioCards(msg.contenido);
+  if (!p) return null;
+  return {
+    a: Number(p.miProducto.precio ?? 0) || 0,
+    b: Number(p.tuProducto.precio ?? 0) || 0,
+  };
+}
+
+export function primerPayloadIntercambio(
+  mensajes: { contenido: string }[]
+): PayloadIntercambio | null {
+  for (const m of mensajes) {
+    const p = parseIntercambioCards(m.contenido);
+    if (p) return p;
   }
+  return null;
 }
 
 /**
@@ -199,22 +274,37 @@ export function resolverPagadorId(
   return proposerEsComprador ? vendedorId : compradorId;
 }
 
-export function propuestaPagoToDisplayText(p: PropuestaPago): string {
+export type OpcionesCopyPropuesta = {
+  unidad?: UnidadEtiqueta;
+  rubroDestino?: string | null;
+};
+
+function verboCierrePropuesta(p: PropuestaPago, opts?: OpcionesCopyPropuesta): string {
+  if (p.modo === "permuta") return "cerrar el canje";
+  if (esServicio(opts?.rubroDestino)) return "cerrar la contratación";
+  return "cerrar la compra";
+}
+
+export function propuestaPagoToDisplayText(p: PropuestaPago, opts?: OpcionesCopyPropuesta): string {
   const parts: string[] = [];
   const esPermuta = p.modo === "permuta";
+  const unidad = opts?.unidad ?? UNIDAD_DEFAULT;
   if (p.iox) parts.push(esPermuta ? `${p.iox} IOX de diferencia` : `${p.iox} IOX`);
   if (p.pesos) parts.push(`${p.pesos} pesos (por fuera)`);
   if (p.usd) parts.push(`${p.usd} USD (por fuera)`);
   if (parts.length === 0) return "";
-  const qty = p.cantidad && p.cantidad > 1 ? ` (${p.cantidad} unidades)` : "";
-  const verbo = esPermuta ? "cerrar el intercambio" : "cerrar la compra";
-  return `Propongo ${verbo} con: ${parts.join(", ")}${qty}. Ambos debemos aprobar el acuerdo.`;
+  const qty = p.cantidad && p.cantidad > 1 ? ` (${etiquetaCantidad(p.cantidad, unidad)})` : "";
+  return `Propongo ${verboCierrePropuesta(p, opts)} con: ${parts.join(", ")}${qty}. Ambos debemos aprobar el acuerdo.`;
 }
 
-export function propuestaPagoToResumenCorto(p: PropuestaPago, formatIX: (n: number) => string): string {
+export function propuestaPagoToResumenCorto(
+  p: PropuestaPago,
+  formatIX: (n: number) => string,
+  unidad: UnidadEtiqueta = UNIDAD_DEFAULT
+): string {
   const parts: string[] = [];
   const qty = p.cantidad && p.cantidad > 0 ? p.cantidad : 1;
-  parts.push(`${qty} ${qty === 1 ? "unidad" : "unidades"}`);
+  parts.push(etiquetaCantidad(qty, unidad));
   if (p.iox) parts.push(formatIX(p.iox));
   if (p.pesos) parts.push(`$${p.pesos}`);
   if (p.usd) parts.push(`U$D ${p.usd}`);
@@ -333,10 +423,10 @@ export function encontrarPropuestaPendienteDelOtro(
   return null;
 }
 
-export function buildAceptacionTexto(p: PropuestaPago): string {
+export function buildAceptacionTexto(p: PropuestaPago, unidad: UnidadEtiqueta = UNIDAD_DEFAULT): string {
   const parts: string[] = [];
   if (p.cantidad && p.cantidad > 1) {
-    parts.push(`${p.cantidad} ${p.cantidad === 1 ? "unidad" : "unidades"}`);
+    parts.push(etiquetaCantidad(p.cantidad, unidad));
   }
   if (p.iox) parts.push(`${p.iox} IOX`);
   if (p.pesos) parts.push(`${p.pesos} pesos (por fuera)`);
@@ -344,12 +434,12 @@ export function buildAceptacionTexto(p: PropuestaPago): string {
   return `Acepto la propuesta: ${parts.join(" + ")}. ¡Ambos aprobamos el acuerdo!`;
 }
 
-export function contenidoParaMostrar(contenido: string): string | null {
+export function contenidoParaMostrar(contenido: string, opts?: OpcionesCopyPropuesta): string | null {
   const trimmed = contenido.trim();
   const json = parsePropuestaPagoJson(trimmed);
-  if (json) return propuestaPagoToDisplayText(json);
+  if (json) return propuestaPagoToDisplayText(json, opts);
   const legacy = parseLegacyPropuestaLinea(trimmed);
-  if (legacy) return propuestaPagoToDisplayText(legacy);
+  if (legacy) return propuestaPagoToDisplayText(legacy, opts);
   return null;
 }
 
@@ -358,8 +448,9 @@ export function resumenMensajeParaPreview(contenido: string): string {
   const display = contenidoParaMostrar(contenido);
   if (display) return display;
   const trimmed = contenido.trim();
-  if (trimmed.startsWith('{"_t":"intercambio"')) return "Propuesta de intercambio";
-  if (/quiero realizar un intercambio/i.test(contenido)) return "Propuesta de intercambio";
+  if (parseIntercambioCards(trimmed) || /quiero realizar un intercambio/i.test(contenido)) {
+    return "Propuesta de intercambio";
+  }
   if (mensajeEsAceptacionPropuesta(contenido)) return "Aceptó la propuesta de pago";
   if (mensajeEsRechazoPropuesta(contenido)) return "Rechazó la propuesta de pago";
   if (/código de verificación enviado por email/i.test(contenido)) {

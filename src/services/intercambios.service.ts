@@ -19,6 +19,8 @@ export interface MarketItemEnIntercambio {
   rating?: number;
 }
 
+export type ModoIntercambio = "compra" | "permuta";
+
 export interface Intercambio {
   id: number;
   usuarioId: number;
@@ -30,6 +32,10 @@ export interface Intercambio {
   estado: string;
   marketItemId?: number;
   marketItem?: MarketItemEnIntercambio | null;
+  /** Ítem ofrecido en un canje (el otro lado). El backend puede omitirlo. */
+  otroMarketItemId?: number | null;
+  otroMarketItem?: MarketItemEnIntercambio | null;
+  modo?: ModoIntercambio | null;
   /** Chat asociado a esta compra/intercambio (una conversación por operación, no por publicación). */
   conversacionId?: number | null;
   createdAt?: string;

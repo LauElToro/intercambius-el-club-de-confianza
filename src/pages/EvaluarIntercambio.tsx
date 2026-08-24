@@ -12,6 +12,7 @@ import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ContactDialog } from '@/components/contact/ContactDialog';
 import { perfilPath, nombrePublico } from '@/lib/perfil';
+import { esServicio } from '@/lib/publicacion';
 
 function StarRating({
   value,
@@ -69,13 +70,13 @@ const EvaluarIntercambio = () => {
       evaluacionesService.crear({
         intercambioId: idNum,
         puntuacionAtencion,
-        puntuacionItem: ctx?.soyComprador ? puntuacionItem : null,
+        puntuacionItem: ctx?.soyComprador || ctx?.modo === 'permuta' ? puntuacionItem : null,
         comentario: comentario.trim() || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['evaluacion'] });
       toast({ title: '¡Gracias!', description: 'Tu evaluación fue registrada.' });
-      navigate('/mis-compras');
+      navigate(ctx?.modo === 'permuta' ? '/historial' : '/mis-compras');
     },
     onError: (e: unknown) => {
       const msg = e instanceof ApiError ? e.message : 'No se pudo enviar la evaluación';
@@ -89,10 +90,14 @@ const EvaluarIntercambio = () => {
       toast({ title: 'Falta puntuación', description: 'Calificá la atención (1 a 5).', variant: 'destructive' });
       return;
     }
-    if (ctx?.soyComprador && puntuacionItem < 1) {
+    if ((ctx?.soyComprador || ctx?.modo === 'permuta') && puntuacionItem < 1) {
+      const esCanje = ctx.modo === "permuta";
+      const noun = ctx.esServicio || esServicio(ctx.rubro) ? "servicio" : "producto";
       toast({
         title: 'Falta puntuación',
-        description: `Calificá el ${ctx.esServicio ? 'servicio' : 'producto'} (1 a 5).`,
+        description: esCanje
+          ? `Calificá el ${noun} recibido (1 a 5).`
+          : `Calificá el ${noun} (1 a 5).`,
         variant: 'destructive',
       });
       return;
@@ -134,16 +139,25 @@ const EvaluarIntercambio = () => {
               <Link to={perfilPath(ctx.evaluado)}>Ver perfil de {ctx.evaluado.nombre}</Link>
             </Button>
           )}
-          <Button variant="gold" onClick={() => navigate('/mis-compras')}>
-            Ir a mis compras
+          <Button variant="gold" onClick={() => navigate(ctx.modo === 'permuta' ? '/historial' : '/mis-compras')}>
+            {ctx.modo === 'permuta' ? 'Ir a mis intercambios' : 'Ir a mis compras'}
           </Button>
         </div>
       </Layout>
     );
   }
 
-  const itemLabel = ctx.labels.item;
+  const itemLabel =
+    ctx.modo === 'permuta'
+      ? ctx.esServicio || esServicio(ctx.rubro)
+        ? 'El servicio recibido'
+        : 'Lo recibido'
+      : ctx.labels.item;
   const evaluadoNombre = ctx.evaluado ? nombrePublico(ctx.evaluado) : 'la otra parte';
+  const itemMostrado =
+    ctx.modo === 'permuta' && !ctx.soyComprador && ctx.otroMarketItem
+      ? ctx.otroMarketItem
+      : ctx.marketItem;
 
   return (
     <Layout>
@@ -156,8 +170,8 @@ const EvaluarIntercambio = () => {
         <Card>
           <CardHeader>
             <CardTitle>¿Cómo fue tu experiencia?</CardTitle>
-            {ctx.marketItem && (
-              <p className="text-sm text-muted-foreground">{ctx.marketItem.titulo}</p>
+            {itemMostrado && (
+              <p className="text-sm text-muted-foreground">{itemMostrado.titulo}</p>
             )}
             <p className="text-sm">
               Evaluás a <strong>{evaluadoNombre}</strong>
@@ -165,7 +179,7 @@ const EvaluarIntercambio = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {ctx.soyComprador && (
+              {(ctx.soyComprador || ctx.modo === 'permuta') && (
                 <StarRating
                   label={`${itemLabel} (1 a 5)`}
                   value={puntuacionItem}

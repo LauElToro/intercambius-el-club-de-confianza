@@ -58,3 +58,30 @@ El contacto **antes** de comprar desde el detalle del producto sigue usando `mar
 - **Slug único:** `PUT /api/referidos/me/slug` con body `{ slug }`. Normalizar a minúsculas; rechazar con **409** si el slug ya está en uso por otro usuario.
 - **Link de invitación:** el frontend arma `.../registro?ref=<slug o codigo>`.
 - **Admin:** `GET /api/admin/referidos?page=&limit=` devuelve filas con referido, referente, código usado, cantidad de referidos acumulados del referente y fechas; opcional `resumen` con totales agregados.
+
+## 7. Canje bilateral (servicios y permuta)
+
+**Problema:** El registro `Intercambio` solo guarda un `marketItemId` (el de la conversación). En un canje (servicio↔servicio o mixto) el historial no puede mostrar ambos lados.
+
+**Requisito:**
+
+- `POST /api/chat/:id/registro-intercambio` acepta opcional **`otroMarketItemId`**: el ítem que ofreció la otra parte (el que no es el `marketItem` de la conversación). Ignorar si no existe o no pertenece a ninguna de las dos partes.
+- `GET /api/intercambios/:userId` debe devolver, cuando existan:
+  - `modo`: `"compra"` | `"permuta"`
+  - `otroMarketItemId`
+  - `otroMarketItem` (mismo shape que `marketItem`: id, titulo, rubro, imagen, etc.)
+- El frontend ya envía `otroMarketItemId` y degrada a la descripción bilateral si el backend aún no persiste el segundo ítem.
+- `GET /api/chat/:id` hoy selecciona el `marketItem` sin `detalles`. El front pide `/api/market/:id` cuando el destino es un servicio para leer `unidadServicio`. Conviene incluir `detalles` (y `stock`) en el `marketItem` del chat para evitar esa llamada extra.
+
+## 8. Contratar un servicio no lo marca como vendido
+
+**Problema:** Tras un checkout o registro, marcar `status = sold` / `out_of_stock` tiene sentido en un producto único, no en un servicio recurrente.
+
+**Requisito:** Al confirmar una **contratación** (`rubro === "servicios"`), **no** marcar la publicación como vendida. Sigue disponible salvo que el prestador la desactive o ponga `disponible: false`. Los productos (y alimentos/experiencias con stock) siguen agotándose según stock.
+
+## 9. Evaluación en permuta / canje
+
+**Problema:** Hoy solo el “comprador” puntúa el ítem (`puntuacionItem`). En un canje ambas partes reciben algo.
+
+**Requisito:** Si `modo === "permuta"`, ambas partes deberían poder calificar el ítem recibido. `GET /api/evaluaciones/contexto/:id` puede incluir `modo` para que el frontend adapte el copy (“el servicio recibido”). El frontend ya lee `modo` si viene; si no, sigue con el flujo actual de comprador/vendedor.
+

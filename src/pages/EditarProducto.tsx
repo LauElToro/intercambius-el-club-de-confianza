@@ -476,6 +476,11 @@ const EditarProducto = () => {
                       placeholder="100"
                       required
                     />
+                    {formData.rubro === "servicios" && (
+                      <p className="text-xs text-muted-foreground">
+                        Precio por hora, sesión o trabajo (elegí la unidad en la ficha técnica).
+                      </p>
+                    )}
                   </div>
                   {formData.rubro && formData.rubro !== "servicios" && (
                     <div className="space-y-2 md:col-span-2">
