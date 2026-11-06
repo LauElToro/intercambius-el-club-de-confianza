@@ -1,4 +1,5 @@
-import type { CodigoPlan } from "@/lib/suscripcion";
+import api, { ApiError } from '@/lib/api';
+import type { CodigoPlan } from '@/lib/suscripcion';
 
 export type EstadoMercadoPago = {
   configurado: boolean;
@@ -10,35 +11,33 @@ export type CheckoutMercadoPago = {
   initPoint: string;
 };
 
-async function suscripcionFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = localStorage.getItem("intercambius_token");
-  const headers = new Headers(init?.headers);
-  if (!headers.has("Content-Type") && init?.body) headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(path, { ...init, headers });
-  const data = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) {
-    throw new Error(data.error || "No se pudo conectar con Mercado Pago.");
-  }
-  return data as T;
+function mensaje(error: unknown, fallback: string): never {
+  if (error instanceof ApiError) throw error;
+  throw new ApiError(fallback, 500);
 }
 
 export const suscripcionService = {
-  estado(): Promise<EstadoMercadoPago> {
-    return suscripcionFetch<EstadoMercadoPago>("/api/suscripcion/estado");
+  async estado(): Promise<EstadoMercadoPago> {
+    try {
+      return await api.get<EstadoMercadoPago>('/api/suscripcion/estado');
+    } catch (error) {
+      mensaje(error, 'No se pudo consultar la suscripción.');
+    }
   },
 
-  checkout(plan: CodigoPlan): Promise<CheckoutMercadoPago> {
-    return suscripcionFetch<CheckoutMercadoPago>("/api/suscripcion/checkout", {
-      method: "POST",
-      body: JSON.stringify({ tipo: "suscripcion", plan }),
-    });
+  async checkout(plan: CodigoPlan): Promise<CheckoutMercadoPago> {
+    try {
+      return await api.post<CheckoutMercadoPago>('/api/suscripcion/checkout', { tipo: 'suscripcion', plan });
+    } catch (error) {
+      mensaje(error, 'No se pudo conectar con Mercado Pago.');
+    }
   },
 
-  pagarKyc(): Promise<CheckoutMercadoPago> {
-    return suscripcionFetch<CheckoutMercadoPago>("/api/suscripcion/checkout", {
-      method: "POST",
-      body: JSON.stringify({ tipo: "kyc" }),
-    });
+  async pagarKyc(): Promise<CheckoutMercadoPago> {
+    try {
+      return await api.post<CheckoutMercadoPago>('/api/suscripcion/checkout', { tipo: 'kyc' });
+    } catch (error) {
+      mensaje(error, 'No se pudo conectar con Mercado Pago.');
+    }
   },
 };
