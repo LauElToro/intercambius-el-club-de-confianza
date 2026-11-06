@@ -65,6 +65,8 @@ export interface User {
   /** Términos IOX: true = aceptó, false = rechazó, null/undefined = no respondió. */
   aceptaTerminosCredito?: boolean | null;
   creditoOfertaAplicado?: boolean;
+  /** Gratis de por vida, cuando el backend confirma que cumplió el cupo de pioneros. */
+  accesoVitalicio?: boolean;
 }
 
 export const authService = {

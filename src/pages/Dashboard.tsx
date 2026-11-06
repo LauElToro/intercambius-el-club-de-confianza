@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
-import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight, CheckCircle2, Shield, Loader2 } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Edit, Plus, ArrowRight, CheckCircle2, Shield, Loader2, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { kycService } from "@/services/kyc.service";
@@ -12,6 +12,8 @@ import { intercambiosService } from "@/services/intercambios.service";
 import { useCurrencyVariant } from "@/contexts/CurrencyVariantContext";
 import { marketService } from "@/services/market.service";
 import { CREDIT_LIMIT_DEFAULT } from "@/lib/constants";
+import { evaluarFreemium, grupoSuscripcion, suscripcionCubre } from "@/lib/suscripcion";
+import { suscripcionService } from "@/services/suscripcion.service";
 import { WelcomeBanner } from "@/components/onboarding/WelcomeBanner";
 import { useToast } from "@/components/ui/use-toast";
 import { ComoFuncionaIX } from "@/components/onboarding/ComoFuncionaIX";
@@ -50,6 +52,13 @@ const Dashboard = () => {
     queryKey: ['intercambios', currentUser?.id],
     queryFn: () => intercambiosService.getByUserId(currentUser!.id!),
     enabled: !!currentUser?.id,
+  });
+
+  const { data: suscripcionMp } = useQuery({
+    queryKey: ['suscripcion', currentUser?.id],
+    queryFn: () => suscripcionService.estado(),
+    enabled: !!currentUser?.id,
+    retry: false,
   });
 
   const { data: misProductosResponse } = useQuery({
@@ -120,6 +129,20 @@ const Dashboard = () => {
   const limite = Number(currentUser?.limite ?? 0) || CREDIT_LIMIT_DEFAULT;
   const saldoPositivo = saldo >= 0;
   const porcentajeCredito = limite > 0 ? Math.abs(saldo) / limite * 100 : 0;
+  const freemium = evaluarFreemium({
+    miembroDesde: currentUser.miembroDesde,
+    movimientos: intercambios,
+    accesoVitalicio: currentUser.accesoVitalicio === true,
+  });
+  const grupoPlan = grupoSuscripcion(intercambios, currentUser.id);
+  const planActivo = suscripcionCubre(grupoPlan, suscripcionMp?.planesAutorizados ?? []);
+  const textoPrueba = freemium.motivo === "vitalicio"
+    ? "Tenés acceso gratis de por vida."
+    : freemium.activo
+      ? `Prueba vigente: ${freemium.usadas} de ${freemium.limite} transacciones, o hasta el ${freemium.vence ? freemium.vence.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" }) : "vencimiento"}. Lo que ocurra primero.`
+      : freemium.motivo === "transacciones"
+        ? "La prueba se cortó: ya usaste las 3 transacciones."
+        : "La prueba se cortó: pasaron 3 meses.";
 
   return (
     <Layout>
@@ -138,6 +161,27 @@ const Dashboard = () => {
         <WelcomeBanner
           isNewUser={totalMisProductos === 0 && intercambios.length === 0}
         />
+
+        <div className="mb-8 rounded-2xl border border-border bg-card p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex gap-3">
+            <div className="rounded-xl bg-gold/10 p-3 h-fit">
+              <CreditCard className="w-6 h-6 text-gold" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg">Suscripción</h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                {textoPrueba}
+                {planActivo ? " Suscripción activa." : ""}
+                {grupoPlan === "vendedor"
+                  ? " Tu plan es USD 5 por mes o USD 45 al año."
+                  : " Tu plan es USD 3 por mes (más USD 3 de KYC) o USD 30 al año."}
+              </p>
+            </div>
+          </div>
+          <Button variant="gold" className="w-full sm:w-auto shrink-0" asChild>
+            <Link to="/suscripcion">{planActivo ? "Ver suscripción" : "Ver planes"}</Link>
+          </Button>
+        </div>
 
         <div className="mb-8 rounded-2xl border border-border bg-card p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex gap-3">

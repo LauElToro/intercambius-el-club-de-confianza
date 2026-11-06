@@ -17,6 +17,7 @@ import {
   MessageCircle,
   ShoppingCart,
   Gift,
+  CreditCard,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
@@ -88,6 +89,7 @@ const Header = () => {
       { to: "/mis-publicaciones", label: "Mis publicaciones", icon: FileText },
       { to: "/mis-compras", label: "Mis compras", icon: ShoppingCart },
       { to: "/historial", label: "Historial", icon: Receipt },
+      { to: "/suscripcion", label: "Suscripción", icon: CreditCard },
       { to: "/referidos", label: "Referidos", icon: Gift },
     ];
   }, [usuario?.id, user?.id]);

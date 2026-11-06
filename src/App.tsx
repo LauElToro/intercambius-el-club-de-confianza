@@ -30,6 +30,7 @@ import Referidos from "./pages/Referidos";
 import TerminosCondiciones from "./pages/TerminosCondiciones";
 import TerminosGenerales from "./pages/TerminosGenerales";
 import DisenoEconomico from "./pages/DisenoEconomico";
+import Suscripcion from "./pages/Suscripcion";
 import EvaluarIntercambio from "./pages/EvaluarIntercambio";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -185,6 +186,14 @@ const App = () => (
               <Route path="/terminos" element={<TerminosCondiciones />} />
               <Route path="/terminos-generales" element={<TerminosGenerales />} />
               <Route path="/economia" element={<DisenoEconomico />} />
+              <Route
+                path="/suscripcion"
+                element={
+                  <ProtectedRoute>
+                    <Suscripcion />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/admin" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

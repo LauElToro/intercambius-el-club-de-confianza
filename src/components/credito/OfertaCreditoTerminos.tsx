@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   Dialog,
@@ -14,9 +14,13 @@ import { CREDITO_OFERTA_INGRESO, COMISION_IOX_PORCENTAJE, INTERCAMBIUS_EMAIL } f
 import { userService } from "@/services/user.service";
 import type { User } from "@/services/auth.service";
 import { useToast } from "@/hooks/use-toast";
+import { FREEMIUM_MESES, FREEMIUM_TRANSACCIONES, KYC_USD, PIONEROS_CUPO } from "@/lib/suscripcion";
 
 const STORAGE_KEY_PREFIX = "intercambius_credito_aceptado_";
-const STORAGE_PIONEROS_PREFIX = "intercambius_bienvenida_pioneros_";
+const STORAGE_PIONEROS_PREFIX = "intercambius_bienvenida_pioneros_v2_";
+const STORAGE_FREEMIUM_PREFIX = "intercambius_freemium_aviso_";
+
+let duenoAvisos: symbol | null = null;
 
 type Props = {
   userId: number;
@@ -74,14 +78,31 @@ export const OfertaCreditoTerminos = ({
   const [rechazando, setRechazando] = useState(false);
   const [seisMesesOpen, setSeisMesesOpen] = useState(false);
   const [pionerosOpen, setPionerosOpen] = useState(false);
+  const [freemiumOpen, setFreemiumOpen] = useState(false);
+  const [soyDueno, setSoyDueno] = useState(false);
+  const duenoId = useRef(Symbol("avisos"));
   const { formatIX } = useCurrencyVariant();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userId && hasRespondidoOfertaCredito(userId) && !hasVistoBienvenidaPioneros(userId)) {
+    const id = duenoId.current;
+    if (duenoAvisos == null) duenoAvisos = id;
+    setSoyDueno(duenoAvisos === id);
+    return () => {
+      if (duenoAvisos === id) duenoAvisos = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!soyDueno || !userId) return;
+    if (!hasVistoAvisoFreemium(userId)) {
+      setFreemiumOpen(true);
+      return;
+    }
+    if (hasRespondidoOfertaCredito(userId) && !hasVistoBienvenidaPioneros(userId)) {
       setPionerosOpen(true);
     }
-  }, [userId]);
+  }, [soyDueno, userId]);
 
   const abrirPionerosSiCorresponde = () => {
     onClose();
@@ -141,11 +162,30 @@ export const OfertaCreditoTerminos = ({
     setPionerosOpen(false);
   };
 
+  const cerrarFreemium = () => {
+    try {
+      localStorage.setItem(`${STORAGE_FREEMIUM_PREFIX}${userId}`, "true");
+    } catch {
+      /* ignore */
+    }
+    setFreemiumOpen(false);
+    if (hasRespondidoOfertaCredito(userId) && !hasVistoBienvenidaPioneros(userId)) {
+      setPionerosOpen(true);
+    }
+  };
+
+  const freemiumPendiente = !hasVistoAvisoFreemium(userId);
+
   const ixMax = formatIX(CREDITO_OFERTA_INGRESO);
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <Dialog
+        open={open && !freemiumPendiente}
+        onOpenChange={(o) => {
+          if (!o && !freemiumPendiente) onClose();
+        }}
+      >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-4 sm:px-6 pt-6 pb-2 shrink-0 space-y-1 min-w-0">
             <DialogTitle className="text-xl sm:text-2xl pr-8 break-words">👋 Bienvenido a Intercambius</DialogTitle>
@@ -281,7 +321,7 @@ export const OfertaCreditoTerminos = ({
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-4 sm:px-6 pt-6 pb-2 shrink-0 min-w-0">
-            <DialogTitle className="text-lg sm:text-xl pr-8 break-words">¡Sos de los primeros 5 mil!</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl pr-8 break-words">¡Sos de los primeros {PIONEROS_CUPO}!</DialogTitle>
             <DialogDescription className="sr-only">
               Beneficio para los primeros usuarios y pasos sugeridos.
             </DialogDescription>
@@ -289,7 +329,7 @@ export const OfertaCreditoTerminos = ({
           <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-4 sm:px-6">
             <div className="pb-4 text-sm text-muted-foreground text-left space-y-4 break-words [overflow-wrap:anywhere] max-w-full">
               <p>
-                <strong className="text-foreground">Felicidades:</strong> estás entre los primeros 5 mil usuarios. Si seguís estos pasos, el uso de este sitio para vos va a ser gratis de por vida.
+                <strong className="text-foreground">Felicidades:</strong> estás entre los primeros {PIONEROS_CUPO} usuarios. Si seguís estos pasos, el uso de este sitio para vos va a ser gratis de por vida.
               </p>
               <ol className="list-decimal pl-4 space-y-2">
                 <li>Publicá un producto o servicio que puedas vender; cualquier cosa que tengas en tu casa que no uses hace 6 meses o más es probable que ya no la necesites.</li>
@@ -307,7 +347,10 @@ export const OfertaCreditoTerminos = ({
                 y te contamos cómo hacerlo, es muy fácil.
               </p>
               <p>
-                <strong className="text-foreground">¿Por qué gratis de por vida?</strong> Porque dentro de unos meses a los usuarios que entren después de vos y hayan realmente usado el sitio varias veces les vamos a cobrar una suscripción mensual, que desde ya te avisamos que va a ser súper baja. Queremos que todos puedan acceder a esta nueva forma de intercambiar, pero tenemos muchas cosas que pagar y mucho en qué invertir para crecer y llegar a más gente.
+                Si no cumplís estos requisitos, quedás fuera del beneficio. Esa plaza se consumió: no se libera para las personas que se registren después.
+              </p>
+              <p>
+                <strong className="text-foreground">¿Por qué gratis de por vida?</strong> Porque quienes no entren en estas {PIONEROS_CUPO} plazas, o no cumplan los requisitos, van a tener una prueba y después una suscripción mensual baja. Queremos que todos puedan acceder a esta nueva forma de intercambiar, pero tenemos muchas cosas que pagar y mucho en qué invertir para crecer y llegar a más gente.
               </p>
               <p>
                 Intercambius es una empresa de carácter social:{" "}
@@ -321,6 +364,55 @@ export const OfertaCreditoTerminos = ({
           <DialogFooter className="px-4 sm:px-6 py-4 border-t border-border shrink-0 bg-background min-w-0">
             <Button variant="gold" className="w-full min-w-0 h-auto whitespace-normal py-3 px-4 text-sm" onClick={cerrarPioneros}>
               Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={freemiumOpen}
+        onOpenChange={(o) => {
+          if (!o) cerrarFreemium();
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-4 sm:px-6 pt-6 pb-2 shrink-0 min-w-0">
+            <DialogTitle className="text-lg sm:text-xl pr-8 break-words">Prueba gratuita al entrar</DialogTitle>
+            <DialogDescription className="sr-only">
+              La prueba dura {FREEMIUM_MESES} meses o {FREEMIUM_TRANSACCIONES} transacciones, lo que ocurra primero.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-4 sm:px-6">
+            <div className="pb-4 text-sm text-muted-foreground text-left space-y-4 break-words [overflow-wrap:anywhere] max-w-full">
+              <p>
+                Al principio todos tienen un freemium de prueba: <strong className="text-foreground">{FREEMIUM_MESES} meses</strong> o{" "}
+                <strong className="text-foreground">{FREEMIUM_TRANSACCIONES} transacciones</strong>, lo que suceda primero. Cuando se cumple cualquiera de los dos, la prueba se corta.
+              </p>
+              <p>Después hay dos suscripciones:</p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>
+                  Si solo hacés trueque, canje, permuta y compras: <strong className="text-foreground">USD 3 por mes</strong>, más{" "}
+                  <strong className="text-foreground">USD {KYC_USD} de KYC</strong> (pago único). En el año son{" "}
+                  <strong className="text-foreground">USD 30</strong> e incluyen el KYC.
+                </li>
+                <li>
+                  Si además tenés operaciones que son solo de venta: <strong className="text-foreground">USD 5 por mes</strong>. En el año son{" "}
+                  <strong className="text-foreground">USD 45</strong> e incluyen el KYC.
+                </li>
+              </ul>
+              <p>
+                Esto es aparte del beneficio de los primeros {PIONEROS_CUPO}: ese es gratis de por vida solo si se cumplen los requisitos. Si no se cumplen, la plaza igual se consumió.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="px-4 sm:px-6 py-4 border-t border-border flex flex-col gap-3 shrink-0 bg-background min-w-0">
+            <Button variant="outline" className="w-full" asChild>
+              <Link to="/suscripcion" onClick={cerrarFreemium}>
+                Ver suscripciones
+              </Link>
+            </Button>
+            <Button variant="gold" className="w-full" onClick={cerrarFreemium}>
+              Entendido
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -365,6 +457,14 @@ export const hasRespondidoOfertaCredito = (
 export const hasVistoBienvenidaPioneros = (userId: number): boolean => {
   try {
     return localStorage.getItem(`${STORAGE_PIONEROS_PREFIX}${userId}`) === "true";
+  } catch {
+    return true;
+  }
+};
+
+export const hasVistoAvisoFreemium = (userId: number): boolean => {
+  try {
+    return localStorage.getItem(`${STORAGE_FREEMIUM_PREFIX}${userId}`) === "true";
   } catch {
     return true;
   }
