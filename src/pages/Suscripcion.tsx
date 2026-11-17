@@ -209,11 +209,11 @@ const Suscripcion = () => {
                 disabled={pagando != null}
                 onClick={() => void irAMercadoPago("kyc")}
               >
-                {pagando === "kyc" ? "Abriendo Mercado Pago…" : `Pagar KYC (USD ${KYC_USD})`}
+                {pagando === "kyc" ? "Abriendo…" : "Pagar KYC, una vez"}
               </Button>
             )}
             <Button variant="gold" disabled={pagando != null} onClick={() => void irAMercadoPago("plan")}>
-              {pagando === "plan" ? "Abriendo Mercado Pago…" : cubre ? "Actualizar suscripción" : "Suscribirme con Mercado Pago"}
+              {pagando === "plan" ? "Abriendo…" : "Suscribirme"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-4">
