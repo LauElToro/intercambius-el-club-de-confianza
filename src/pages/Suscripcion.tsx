@@ -181,6 +181,19 @@ const Suscripcion = () => {
             USD {plan.montoUsd}
             <span className="text-base font-medium text-muted-foreground"> / {plan.ciclo === "mensual" ? "mes" : "año"}</span>
           </p>
+          {mp?.cotizacionArsPorUsd ? (
+            <p className="text-sm text-muted-foreground mt-2">
+              Mercado Pago cobra esta suscripción en pesos:{" "}
+              <strong className="text-foreground">
+                ${Math.round(plan.montoUsd * mp.cotizacionArsPorUsd).toLocaleString("es-AR")} ARS
+              </strong>
+              . La cuenta de Argentina no acepta suscripciones en dólares. El KYC de USD {KYC_USD} sí se cobra en dólares.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-2">
+              La suscripción se cobra en pesos, al dólar de Mercado Pago. El KYC de USD {KYC_USD} se cobra en dólares.
+            </p>
+          )}
           <p className="text-sm text-muted-foreground mt-2">{plan.resumen}</p>
           {mostrarKyc && (
             <p className="text-sm text-foreground mt-3">

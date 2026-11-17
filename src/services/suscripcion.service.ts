@@ -5,6 +5,7 @@ export type EstadoMercadoPago = {
   configurado: boolean;
   planesAutorizados: string[];
   kycPago: boolean;
+  cotizacionArsPorUsd?: number | null;
 };
 
 export type CheckoutMercadoPago = {
